@@ -131,6 +131,8 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
   <div class="slabel">기준정보</div>
   <button class="ni" onclick="goto('register')"><i class="ti ti-database-plus"></i><span>기준정보 등록</span></button>
   <button class="ni" onclick="goto('partners')"><i class="ti ti-building-factory"></i><span>거래처 관리</span></button>
+  <button class="ni" onclick="goto('franchises')"><i class="ti ti-building-store"></i><span>가맹점 관리</span></button>
+  <button class="ni" onclick="goto('suppliers')"><i class="ti ti-truck"></i><span>납품업체 관리</span></button>
   <div class="slabel">경영</div>
   <button class="ni" onclick="goto('stats')"><i class="ti ti-chart-bar"></i><span>통계·분석</span></button>
   <button class="ni" onclick="goto('settle')"><i class="ti ti-coin"></i><span>정산 관리</span></button>
@@ -141,7 +143,13 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 <div class="main">
   <div class="topbar">
     <div style="display:flex;align-items:center;gap:12px"><span class="ptitle" id="ptitle">대시보드</span><span class="dbadge" id="ddate"></span></div>
-    <div style="display:flex;gap:10px"><div class="tbar-btn" onclick="showToast('새로고침')"><i class="ti ti-refresh"></i></div><div class="tbar-btn"><i class="ti ti-bell"></i></div></div>
+    <div style="display:flex;gap:10px">
+      <button onclick="seedIbaguData()" style="display:flex;align-items:center;gap:5px;padding:7px 13px;border-radius:9px;border:.5px solid var(--line);background:var(--amber-bg);color:var(--amber);font-size:12px;font-weight:700;cursor:pointer;font-family:var(--sans)">
+        <i class="ti ti-database-import" style="font-size:14px"></i>이바구밀면 예시데이터 등록
+      </button>
+      <div class="tbar-btn" onclick="showToast('새로고침')"><i class="ti ti-refresh"></i></div>
+      <div class="tbar-btn"><i class="ti ti-bell"></i></div>
+    </div>
   </div>
 
   <!-- ── 대시보드 ── -->
@@ -373,6 +381,66 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
     </div>
   </div></div>
 
+  <!-- ── 가맹점 관리 ── -->
+  <div class="hqp" id="hqp-franchises"><div class="content">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <div style="font-size:18px;font-weight:700">가맹점 관리</div>
+      <button onclick="openFranchiseForm()" class="rb blue" style="width:auto;padding:9px 16px">+ 가맹점 등록</button>
+    </div>
+    <!-- 등록 폼 -->
+    <div class="rc" id="franchiseForm" style="display:none;margin-bottom:16px">
+      <div class="rch"><div class="rci" style="background:var(--green-bg)"><i class="ti ti-building-store" style="color:var(--green)"></i></div>
+        <div><div class="rct">가맹점 등록</div></div>
+        <button onclick="closeFranchiseForm()" style="margin-left:auto;border:none;background:none;font-size:20px;color:var(--muted);cursor:pointer">✕</button>
+      </div>
+      <div class="rcb">
+        <div class="two-col">
+          <div class="fl"><div class="flb">상호명 *</div><input class="fi" id="frName" placeholder="부산 수영구 광안점"></div>
+          <div class="fl"><div class="flb">사업자번호</div><input class="fi" id="frBiz" placeholder="000-00-00000"></div>
+        </div>
+        <div class="fl"><div class="flb">주소 *</div><input class="fi" id="frAddr" placeholder="부산 수영구 광안해변로 263"></div>
+        <div class="two-col">
+          <div class="fl"><div class="flb">연락처</div><input class="fi" id="frPhone" placeholder="051-000-0000"></div>
+          <div class="fl"><div class="flb">점주명</div><input class="fi" id="frOwner" placeholder="홍길동"></div>
+        </div>
+        <button class="rb green" onclick="saveFranchise()"><i class="ti ti-plus"></i>가맹점 등록</button>
+      </div>
+    </div>
+    <div class="card" style="padding:0;overflow:hidden">
+      <div id="franchiseList" style="min-height:100px"><div style="text-align:center;padding:40px;color:var(--dim)">불러오는 중...</div></div>
+    </div>
+  </div></div>
+
+  <!-- ── 납품업체 관리 ── -->
+  <div class="hqp" id="hqp-suppliers"><div class="content">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <div style="font-size:18px;font-weight:700">납품업체 관리</div>
+      <button onclick="openSupplierForm()" class="rb blue" style="width:auto;padding:9px 16px">+ 납품업체 등록</button>
+    </div>
+    <!-- 등록 폼 -->
+    <div class="rc" id="supplierForm" style="display:none;margin-bottom:16px">
+      <div class="rch"><div class="rci" style="background:var(--purple-bg)"><i class="ti ti-truck" style="color:var(--purple)"></i></div>
+        <div><div class="rct">납품업체 등록</div></div>
+        <button onclick="closeSupplierForm()" style="margin-left:auto;border:none;background:none;font-size:20px;color:var(--muted);cursor:pointer">✕</button>
+      </div>
+      <div class="rcb">
+        <div class="two-col">
+          <div class="fl"><div class="flb">업체명 *</div><input class="fi" id="supName" placeholder="(주)한국식품"></div>
+          <div class="fl"><div class="flb">사업자번호</div><input class="fi" id="supBiz" placeholder="000-00-00000"></div>
+        </div>
+        <div class="two-col">
+          <div class="fl"><div class="flb">연락처</div><input class="fi" id="supPhone" placeholder="051-000-0000"></div>
+          <div class="fl"><div class="flb">담당자명</div><input class="fi" id="supContact" placeholder="김철수"></div>
+        </div>
+        <div class="fl"><div class="flb">납품 품목</div><input class="fi" id="supCategory" placeholder="면류, 소스류, 육류 등"></div>
+        <button class="rb purple" onclick="saveSupplier()"><i class="ti ti-plus"></i>납품업체 등록</button>
+      </div>
+    </div>
+    <div class="card" style="padding:0;overflow:hidden">
+      <div id="supplierList" style="min-height:100px"><div style="text-align:center;padding:40px;color:var(--dim)">불러오는 중...</div></div>
+    </div>
+  </div></div>
+
   <!-- 기타 -->
   <div class="hqp" id="hqp-orders"><div class="content"><div style="padding:60px;text-align:center;color:var(--dim)"><i class="ti ti-circles-relation" style="font-size:48px;opacity:.4;display:block;margin-bottom:12px"></i><div style="font-size:18px;font-weight:700;color:var(--muted)">주문 통합 관리</div><div style="margin-top:6px">다음 업데이트 예정</div></div></div></div>
   <div class="hqp" id="hqp-stats"><div class="content"><div style="padding:60px;text-align:center;color:var(--dim)"><i class="ti ti-chart-bar" style="font-size:48px;opacity:.4;display:block;margin-bottom:12px"></i><div style="font-size:18px;font-weight:700;color:var(--muted)">통계·분석</div><div style="margin-top:6px">다음 업데이트 예정</div></div></div></div>
@@ -381,6 +449,8 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 </div>
 
 <div id="toast"></div>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <script src="auth.js"></script>
 <script>
 const Auth = window.SmartBaljuAuth;
@@ -400,7 +470,7 @@ if(_myBrandId){
 // 사이드바 아바타
 const _myName = _session?.name || _session?.businessName || '관리자';
 document.querySelector('.sfooter').innerHTML = `<div style="display:flex;align-items:center;gap:10px"><div style="width:32px;height:32px;border-radius:50%;background:var(--blue-mid);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;flex-shrink:0">${_myName.slice(0,1)}</div><div><div style="font-size:12px;font-weight:500;color:#fff">${_myName}</div><div style="font-size:11px;color:rgba(255,255,255,.4)">${_myBrandName||'본사 관리자'}</div></div></div>`;
-const PAGES = {dashboard:'대시보드',register:'기준정보 등록',partners:'거래처 관리',orders:'주문 통합 관리',delivery:'배송 관리',stats:'통계·분석',settle:'정산 관리',notice:'공지·레시피'};
+const PAGES = {dashboard:'대시보드',register:'기준정보 등록',partners:'거래처 관리',franchises:'가맹점 관리',suppliers:'납품업체 관리',orders:'주문 통합 관리',delivery:'배송 관리',stats:'통계·분석',settle:'정산 관리',notice:'공지·레시피'};
 
 function goto(p){
   Object.keys(PAGES).forEach(k=>{ const el=document.getElementById('hqp-'+k); if(el) el.classList.toggle('active',k===p); });
@@ -409,6 +479,8 @@ function goto(p){
   if(p==='dashboard') initCharts();
   if(p==='register') loadReg();
   if(p==='partners') loadPartnersFull();
+  if(p==='franchises') loadFranchises();
+  if(p==='suppliers') loadSuppliers();
   if(p==='delivery') loadDelivery();
 }
 
@@ -681,6 +753,146 @@ async function loadDelivery(){
   el.innerHTML=`<table class="lt"><thead><tr><th>배송처</th><th>기사</th><th>품목</th><th>금액</th><th>상태</th><th>시작</th><th>완료</th></tr></thead><tbody>${list.map(d=>{const s=ST[d.status]||ST.assigned;return`<tr><td><strong>${d.storeName||'-'}</strong><div style="font-size:11px;color:var(--muted)">${d.address||''}</div></td><td>${d.driverName||'미배정'}</td><td style="max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;color:var(--muted)">${d.items||'-'}</td><td style="font-family:var(--mono)">${(d.amount||0).toLocaleString()}원</td><td><span style="font-size:11px;font-weight:700;padding:3px 8px;border-radius:999px;background:${s.bg};color:${s.c}">${s.l}</span></td><td style="font-size:12px;color:var(--muted)">${(d.startedAt||'').slice(11,16)||'-'}</td><td style="font-size:12px;color:var(--muted)">${(d.doneAt||'').slice(11,16)||'-'}</td></tr>`;}).join('')}</tbody></table>`;
 }
 
+// ── 가맹점 관리 ───────────────────────────────────────────
+function openFranchiseForm(){ document.getElementById('franchiseForm').style.display=''; }
+function closeFranchiseForm(){ document.getElementById('franchiseForm').style.display='none'; }
+
+async function saveFranchise(){
+  if(!frName.value.trim()||!frAddr.value.trim()){ showToast('상호명과 주소를 입력하세요'); return; }
+  const id='fr_'+Date.now();
+  await Auth.DB.set('hq_franchises/'+id,{id,name:frName.value,businessNumber:frBiz.value,address:frAddr.value,phone:frPhone.value,owner:frOwner.value,brandId:_myBrandId,brandName:_myBrandName,status:'active',createdAt:new Date().toISOString()});
+  frName.value=frBiz.value=frAddr.value=frPhone.value=frOwner.value='';
+  closeFranchiseForm(); await loadFranchises(); showToast('가맹점 등록 완료');
+}
+
+async function loadFranchises(){
+  const data=await Auth.DB.get('hq_franchises')||{};
+  const list=Object.values(data).filter(f=>!_myBrandId||f.brandId===_myBrandId);
+  const el=document.getElementById('franchiseList');
+  if(!list.length){ el.innerHTML='<div style="text-align:center;padding:40px;color:var(--dim)">등록된 가맹점이 없습니다</div>'; return; }
+  el.innerHTML=`<table class="lt"><thead><tr><th>상호명</th><th>주소</th><th>점주</th><th>연락처</th><th>상태</th><th></th></tr></thead><tbody>`+
+    list.map(f=>`<tr>
+      <td><strong>${f.name}</strong>${f.businessNumber?`<div style="font-size:11px;color:var(--muted)">${f.businessNumber}</div>`:''}</td>
+      <td style="font-size:12px;color:var(--muted)">${f.address||'-'}</td>
+      <td>${f.owner||'-'}</td>
+      <td>${f.phone||'-'}</td>
+      <td><span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:var(--green-bg);color:var(--green)">활성</span></td>
+      <td><button class="delbtn" onclick="delFranchise('${f.id}')">삭제</button></td>
+    </tr>`).join('')+'</tbody></table>';
+}
+async function delFranchise(id){ if(!confirm('삭제할까요?'))return; await Auth.DB.remove('hq_franchises/'+id); await loadFranchises(); showToast('삭제'); }
+
+// ── 납품업체 관리 ─────────────────────────────────────────
+function openSupplierForm(){ document.getElementById('supplierForm').style.display=''; }
+function closeSupplierForm(){ document.getElementById('supplierForm').style.display='none'; }
+
+async function saveSupplier(){
+  if(!supName.value.trim()){ showToast('업체명을 입력하세요'); return; }
+  const id='sup_'+Date.now();
+  await Auth.DB.set('hq_suppliers/'+id,{id,name:supName.value,businessNumber:supBiz.value,phone:supPhone.value,contactPerson:supContact.value,category:supCategory.value,brandId:_myBrandId,brandName:_myBrandName,status:'active',createdAt:new Date().toISOString()});
+  supName.value=supBiz.value=supPhone.value=supContact.value=supCategory.value='';
+  closeSupplierForm(); await loadSuppliers(); showToast('납품업체 등록 완료');
+}
+
+async function loadSuppliers(){
+  const data=await Auth.DB.get('hq_suppliers')||{};
+  const list=Object.values(data).filter(s=>!_myBrandId||s.brandId===_myBrandId);
+  const el=document.getElementById('supplierList');
+  if(!list.length){ el.innerHTML='<div style="text-align:center;padding:40px;color:var(--dim)">등록된 납품업체가 없습니다</div>'; return; }
+  el.innerHTML=`<table class="lt"><thead><tr><th>업체명</th><th>납품품목</th><th>담당자</th><th>연락처</th><th>상태</th><th></th></tr></thead><tbody>`+
+    list.map(s=>`<tr>
+      <td><strong>${s.name}</strong>${s.businessNumber?`<div style="font-size:11px;color:var(--muted)">${s.businessNumber}</div>`:''}</td>
+      <td style="font-size:12px;color:var(--muted)">${s.category||'-'}</td>
+      <td>${s.contactPerson||'-'}</td>
+      <td>${s.phone||'-'}</td>
+      <td><span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:var(--green-bg);color:var(--green)">활성</span></td>
+      <td><button class="delbtn" onclick="delSupplier('${s.id}')">삭제</button></td>
+    </tr>`).join('')+'</tbody></table>';
+}
+async function delSupplier(id){ if(!confirm('삭제할까요?'))return; await Auth.DB.remove('hq_suppliers/'+id); await loadSuppliers(); showToast('삭제'); }
+
+// ── 이바구밀면 시드 데이터 ────────────────────────────────
+async function seedIbaguData(){
+  if(!confirm('이바구밀면 예시 데이터를 Firebase에 등록합니다.\n(브랜드·거래처·품목·가맹점·납품업체·소요량)')) return;
+  showToast('등록 중...');
+
+  // 1. 브랜드
+  let brandId=_myBrandId;
+  if(!brandId){
+    const brands=await Auth.loadBrands();
+    const exist=brands.find(b=>b.name==='이바구밀면');
+    if(exist){ brandId=exist.id; }
+    else {
+      const b=await Auth.registerBrand({code:'01',name:'이바구밀면',category:'밀면',owner:'이호건'});
+      brandId=b.id;
+    }
+  }
+
+  // 2. 거래처
+  const partners=await Auth.loadPartners();
+  let p1Id=partners.find(p=>p.name==='(주)밀면식품')?.id;
+  let p2Id=partners.find(p=>p.name==='부산소스공방')?.id;
+  if(!p1Id){ const p=await Auth.registerPartner({code:'01',name:'(주)밀면식품',phone:'051-123-4567',contactPerson:'박민준',status:'active'}); p1Id=p.id; }
+  if(!p2Id){ const p=await Auth.registerPartner({code:'02',name:'부산소스공방',phone:'051-234-5678',contactPerson:'김소연',status:'active'}); p2Id=p.id; }
+
+  // 3. 품목 + 가격 (코드: 거래처2+브랜드2+일련번호2)
+  const menuItems=[
+    {code:'010101',name:'물밀면',         category:'밀면',  price:10000,unit:'그릇',spec:'면180g+육수',  partnerId:p1Id,partnerName:'(주)밀면식품'},
+    {code:'010102',name:'물밀면(곱빼기)',  category:'밀면',  price:11000,unit:'그릇',spec:'면270g+육수',  partnerId:p1Id,partnerName:'(주)밀면식품'},
+    {code:'010103',name:'매운물밀면',      category:'밀면',  price:11000,unit:'그릇',spec:'면180g+매운육수',partnerId:p1Id,partnerName:'(주)밀면식품'},
+    {code:'010104',name:'매운물밀면(곱빼기)',category:'밀면',price:12000,unit:'그릇',spec:'면270g+매운육수',partnerId:p1Id,partnerName:'(주)밀면식품'},
+    {code:'010105',name:'비빔밀면',        category:'밀면',  price:10000,unit:'그릇',spec:'면180g+비빔소스',partnerId:p1Id,partnerName:'(주)밀면식품'},
+    {code:'010106',name:'비빔밀면(곱빼기)',category:'밀면',  price:11000,unit:'그릇',spec:'면270g+비빔소스',partnerId:p1Id,partnerName:'(주)밀면식품'},
+    {code:'010107',name:'매운비빔밀면',    category:'밀면',  price:11000,unit:'그릇',spec:'면180g+매운비빔',partnerId:p1Id,partnerName:'(주)밀면식품'},
+    {code:'010108',name:'매운비빔밀면(곱빼기)',category:'밀면',price:12000,unit:'그릇',spec:'면270g+매운비빔',partnerId:p1Id,partnerName:'(주)밀면식품'},
+    {code:'010109',name:'아기밀면(13세이하)',category:'밀면',price:5000, unit:'그릇',spec:'면120g+육수',  partnerId:p1Id,partnerName:'(주)밀면식품'},
+    {code:'020110',name:'이바구육전',      category:'안주',  price:13000,unit:'접시',spec:'우육150g',     partnerId:p2Id,partnerName:'부산소스공방'},
+    {code:'020111',name:'육전(대)',        category:'안주',  price:25000,unit:'접시',spec:'우육300g',     partnerId:p2Id,partnerName:'부산소스공방'},
+    {code:'020112',name:'이바구만두',      category:'만두',  price:7000, unit:'접시',spec:'냉동만두5개',  partnerId:p2Id,partnerName:'부산소스공방'},
+    {code:'020113',name:'갈비만두',        category:'만두',  price:8000, unit:'접시',spec:'갈비만두4개',  partnerId:p2Id,partnerName:'부산소스공방'},
+  ];
+  for(const m of menuItems){
+    const exist=await Auth.loadMenus().then(list=>list.find(x=>x.code===m.code));
+    if(!exist) await Auth.registerMenu({...m,brandId,brandName:'이바구밀면',minQty:1,maxQty:999});
+  }
+
+  // 4. 가맹점 예시
+  const frData=[
+    {name:'1984이바구밀면 광안점',businessNumber:'123-45-67890',address:'부산 수영구 광안해변로 263',phone:'051-757-1984',owner:'이호건'},
+    {name:'1984이바구밀면 해운대점',businessNumber:'234-56-78901',address:'부산 해운대구 해운대로 123',phone:'051-888-2024',owner:'김부산'},
+    {name:'1984이바구밀면 서면점',businessNumber:'345-67-89012',address:'부산 부산진구 중앙대로 680',phone:'051-777-3030',owner:'박서면'},
+  ];
+  for(const f of frData){
+    const id='fr_'+Date.now()+'_'+Math.random().toString(36).slice(2,6);
+    await Auth.DB.set('hq_franchises/'+id,{id,...f,brandId,brandName:'이바구밀면',status:'active',createdAt:new Date().toISOString()});
+  }
+
+  // 5. 납품업체 예시
+  const supData=[
+    {name:'(주)밀면식품',businessNumber:'111-22-33333',phone:'051-123-4567',contactPerson:'박민준',category:'면류, 육수'},
+    {name:'부산소스공방',businessNumber:'222-33-44444',phone:'051-234-5678',contactPerson:'김소연',category:'소스류, 만두, 육류'},
+  ];
+  for(const s of supData){
+    const id='sup_'+Date.now()+'_'+Math.random().toString(36).slice(2,6);
+    await Auth.DB.set('hq_suppliers/'+id,{id,...s,brandId,brandName:'이바구밀면',status:'active',createdAt:new Date().toISOString()});
+  }
+
+  // 6. 소요량 예시 (물밀면 기준)
+  const menus=await Auth.loadMenus();
+  const findMenuId=(name)=>menus.find(m=>m.name===name)?.id||'';
+  const recipes=[
+    {menuName:'물밀면',    threshold:80,ingredients:[{menuId:findMenuId('물밀면'),    name:'밀면면(생면)',qty:180,unit:'g'},{name:'육수',qty:500,unit:'ml'},{name:'무김치',qty:50,unit:'g'},{name:'수육',qty:30,unit:'g'}]},
+    {menuName:'비빔밀면',  threshold:80,ingredients:[{menuId:findMenuId('비빔밀면'),  name:'밀면면(생면)',qty:180,unit:'g'},{name:'비빔소스',qty:80,unit:'g'},{name:'무김치',qty:50,unit:'g'}]},
+    {menuName:'이바구육전',threshold:85,ingredients:[{menuId:findMenuId('이바구육전'),name:'우육슬라이스',qty:150,unit:'g'},{name:'달걀',qty:2,unit:'개'},{name:'식용유',qty:30,unit:'ml'}]},
+  ];
+  for(const r of recipes){
+    const id='recipe_'+Date.now()+'_'+Math.random().toString(36).slice(2,6);
+    await Auth.DB.set('recipes/'+id,{id,...r,brandId,createdAt:new Date().toISOString()});
+  }
+
+  await Promise.all([rMenu(),loadFranchises(),loadSuppliers(),loadRecipes()]);
+  showToast('이바구밀면 예시 데이터 등록 완료! 품목 '+menuItems.length+'개·가맹점 '+frData.length+'개·납품업체 '+supData.length+'개');
+}
 document.addEventListener('firebaseReady', initCharts);
 if(Auth.isFirebaseReady) initCharts();
 </script>
