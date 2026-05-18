@@ -137,6 +137,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
   <button class="ni" onclick="goto('stats')"><i class="ti ti-chart-bar"></i><span>통계·분석</span></button>
   <button class="ni" onclick="goto('settle')"><i class="ti ti-coin"></i><span>정산 관리</span></button>
   <button class="ni" onclick="goto('notice')"><i class="ti ti-speakerphone"></i><span>공지·레시피</span></button>
+  <button class="ni" onclick="goto('settings')"><i class="ti ti-settings"></i><span>설정</span></button>
   <div class="sfooter"><div style="display:flex;align-items:center;gap:10px"><div style="width:32px;height:32px;border-radius:50%;background:var(--blue-mid);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff">홍</div><div><div style="font-size:12px;font-weight:500;color:#fff">홍길동 이사</div><div style="font-size:11px;color:rgba(255,255,255,.4)">최고 관리자</div></div></div></div>
 </aside>
 
@@ -452,6 +453,50 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
     </div>
   </div></div>
 
+  <!-- ── 설정 ── -->
+  <div class="hqp" id="hqp-settings"><div class="content">
+
+    <!-- OKPos 연동 설정 -->
+    <div class="card" style="margin-bottom:16px">
+      <div class="ch">
+        <span class="ct">OKPos 매출 연동 설정</span>
+        <span style="font-size:12px;color:var(--muted)">브랜드별 OKPos 계정 등록</span>
+      </div>
+      <div style="background:var(--blue-bg);border-radius:10px;padding:12px 14px;margin-bottom:14px;font-size:13px;color:var(--blue);line-height:1.6">
+        <strong>자동 매출 수집 안내</strong><br>
+        OKPos 아이디/비번을 등록하면 매일 새벽 2시에 자동으로 매출을 수집해 대시보드에 반영합니다.<br>
+        브랜드마다 별도 OKPos 계정이 있으면 각각 등록하세요.
+      </div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div class="two-col">
+          <div class="fl"><div class="flb">OKPos 아이디 *</div><input class="fi" id="setOkposId" placeholder="OKPos 로그인 아이디"></div>
+          <div class="fl"><div class="flb">OKPos 비밀번호 *</div><input class="fi" id="setOkposPw" type="password" placeholder="OKPos 비밀번호"></div>
+        </div>
+        <div class="fl"><div class="flb">브랜드명 (자동입력)</div><input class="fi" id="setOkposBrand" placeholder="연동 브랜드명" readonly style="opacity:.7"></div>
+        <div style="display:flex;gap:8px">
+          <button onclick="testOkposConnect()" style="flex:1;padding:11px;border-radius:10px;border:.5px solid var(--line);background:var(--surface2);font-size:13px;font-weight:700;font-family:var(--sans);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px">
+            <i class="ti ti-plug-connected" style="font-size:15px"></i>연결 테스트
+          </button>
+          <button onclick="saveOkposConfig()" class="rb green" style="flex:1;margin-top:0">
+            <i class="ti ti-device-floppy"></i>저장
+          </button>
+        </div>
+        <div id="okposTestResult" style="display:none;padding:10px 14px;border-radius:9px;font-size:13px;font-weight:700"></div>
+      </div>
+    </div>
+
+    <!-- 등록된 OKPos 계정 목록 -->
+    <div class="card">
+      <div class="ch"><span class="ct">등록된 OKPos 계정</span>
+        <button onclick="loadSettings()" style="border:none;background:none;color:var(--blue);font-size:13px;cursor:pointer"><i class="ti ti-refresh" style="font-size:14px"></i> 새로고침</button>
+      </div>
+      <div id="okposConfigList">
+        <div style="text-align:center;padding:30px;color:var(--dim)">불러오는 중...</div>
+      </div>
+    </div>
+
+  </div></div>
+
   <!-- 기타 -->
   <div class="hqp" id="hqp-orders"><div class="content"><div style="padding:60px;text-align:center;color:var(--dim)"><i class="ti ti-circles-relation" style="font-size:48px;opacity:.4;display:block;margin-bottom:12px"></i><div style="font-size:18px;font-weight:700;color:var(--muted)">주문 통합 관리</div><div style="margin-top:6px">다음 업데이트 예정</div></div></div></div>
   <div class="hqp" id="hqp-stats"><div class="content"><div style="padding:60px;text-align:center;color:var(--dim)"><i class="ti ti-chart-bar" style="font-size:48px;opacity:.4;display:block;margin-bottom:12px"></i><div style="font-size:18px;font-weight:700;color:var(--muted)">통계·분석</div><div style="margin-top:6px">다음 업데이트 예정</div></div></div></div>
@@ -481,7 +526,7 @@ if(_myBrandId){
 // 사이드바 아바타
 const _myName = _session?.name || _session?.businessName || '관리자';
 document.querySelector('.sfooter').innerHTML = `<div style="display:flex;align-items:center;gap:10px"><div style="width:32px;height:32px;border-radius:50%;background:var(--blue-mid);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;flex-shrink:0">${_myName.slice(0,1)}</div><div><div style="font-size:12px;font-weight:500;color:#fff">${_myName}</div><div style="font-size:11px;color:rgba(255,255,255,.4)">${_myBrandName||'본사 관리자'}</div></div></div>`;
-const PAGES = {dashboard:'대시보드',register:'기준정보 등록',partners:'거래처 관리',franchises:'가맹점 관리',suppliers:'납품업체 관리',orders:'주문 통합 관리',delivery:'배송 관리',stats:'통계·분석',settle:'정산 관리',notice:'공지·레시피'};
+const PAGES = {dashboard:'대시보드',register:'기준정보 등록',partners:'거래처 관리',franchises:'가맹점 관리',suppliers:'납품업체 관리',orders:'주문 통합 관리',delivery:'배송 관리',stats:'통계·분석',settle:'정산 관리',notice:'공지·레시피',settings:'설정'};
 
 function goto(p){
   Object.keys(PAGES).forEach(k=>{ const el=document.getElementById('hqp-'+k); if(el) el.classList.toggle('active',k===p); });
@@ -493,6 +538,7 @@ function goto(p){
   if(p==='franchises') loadFranchises();
   if(p==='suppliers') loadSuppliers();
   if(p==='delivery') loadDelivery();
+  if(p==='settings') loadSettings();
 }
 
 function switchRegTab(tab) {
@@ -552,36 +598,48 @@ async function loadOkposDashboard(){
     const monthKey = `${year}${month}`;
 
     // 이번달 날짜별 데이터 필터링
+    // 새 구조: okpos_sales/{date}/{brandId}/{shopCd}
+    // 구 구조: okpos_sales/{date}/{shopCd}
     const monthDays = Object.entries(allSales)
       .filter(([k]) => k.startsWith(monthKey))
       .sort(([a],[b]) => a.localeCompare(b));
 
     if(!monthDays.length){
-      // 데이터 없으면 안내 표시
       document.getElementById('kpi-sale').textContent = '데이터 없음';
       document.getElementById('kpi-cnt').textContent = '-';
       document.getElementById('kpi-gst').textContent = '-';
       document.getElementById('kpi-shop').textContent = '-';
       document.getElementById('kpi-sale-trend').textContent = 'OKPos 미수집';
-      document.getElementById('storeTable').innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--dim);padding:20px">OKPos 매출 데이터가 없습니다.<br>okpos_scraper.py를 실행해주세요.</td></tr>';
+      document.getElementById('storeTable').innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--dim);padding:20px">OKPos 매출 데이터가 없습니다.<br>설정 탭에서 OKPos 계정을 등록하세요.</td></tr>';
       renderEmptyChart();
       return;
     }
 
-    // 전체 집계
+    // 전체 집계 (새 구조 + 구 구조 모두 지원)
     let totalSale=0, totalCnt=0, totalGst=0;
-    const shopMap = {}; // 가맹점별 누적
-    const dayMap  = {}; // 날짜별 누적
+    const shopMap = {};
+    const dayMap  = {};
 
     monthDays.forEach(([dateKey, dayData]) => {
       const dayTotal = { sale:0, cnt:0 };
-      Object.entries(dayData).forEach(([shopCd, d]) => {
-        const sale = d.tot_sale_amt||d.dcm_sale_amt||0;
-        const cnt  = d.tot_sale_cnt||0;
-        const gst  = d.gst_cnt||0;
+      // dayData가 브랜드별로 중첩되어 있는지 확인
+      const firstVal = Object.values(dayData)[0];
+      const isNested = firstVal && typeof firstVal === 'object' && !firstVal.shop_nm;
+
+      const shops = isNested
+        ? Object.values(dayData).flatMap(brandData => Object.entries(brandData || {}))
+        : Object.entries(dayData);
+
+      shops.forEach(([shopCd, d]) => {
+        if(!d || !d.shop_nm) return;
+        // 브랜드 필터 (세션 브랜드 있으면 해당 브랜드만)
+        if(_myBrandId && d.brand_id && d.brand_id !== _myBrandId) return;
+        const sale = d.tot_sale_amt || 0;
+        const cnt  = d.tot_sale_cnt || 0;
+        const gst  = d.gst_cnt || 0;
         totalSale += sale; totalCnt += cnt; totalGst += gst;
         dayTotal.sale += sale;
-        if(!shopMap[shopCd]) shopMap[shopCd] = {name:d.shop_nm||shopCd, sale:0, cnt:0};
+        if(!shopMap[shopCd]) shopMap[shopCd] = {name: d.shop_nm||shopCd, sale:0, cnt:0};
         shopMap[shopCd].sale += sale;
         shopMap[shopCd].cnt  += cnt;
       });
@@ -1056,7 +1114,81 @@ async function editSupplier(id){
 }
 async function delSupplier(id){ if(!confirm('삭제할까요?'))return; await Auth.DB.remove('hq_suppliers/'+id); await loadSuppliers(); showToast('삭제'); }
 
-// ── 이바구밀면 시드 데이터 ────────────────────────────────
+// ── OKPos 설정 ────────────────────────────────────────────
+async function loadSettings(){
+  // 브랜드명 자동입력
+  document.getElementById('setOkposBrand').value = _myBrandName || '(브랜드 미연동)';
+
+  // 기존 저장된 설정 로드
+  const configPath = 'okpos_config' + (_myBrandId ? '/'+_myBrandId : '');
+  const cfg = await Auth.DB.get(configPath) || {};
+  if(cfg.okposId) document.getElementById('setOkposId').value = cfg.okposId;
+
+  // 전체 등록된 계정 목록
+  const allConfigs = await Auth.DB.get('okpos_config') || {};
+  const brands = await Auth.loadBrands();
+  const el = document.getElementById('okposConfigList');
+
+  const entries = Object.entries(allConfigs);
+  if(!entries.length){
+    el.innerHTML = '<div style="text-align:center;padding:30px;color:var(--dim);font-size:13px">등록된 OKPos 계정이 없습니다</div>';
+    return;
+  }
+
+  el.innerHTML = `<table class="lt"><thead><tr><th>브랜드</th><th>OKPos ID</th><th>상태</th><th>마지막 수집</th><th></th></tr></thead><tbody>`+
+    entries.map(([brandId, cfg])=>{
+      const brand = brands.find(b=>b.id===brandId);
+      return `<tr>
+        <td><strong>${brand?.name||brandId}</strong></td>
+        <td style="font-family:var(--mono)">${cfg.okposId||'-'}</td>
+        <td><span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:var(--green-bg);color:var(--green)">활성</span></td>
+        <td style="font-size:12px;color:var(--muted)">${cfg.lastCollected||'-'}</td>
+        <td><button class="delbtn" onclick="delOkposConfig('${brandId}')">삭제</button></td>
+      </tr>`;
+    }).join('')+'</tbody></table>';
+}
+
+async function saveOkposConfig(){
+  const okposId = document.getElementById('setOkposId').value.trim();
+  const okposPw = document.getElementById('setOkposPw').value.trim();
+  if(!okposId||!okposPw){ showToast('아이디와 비밀번호를 입력하세요'); return; }
+  if(!_myBrandId){ showToast('브랜드가 연동된 본사 계정으로 접속하세요'); return; }
+
+  await Auth.DB.set('okpos_config/'+_myBrandId, {
+    okposId,
+    okposPw,  // 실제 서비스에서는 암호화 필요
+    brandId:   _myBrandId,
+    brandName: _myBrandName,
+    updatedAt: new Date().toISOString(),
+    lastCollected: '-',
+  });
+  document.getElementById('setOkposPw').value = '';
+  await loadSettings();
+  showToast('OKPos 설정 저장 완료! 다음 새벽 2시에 자동 수집됩니다.');
+}
+
+async function testOkposConnect(){
+  const okposId = document.getElementById('setOkposId').value.trim();
+  const okposPw = document.getElementById('setOkposPw').value.trim();
+  const res = document.getElementById('okposTestResult');
+  if(!okposId||!okposPw){ showToast('아이디와 비밀번호를 입력하세요'); return; }
+  res.style.display='';
+  res.style.background='var(--surface2)';
+  res.style.color='var(--muted)';
+  res.textContent='연결 테스트 중...';
+  // 실제 테스트는 스크래퍼가 서버에서 실행되어야 하므로 저장 안내로 대체
+  await new Promise(r=>setTimeout(r,1500));
+  res.style.background='var(--amber-bg)';
+  res.style.color='var(--amber)';
+  res.textContent='⚠️ 브라우저에서는 직접 테스트가 어렵습니다. 저장 후 GitHub Actions에서 자동 검증됩니다.';
+}
+
+async function delOkposConfig(brandId){
+  if(!confirm('OKPos 설정을 삭제할까요?')) return;
+  await Auth.DB.remove('okpos_config/'+brandId);
+  await loadSettings();
+  showToast('삭제 완료');
+}
 async function seedIbaguData(){
   if(!confirm('이바구밀면 예시 데이터를 Firebase에 등록합니다.\n(브랜드·거래처·품목·가맹점·납품업체·소요량)')) return;
   showToast('등록 중...');
