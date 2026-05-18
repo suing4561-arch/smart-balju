@@ -12,8 +12,8 @@ import re
 from typing import Optional
 
 CONFIG = {
-    "id":       "hhxs",
-    "pw":       "00667",
+    "id":       "여기에_OKPos_아이디",
+    "pw":       "여기에_OKPos_비밀번호",
     "base_url": "https://nice.okpos.co.kr",
 }
 
