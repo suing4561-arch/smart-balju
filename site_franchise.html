@@ -416,7 +416,7 @@ function showToast(msg){ const el=document.getElementById('toast'); el.textConte
 async function loadHqProducts(filterBrandId = ''){
   document.getElementById('productList').innerHTML='<div class="loading-state"><div class="spinner"></div>본사 품목 불러오는 중...</div>';
   try {
-    const [menus, prices] = await Promise.all([Auth.loadMenus(), Auth.loadPrices()]);
+    const menus = await Auth.loadMenus();
 
     // 삭제된 품목 제외 (name 없거나 빈 항목 제거)
     const validMenus = menus.filter(m => m && m.name && m.name.trim());
@@ -436,9 +436,11 @@ async function loadHqProducts(filterBrandId = ''){
     PRODUCTS = validMenus
       .filter(m => filterBrandId ? m.brandId === filterBrandId : true)
       .map(m=>{
-      const priceObj = prices.find(p=>p.menuId===m.id);
       const cat = catMap[m.category]||'other';
-      return { id:m.id, cat, emoji:emojiMap[m.category]||'📦', name:m.name, spec:m.spec||'-', code:m.code||'', supplier:m.partnerName||'-', price:Number(priceObj?.price)||0, unit:m.unit||priceObj?.unit||'개', stock:70, minOrder:Number(m.minQty)||1, maxOrder:Number(m.maxQty)||999 };
+      // prices/ 별도 조회 없이 menus에 저장된 price 직접 사용
+      const price = Number(m.price) || 0;
+      const unit = m.unit || '개';
+      return { id:m.id, cat, emoji:emojiMap[m.category]||'📦', name:m.name, spec:m.spec||'-', code:m.code||'', supplier:m.partnerName||'-', price, unit, stock:70, minOrder:Number(m.minQty)||1, maxOrder:Number(m.maxQty)||999 };
     });
 
     // 카테고리 탭 구성
