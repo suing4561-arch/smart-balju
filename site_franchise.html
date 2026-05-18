@@ -194,8 +194,8 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);display:flex
         <div class="store-sub" id="headerDate">로딩 중...</div>
       </div>
       <div class="home-tabs">
-        <button class="home-tab active" id="htab-order" onclick="switchHomeTab('order')">수발주 현황</button>
-        <button class="home-tab" id="htab-sales" onclick="switchHomeTab('sales')">매출 현황</button>
+        <button class="home-tab active" onclick="switchHomeTab('order')">수발주 현황</button>
+        <button class="home-tab" onclick="switchHomeTab('sales')">매출 현황</button>
       </div>
       <div class="scroll-body">
         <div class="alert-banner" id="stockAlertBanner" style="display:none">
@@ -281,7 +281,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);display:flex
     <div class="page" id="page-delivery">
       <div class="app-header" style="border-bottom:.5px solid var(--line)">
         <div style="font-size:17px;font-weight:700">배송 현황</div>
-        <div style="font-size:11px;color:var(--dim);margin-top:3px" id="deliveryStoreName">—</div>
+        <div style="font-size:11px;color:var(--dim);margin-top:3px">대상 부산 1호점</div>
       </div>
       <div style="padding:14px 20px;flex:1" id="deliveryPage">
         <div class="loading-state"><div class="spinner"></div>불러오는 중...</div>
@@ -369,7 +369,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);display:flex
     </div>
     <div style="font-size:13px;color:var(--muted);padding:10px 20px 0">본사에서 등록한 가맹점을 선택하세요</div>
     <div id="storeSelectList" style="overflow-y:auto;padding:12px 20px;display:flex;flex-direction:column;gap:8px">
-      <div class="loading-state">불러오는 중...</div>
+      <div style="display:flex;align-items:center;justify-content:center;padding:30px;gap:8px;color:var(--muted)"><div class="spinner" style="width:16px;height:16px;border:2px solid var(--line);border-top-color:var(--blue);border-radius:50%;animation:spin .7s linear infinite"></div>불러오는 중...</div>
     </div>
   </div>
 </div>
@@ -381,7 +381,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);display:flex
 const Auth = window.SmartBaljuAuth;
 
 // ── 상태 ───────────────────────────────────────────────────
-let PRODUCTS = [];
+let PRODUCTS = [];  // 본사 Firebase에서 로드
 let CATEGORIES = [{id:'all',label:'전체',icon:'ti-layout-grid'}];
 let cart = {};
 let currentCat = 'all';
@@ -402,39 +402,49 @@ function goTo(id){
 
 // ── 홈 탭 ──────────────────────────────────────────────────
 function switchHomeTab(tab){
-  ['order','sales'].forEach(t=>{
-    document.getElementById('htab-'+t).classList.toggle('active',t===tab);
-    document.getElementById('panel-'+t).classList.toggle('active',t===tab);
-  });
+  ['order','sales'].forEach(t=>{ document.getElementById('htab-'+t)?.classList.toggle('active',t===tab); });
+  ['order','sales'].forEach(t=>{ document.getElementById('panel-'+t).classList.toggle('active',t===tab); });
 }
+// 홈탭 버튼 id 수정
+document.querySelectorAll('.home-tab').forEach((b,i)=>b.id='htab-'+['order','sales'][i]);
 
 // ── 토스트 ─────────────────────────────────────────────────
 let _tt;
 function showToast(msg){ const el=document.getElementById('toast'); el.textContent=msg; el.classList.add('show'); clearTimeout(_tt); _tt=setTimeout(()=>el.classList.remove('show'),2200); }
 
 // ── 본사 품목 Firebase 로드 ────────────────────────────────
-async function loadHqProducts(filterBrandId=''){
+async function loadHqProducts(filterBrandId = ''){
   document.getElementById('productList').innerHTML='<div class="loading-state"><div class="spinner"></div>본사 품목 불러오는 중...</div>';
   try {
     const [menus, prices] = await Promise.all([Auth.loadMenus(), Auth.loadPrices()]);
-    if(!menus.length){
+
+    // 삭제된 품목 제외 (name 없거나 빈 항목 제거)
+    const validMenus = menus.filter(m => m && m.name && m.name.trim());
+
+    if(!validMenus.length){
       document.getElementById('productList').innerHTML='<div class="empty-state">본사에 등록된 품목이 없습니다.<br>본사 관리자에게 문의하세요.</div>';
       document.getElementById('orderSubTitle').textContent='품목 0개';
       return;
     }
+
+    // 카테고리 매핑
     const catMap={'육류':'meat','면류':'noodle','곡류':'grain','유지류':'oil','소스류':'sauce','채소류':'veg','음료':'drink','포장재':'pack','기타':'other'};
     const emojiMap={'육류':'🍗','면류':'🍜','곡류':'🌾','유지류':'🫙','소스류':'🍶','채소류':'🥬','음료':'🧃','포장재':'📦','기타':'📋'};
     const labelMap={'meat':'육류','noodle':'면류','grain':'곡류','oil':'유지류','sauce':'소스류','veg':'채소류','drink':'음료','pack':'포장재','other':'기타'};
     const iconMap={'meat':'ti-meat','noodle':'ti-tools-kitchen-2','grain':'ti-grain','oil':'ti-droplet','sauce':'ti-bottle','veg':'ti-plant','drink':'ti-cup','pack':'ti-box','other':'ti-package'};
-    PRODUCTS = menus
+
+    PRODUCTS = validMenus
       .filter(m => filterBrandId ? m.brandId === filterBrandId : true)
       .map(m=>{
-        const priceObj = prices.find(p=>p.menuId===m.id);
-        const cat = catMap[m.category]||'other';
-        return { id:m.id, cat, emoji:emojiMap[m.category]||'📦', name:m.name, spec:m.spec||'-', code:m.code||'', supplier:m.partnerName||'-', price:Number(priceObj?.price)||0, unit:m.unit||priceObj?.unit||'개', stock:70, minOrder:Number(m.minQty)||1, maxOrder:Number(m.maxQty)||999 };
-      });
+      const priceObj = prices.find(p=>p.menuId===m.id);
+      const cat = catMap[m.category]||'other';
+      return { id:m.id, cat, emoji:emojiMap[m.category]||'📦', name:m.name, spec:m.spec||'-', code:m.code||'', supplier:m.partnerName||'-', price:Number(priceObj?.price)||0, unit:m.unit||priceObj?.unit||'개', stock:70, minOrder:Number(m.minQty)||1, maxOrder:Number(m.maxQty)||999 };
+    });
+
+    // 카테고리 탭 구성
     const usedCats=[...new Set(PRODUCTS.map(p=>p.cat))];
     CATEGORIES=[{id:'all',label:'전체',icon:'ti-layout-grid'},...usedCats.map(c=>({id:c,label:labelMap[c]||c,icon:iconMap[c]||'ti-package'}))];
+
     document.getElementById('orderSubTitle').textContent='품목 '+PRODUCTS.length+'개';
     renderCats(); renderProducts();
     loadStockStatus();
@@ -445,11 +455,16 @@ async function loadHqProducts(filterBrandId=''){
   }
 }
 
-// ── 재고 현황 ──────────────────────────────────────────────
+// ── 재고 현황 (소요량 기반) ────────────────────────────────
 async function loadStockStatus(){
-  const recipesData = await new Promise(resolve => Auth.DB.get('recipes', resolve));
-  const recipeList = recipesData ? Object.values(recipesData) : [];
-  if(!recipeList.length){ renderDefaultStock(); return; }
+  const recipes = await Auth.DB.get('recipes') || {};
+  const recipeList = Object.values(recipes);
+  if(!recipeList.length){
+    // 소요량 미등록 시 품목별 기본 재고 표시
+    renderDefaultStock();
+    return;
+  }
+  // 소요량 등록된 재료 위주로 재고 표시
   const stockItems = [];
   recipeList.forEach(r=>{
     (r.ingredients||[]).forEach(ing=>{
@@ -473,6 +488,7 @@ function renderStockItems(items){
     alertEl.style.display='';
     alertText.textContent=alerts.map(a=>a.name).join(', ')+' — 재고 '+alerts[0].threshold+'% 이상 소진. 발주를 권고합니다.';
   } else { alertEl.style.display='none'; }
+
   const el=document.getElementById('stockList');
   if(!items.length){ el.innerHTML='<div class="empty-state">재고 데이터 없음</div>'; return; }
   el.innerHTML=items.map(item=>{
@@ -486,6 +502,9 @@ function renderStockItems(items){
       <div class="stock-bar-wrap"><div class="stock-bar-track"><div class="stock-bar-fill" style="width:${item.pct}%;background:${color}"></div></div><div class="stock-pct">${item.pct}%</div></div>
     </div>`;
   }).join('');
+  document.getElementById('goto-order-btn-wrap')?.appendChild(
+    Object.assign(document.createElement('button'),{className:'goto-order-btn',onclick:()=>goTo('order'),innerHTML:'<i class="ti ti-truck-delivery"></i>부족한 재고 바로 발주하기'})
+  );
 }
 
 // ── 수발주 현황 ────────────────────────────────────────────
@@ -494,8 +513,8 @@ async function loadOsiList(){
   const el = document.getElementById('osiList');
   if(!deliveries.length){ el.innerHTML='<div class="empty-state">진행중인 수발주 없음</div>'; return; }
   const recent = deliveries.slice(-3).reverse();
-  const ST={assigned:{icon:'ti-clock',bg:'var(--surface2)',color:'var(--muted)',chip:'chip-draft',label:'준비중'},shipping:{icon:'ti-truck-delivery',bg:'var(--blue-bg)',color:'var(--blue)',chip:'chip-shipping',label:'배송중'},done:{icon:'ti-circle-check',bg:'var(--green-bg)',color:'var(--green)',chip:'chip-done',label:'완료'},issue:{icon:'ti-alert-triangle',bg:'var(--red-bg)',color:'var(--red)',chip:'chip-draft',label:'이슈'}};
-  el.innerHTML=recent.map(d=>{ const s=ST[d.status]||ST.assigned; return `<div class="osi"><div class="osi-icon" style="background:${s.bg}"><i class="ti ${s.icon}" style="color:${s.color}"></i></div><div style="flex:1"><div class="osi-title">${(d.items||'품목 없음').slice(0,20)}</div><div class="osi-sub">${d.storeName||''} · ${(d.createdAt||'').slice(0,10)}</div><span class="osi-chip ${s.chip}">${s.label}</span></div><div style="font-family:var(--mono);font-size:13px;font-weight:700">${(d.amount||0).toLocaleString()}원</div></div>`; }).join('');
+  const ST={assigned:{icon:'ti-clock',bg:'var(--surface2)',color:'var(--muted)',chip:'sc-p',label:'준비중'},shipping:{icon:'ti-truck-delivery',bg:'var(--blue-bg)',color:'var(--blue)',chip:'sc-s',label:'배송중'},done:{icon:'ti-circle-check',bg:'var(--green-bg)',color:'var(--green)',chip:'sc-d',label:'완료'},issue:{icon:'ti-alert-triangle',bg:'var(--red-bg)',color:'var(--red)',chip:'sc-p',label:'이슈'}};
+  el.innerHTML=recent.map(d=>{ const s=ST[d.status]||ST.assigned; return `<div class="osi"><div class="osi-icon" style="background:${s.bg}"><i class="ti ${s.icon}" style="color:${s.color}"></i></div><div style="flex:1"><div class="osi-title">${d.items?.slice(0,20)||'품목 없음'}</div><div class="osi-sub">${d.storeName||''} · ${(d.createdAt||'').slice(0,10)}</div><span class="osi-chip ${s.chip}">${s.label}</span></div><div style="font-family:var(--mono);font-size:13px;font-weight:700">${(d.amount||0).toLocaleString()}원</div></div>`; }).join('');
 }
 
 // ── 카테고리 탭 ────────────────────────────────────────────
@@ -536,6 +555,7 @@ function renderProducts(){
 // ── 장바구니 ───────────────────────────────────────────────
 function cartItems(){ return Object.entries(cart).map(([id,qty])=>({...PRODUCTS.find(p=>p.id===id),qty})).filter(Boolean); }
 function cartTotal(){ return cartItems().reduce((s,i)=>s+i.price*i.qty,0); }
+
 function addToCart(id){ const p=PRODUCTS.find(x=>x.id===id); if(!p)return; cart[id]=p.minOrder||1; updateUI(); showToast(p.name+' 담겼습니다'); }
 function changeQty(id,delta){ const p=PRODUCTS.find(x=>x.id===id); if(!p)return; const next=(cart[id]||0)+delta; if(next<=0)delete cart[id]; else if(next>p.maxOrder){showToast('최대 '+p.maxOrder+p.unit);return;} else cart[id]=next; updateUI(); }
 
@@ -543,8 +563,8 @@ function updateUI(){
   renderProducts();
   const items=cartItems(),total=cartTotal(),cnt=items.length;
   const fb=document.getElementById('floatBtn');
-  if(cnt===0){ fb.className='float-btn empty'; fb.querySelector('span').textContent='장바구니'; }
-  else { fb.className='float-btn'; fb.querySelector('span').textContent='장바구니 보기'; }
+  if(cnt===0){ fb.className='float-btn empty'; fb.querySelector('span:first-of-type').textContent='장바구니'; }
+  else { fb.className='float-btn'; fb.querySelector('span:first-of-type').textContent='장바구니 보기'; }
   document.getElementById('floatTotal').textContent=total.toLocaleString()+'원';
   const cc=document.getElementById('cartCount'); cc.style.display=cnt>0?'flex':'none'; cc.textContent=cnt;
   document.getElementById('sumItems').textContent=cnt+'종';
@@ -561,17 +581,23 @@ function closeCart(){ document.getElementById('cartBg').classList.remove('show')
 
 // ── 발주 확정 ──────────────────────────────────────────────
 function openConfirm(){
-  const items=cartItems(); if(!items.length)return;
+  const items=cartItems(); if(!items.length){ showToast('장바구니가 비어있습니다'); return; }
   const total=cartTotal(),d=new Date(); d.setDate(d.getDate()+1);
-  document.getElementById('confirmDetail').innerHTML=`<div class="od-row"><span class="od-label">품목 수</span><span class="od-val">${items.length}종</span></div><div class="od-row"><span class="od-label">총 금액</span><span class="od-val">${total.toLocaleString()}원</span></div><div class="od-row"><span class="od-label">예상 도착</span><span class="od-val">${d.getMonth()+1}/${d.getDate()} 오전</span></div>`;
-  closeCart(); document.getElementById('confirmOverlay').classList.add('show');
+  document.getElementById('confirmDetail').innerHTML=
+    `<div class="od-row"><span class="od-label">품목 수</span><span class="od-val">${items.length}종</span></div>
+     <div class="od-row"><span class="od-label">총 금액</span><span class="od-val">${total.toLocaleString()}원</span></div>
+     <div class="od-row"><span class="od-label">예상 도착</span><span class="od-val">${d.getMonth()+1}/${d.getDate()} 오전</span></div>`;
+  closeCart();
+  // 장바구니 닫힘 애니메이션 후 오버레이 표시
+  setTimeout(()=>{ document.getElementById('confirmOverlay').classList.add('show'); }, 200);
 }
 function closeConfirm(){ document.getElementById('confirmOverlay').classList.remove('show'); }
 async function submitOrder(){
   const items=cartItems(),total=cartTotal();
   const no='ORD-'+new Date().toISOString().slice(0,10).replace(/-/g,'')+'-'+String(Math.floor(Math.random()*900)+100);
+  // Firebase에 발주 저장
   try {
-    await new Promise(resolve => Auth.DB.set('franchise_orders/'+no, {id:no,items:items.map(i=>i.name+' '+i.qty+i.unit).join(' · '),itemDetails:items,amount:total,status:'waiting',createdAt:new Date().toISOString()}, resolve));
+    await Auth.DB.set('franchise_orders/'+no,{id:no,items:items.map(i=>i.name+' '+i.qty+i.unit).join(' · '),itemDetails:items,amount:total,status:'waiting',createdAt:new Date().toISOString()});
   } catch(e){ console.warn('발주 저장 실패:', e); }
   closeConfirm();
   document.getElementById('orderNo').textContent='주문번호: '+no;
@@ -586,7 +612,7 @@ async function loadDeliveryPage(){
   const list=await Auth.loadDeliveries();
   if(!list.length){ el.innerHTML='<div class="empty-state">진행중인 배송 없음</div>'; return; }
   const ST={assigned:{l:'준비중',cls:'sc-p',bg:'var(--surface2)'},shipping:{l:'배송중',cls:'sc-s',bg:'var(--blue-bg)'},done:{l:'완료',cls:'sc-d',bg:'var(--green-bg)'},issue:{l:'이슈',cls:'',bg:'var(--red-bg)'}};
-  el.innerHTML=list.map(d=>{const s=ST[d.status]||ST.assigned;return`<div class="dlv-card"><div class="dlv-hdr"><div class="dlv-icon" style="background:${s.bg}"><i class="ti ti-truck-delivery" style="color:var(--blue)"></i></div><div style="flex:1"><div class="dlv-title">${(d.items||'품목 없음').slice(0,30)}</div><div class="dlv-sub">${d.driverName||'기사 미배정'}</div><div class="dlv-sub">${(d.createdAt||'').slice(0,10)}</div></div><span class="sc ${s.cls}">${s.l}</span></div></div>`;}).join('');
+  el.innerHTML=list.map(d=>{const s=ST[d.status]||ST.assigned;return`<div class="dlv-card"><div class="dlv-hdr"><div class="dlv-icon" style="background:${s.bg}"><i class="ti ti-truck-delivery" style="color:var(--blue)"></i></div><div style="flex:1"><div class="dlv-title">${d.items?.slice(0,30)||'품목 없음'}</div><div class="dlv-sub">${d.driverName||'기사 미배정'}</div><div class="dlv-sub">${(d.createdAt||'').slice(0,10)}</div></div><span class="sc ${s.cls}">${s.l}</span></div></div>`;}).join('');
 }
 
 // ── 가맹점 선택 ────────────────────────────────────────────
@@ -595,23 +621,28 @@ let _currentStore = null;
 async function openStoreSelect() {
   document.getElementById('storeSelectModal').classList.add('show');
   const el = document.getElementById('storeSelectList');
-  el.innerHTML = '<div class="loading-state"><div class="spinner"></div>불러오는 중...</div>';
+  el.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;padding:30px;gap:8px;color:var(--muted)"><div class="spinner" style="width:16px;height:16px;border:2px solid var(--line);border-top-color:var(--blue);border-radius:50%;animation:spin .7s linear infinite"></div>불러오는 중...</div>';
+
   const [users, stores] = await Promise.all([
     Auth.loadUsers(),
     Auth.loadSupplierFranchises()
   ]);
+  // 가맹점 계정 + 납품업체에 등록된 배송지
   const franchiseUsers = users.filter(u => u.role === 'franchise' && u.status === 'active');
+
   const list = [];
-  franchiseUsers.forEach(u => list.push({ id: u.uid, name: u.businessName || u.name || u.loginId, sub: u.businessNumber || u.phone || u.loginId, brandName: u.brandName || '', brandId: u.brandId || '', type: 'user', data: u }));
+  franchiseUsers.forEach(u => list.push({ id: u.uid, name: u.businessName || u.name || u.loginId, sub: u.businessNumber || u.phone || u.loginId, brandName: u.brandName || '', type: 'user', data: u }));
   stores.forEach(s => {
     if(!list.find(x => x.name === s.businessName)) {
-      list.push({ id: s.id, name: s.businessName, sub: s.address || s.phone || '', brandName: '', brandId: '', type: 'store', data: s });
+      list.push({ id: s.id, name: s.businessName, sub: s.address || s.phone || '', type: 'store', data: s });
     }
   });
+
   if(!list.length) {
-    el.innerHTML = '<div class="empty-state">등록된 가맹점이 없습니다.<br>Master에서 가맹점 계정을 먼저 생성하세요.</div>';
+    el.innerHTML = '<div style="text-align:center;padding:30px;color:var(--dim);font-size:13px">등록된 가맹점이 없습니다.<br>Master에서 가맹점 계정을 먼저 생성하세요.</div>';
     return;
   }
+
   el.innerHTML = list.map(s => `
     <div onclick='selectStore(${JSON.stringify(s).replace(/'/g,"&#39;")})' style="display:flex;align-items:center;gap:12px;padding:12px 14px;border:.5px solid var(--line);border-radius:12px;cursor:pointer;background:var(--surface)">
       <div style="width:38px;height:38px;border-radius:10px;background:var(--green-bg);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">
@@ -629,11 +660,14 @@ function selectStore(s) {
   _currentStore = s;
   document.getElementById('storeNameText').textContent = s.name;
   document.getElementById('headerDate').textContent = s.sub || '';
-  document.getElementById('deliveryStoreName').textContent = s.name;
   document.getElementById('storeSelectModal').classList.remove('show');
   showToast(s.name + ' 선택됨');
-  if(s.brandId) { loadHqProducts(s.brandId); }
-  else { loadHqProducts(); }
+  // 해당 가맹점 브랜드로 품목 필터링
+  if(s.data?.brandId) {
+    loadHqProducts(s.data.brandId);
+  } else {
+    loadHqProducts();
+  }
 }
 
 // 세션 자동 복원
@@ -644,7 +678,6 @@ function selectStore(s) {
     if(session.brandId) loadHqProducts(session.brandId);
   }
 })();
-
 async function init(){
   await loadHqProducts();
   await loadOsiList();

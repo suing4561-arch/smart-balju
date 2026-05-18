@@ -295,6 +295,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
             <div style="font-size:11px;font-weight:700;color:var(--dim);margin-bottom:8px;display:flex;align-items:center;gap:8px">
               등록된 품목
               <span id="menuCount" style="background:var(--blue-bg);color:var(--blue);font-size:10px;padding:1px 7px;border-radius:999px;font-weight:700">0</span>
+              <button onclick="rMenu()" style="margin-left:auto;padding:4px 10px;border-radius:7px;border:.5px solid var(--line);background:var(--surface2);font-size:11px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:4px"><i class="ti ti-refresh" style="font-size:12px"></i>조회</button>
             </div>
             <div style="overflow:auto;max-height:300px">
               <table class="lt">
@@ -554,12 +555,12 @@ function goto(p){
   if(p==='settings') loadSettings();
 }
 
-function switchRegTab(tab) {
+async function switchRegTab(tab) {
   ['code','menu','recipe'].forEach(t=>{
     document.getElementById('regp-'+t).classList.toggle('active',t===tab);
   });
   document.querySelectorAll('.reg-tab').forEach((b,i)=>b.classList.toggle('active',['code','menu','recipe'][i]===tab));
-  if(tab==='menu') refreshMenuSelects();
+  if(tab==='menu') { await refreshMenuSelects(); await rMenu(); }
   if(tab==='recipe') { refreshIngSelect(); loadRecipes(); }
 }
 
