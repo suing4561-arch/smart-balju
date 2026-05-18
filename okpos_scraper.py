@@ -1,7 +1,8 @@
 """
-나이스오케이포스 ASP 매출 자동 수집 스크래퍼 v8
+나이스오케이포스 ASP 매출 자동 수집 스크래퍼 v9
 - JSON 응답 파싱
-- 토큰 자동 추출
+- Firebase REST API 직접 저장 (서비스계정 불필요)
+- 환경변수(.env) 또는 GitHub Secrets에서 인증정보 로드
 """
 
 import requests
@@ -9,17 +10,27 @@ import json
 import datetime
 import time
 import re
+import os
 from typing import Optional
 
+# .env 파일 자동 로드 (로컬 실행 시)
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
+
 CONFIG = {
-    "id":       "여기에_OKPos_아이디",
-    "pw":       "여기에_OKPos_비밀번호",
+    "id":       os.environ.get("OKPOS_ID", ""),
+    "pw":       os.environ.get("OKPOS_PW", ""),
     "base_url": "https://nice.okpos.co.kr",
 }
 
-FIREBASE_ENABLED = False
-# FIREBASE_CREDENTIAL_PATH = "firebase-credentials.json"
-# FIREBASE_DB_URL = "https://your-project.firebaseio.com"
+FIREBASE_DB_URL = os.environ.get(
+    "FIREBASE_DB_URL",
+    "https://smart-balju-default-rtdb.asia-southeast1.firebasedatabase.app"
+)
+FIREBASE_ENABLED = True
 
 
 def get_hidden_fields(html: str) -> dict:
@@ -48,7 +59,13 @@ def login(session: requests.Session) -> bool:
     base = CONFIG["base_url"]
     uid  = CONFIG["id"]
     upw  = CONFIG["pw"]
-    hdr  = lambda ref: {
+
+    if not uid or not upw:
+        print("❌ OKPOS_ID / OKPOS_PW 환경변수가 설정되지 않았습니다.")
+        print("   .env 파일을 만들거나 환경변수를 설정하세요.")
+        return False
+
+    hdr = lambda ref: {
         "Referer": ref, "Origin": base,
         "Content-Type": "application/x-www-form-urlencoded",
     }
@@ -96,7 +113,6 @@ def fetch_sales(session: requests.Session, date_from: str,
                 date_to: str, shop_cd: str = "") -> Optional[list]:
     base = CONFIG["base_url"]
 
-    # 매출 페이지 접속 → 토큰 추출
     r_page = session.get(f"{base}/sale/day/day_jump010.jsp", timeout=15)
     print(f"[매출페이지] {r_page.status_code}, {len(r_page.content):,} bytes")
 
@@ -119,26 +135,9 @@ def fetch_sales(session: requests.Session, date_from: str,
             "TOT_SALE_AMT|TOT_DC_AMT|DCM_SALE_AMT|"
             "NO_TAX_SALE_AMT|VAT_AMT|TOT_SALE_CNT|"
             "DCM_TOT_RATE|FD_GST_CNT_T|SALE_PER_GST|"
-            "FD_GST_CNT_1|FD_GST_CNT_2|FD_GST_CNT_3|FD_GST_CNT_4|"
             "TABLE_CNT|SALE_PER_TABLE|GST_PER_TABLE|"
-            "SVC_TIP_AMT|TOT_ETC_AMT|TOT_PAY_AMT|"
             "CASH_AMT2|CASH_BILL_AMT|CRD_CARD_AMT|"
-            "WES_AMT|TK_GFT_AMT|TK_FOD_AMT|CST_POINT_AMT|"
-            "JCD_CARD_AMT|KP_AMT|"
-            "P01_AMT|P02_AMT|P03_AMT|P04_AMT|P05_AMT|"
-            "P06_AMT|P07_AMT|P08_AMT|P09_AMT|P10_AMT|"
-            "P11_AMT|P12_AMT|P13_AMT|P14_AMT|P15_AMT|"
-            "P16_AMT|P17_AMT|P18_AMT|P19_AMT|P20_AMT|"
-            "P21_AMT|P22_AMT|P23_AMT|P24_AMT|P25_AMT|"
-            "P26_AMT|P27_AMT|P28_AMT|P29_AMT|P30_AMT|"
-            "P99_AMT|RFC_AMT|MCP_AMT|PCD_CARD_AMT|EGIFT_AMT|"
-            "O2O_AMT|ETC_PAY_AMT|"
-            "GEN_DCM_SALE_AMT|GEN_DCM_SALE_RATE|"
-            "PKG_DCM_SALE_AMT|PKG_DCM_SALE_RATE|"
-            "DLV_DCM_SALE_AMT|DLV_DCM_SALE_RATE|"
-            "DC_GEN_AMT|DC_SVC_AMT|DC_PCD_AMT|DC_CPN_AMT|"
-            "DC_CST_AMT|DC_TFD_AMT|DC_PACK_AMT|DC_YAP_AMT|"
-            "A_TAX_RFND_AMT|D_TAX_RFND_AMT|D_TAX_RFND_FEE"
+            "WES_AMT|TK_GFT_AMT|O2O_AMT|ETC_PAY_AMT"
         ),
         "S_ORDERBY":    "",
         "date1_1":      date_from,
@@ -166,22 +165,20 @@ def fetch_sales(session: requests.Session, date_from: str,
     if resp.status_code != 200:
         return None
 
-    # ── JSON 파싱 ──
     return parse_json(resp.text, date_from)
 
 
 def parse_json(raw: str, date: str) -> list:
-    """JSON 형식 응답 파싱"""
     try:
         data = json.loads(raw)
     except Exception as e:
-        print(f"[파싱 오류] JSON 파싱 실패: {e}")
+        print(f"[파싱 오류] {e}")
         print(f"[원문] {raw[:300]}")
         return []
 
     rows = data.get("Data", [])
     if not rows:
-        print(f"[파싱] Data 없음. 전체 키: {list(data.keys())}")
+        print(f"[파싱] Data 없음. 키: {list(data.keys())}")
         print(f"[원문] {raw[:300]}")
         return []
 
@@ -189,30 +186,24 @@ def parse_json(raw: str, date: str) -> list:
     for row in rows:
         shop_cd = row.get("SHOP_CD", "")
         if not shop_cd:
-            continue  # 합계 행 제외
+            continue
 
         def to_int(v):
-            try:
-                return int(float(str(v).replace(",", "")))
-            except:
-                return 0
+            try: return int(float(str(v).replace(",", "")))
+            except: return 0
 
         results.append({
             "SALE_DATE":    row.get("SALE_DATE", date),
-            "SALE_YOIL":    row.get("SALE_YOIL", ""),
             "SHOP_CD":      shop_cd,
             "SHOP_NM":      row.get("SHOP_NM", ""),
             "TOT_SALE_AMT": to_int(row.get("TOT_SALE_AMT", 0)),
-            "TOT_DC_AMT":   to_int(row.get("TOT_DC_AMT", 0)),
             "DCM_SALE_AMT": to_int(row.get("DCM_SALE_AMT", 0)),
             "TOT_SALE_CNT": to_int(row.get("TOT_SALE_CNT", 0)),
             "FD_GST_CNT_T": to_int(row.get("FD_GST_CNT_T", 0)),
             "SALE_PER_GST": to_int(row.get("SALE_PER_GST", 0)),
             "CRD_CARD_AMT": to_int(row.get("CRD_CARD_AMT", 0)),
             "CASH_AMT2":    to_int(row.get("CASH_AMT2", 0)),
-            "CASH_BILL_AMT":to_int(row.get("CASH_BILL_AMT", 0)),
             "VAT_AMT":      to_int(row.get("VAT_AMT", 0)),
-            "TABLE_CNT":    to_int(row.get("TABLE_CNT", 0)),
         })
 
     print(f"[파싱 완료] {len(results)}개 가맹점")
@@ -225,32 +216,16 @@ def save_to_json(sales_data: list, date: str):
     for row in sales_data:
         shop_cd = row.get("SHOP_CD", "")
         if shop_cd:
-            output[shop_cd] = {
-                "shop_nm":      row.get("SHOP_NM", ""),
-                "date":         date,
-                "tot_sale_amt": row.get("TOT_SALE_AMT", 0),
-                "dcm_sale_amt": row.get("DCM_SALE_AMT", 0),
-                "tot_sale_cnt": row.get("TOT_SALE_CNT", 0),
-                "gst_cnt":      row.get("FD_GST_CNT_T", 0),
-                "sale_per_gst": row.get("SALE_PER_GST", 0),
-                "card_amt":     row.get("CRD_CARD_AMT", 0),
-                "cash_amt":     row.get("CASH_AMT2", 0),
-                "updated_at":   datetime.datetime.now().strftime("%H:%M"),
-            }
+            output[shop_cd] = {k.lower(): v for k, v in row.items()}
+            output[shop_cd]["updated_at"] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
     with open(filename, "w", encoding="utf-8") as f:
         json.dump(output, f, ensure_ascii=False, indent=2)
-    print(f"✅ JSON 저장: {filename} ({len(output)}개 가맹점)")
-    return filename
+    print(f"✅ JSON 백업: {filename} ({len(output)}개 가맹점)")
 
 
 def save_to_firebase(sales_data: list, date: str):
     try:
-        import firebase_admin
-        from firebase_admin import credentials, db
-        if not firebase_admin._apps:
-            cred = credentials.Certificate(FIREBASE_CREDENTIAL_PATH)
-            firebase_admin.initialize_app(cred, {"databaseURL": FIREBASE_DB_URL})
-        ref = db.reference(f"okpos_sales/{date.replace('-','')}")
+        date_key = date.replace('-', '')
         output = {}
         for row in sales_data:
             shop_cd = row.get("SHOP_CD", "")
@@ -265,11 +240,20 @@ def save_to_firebase(sales_data: list, date: str):
                     "sale_per_gst": row.get("SALE_PER_GST", 0),
                     "card_amt":     row.get("CRD_CARD_AMT", 0),
                     "cash_amt":     row.get("CASH_AMT2", 0),
-                    "updated_at":   datetime.datetime.now().strftime("%H:%M"),
+                    "updated_at":   datetime.datetime.now().strftime("%Y-%m-%d %H:%M"),
                 }
-        ref.set(output)
-        print(f"✅ Firebase 저장: {len(output)}개 가맹점")
-        return True
+
+        url = f"{FIREBASE_DB_URL}/okpos_sales/{date_key}.json"
+        print(f"[Firebase] PUT → okpos_sales/{date_key}")
+        resp = requests.put(url, json=output, timeout=15)
+
+        if resp.status_code == 200:
+            print(f"✅ Firebase 저장 완료! {len(output)}개 가맹점")
+            return True
+        else:
+            print(f"❌ Firebase 저장 실패: HTTP {resp.status_code}")
+            print(f"   {resp.text[:200]}")
+            return False
     except Exception as e:
         print(f"❌ Firebase 오류: {e}")
         return False
@@ -281,23 +265,21 @@ def main(date_from=None, date_to=None):
         date_from = date_to = yesterday.strftime("%Y-%m-%d")
 
     print(f"\n{'='*50}")
-    print(f"  나이스오케이포스 매출 수집 v8")
+    print(f"  나이스오케이포스 매출 수집 v9")
     print(f"  조회: {date_from} ~ {date_to}")
-    print(f"  계정: {CONFIG['id']}")
+    print(f"  계정: {CONFIG['id'] or '(미설정)'}")
+    print(f"  Firebase: {'ON' if FIREBASE_ENABLED else 'OFF'}")
     print(f"{'='*50}\n")
 
     session = requests.Session()
     session.headers.update({
-        "User-Agent": (
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-            "AppleWebKit/537.36 (KHTML, like Gecko) "
-            "Chrome/124.0.0.0 Safari/537.36"
-        ),
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124.0.0.0 Safari/537.36",
         "Accept-Language": "ko-KR,ko;q=0.9",
     })
 
     if not login(session):
-        input("\n아무 키나 누르면 닫힙니다...")
+        try: input("\n아무 키나 누르면 닫힙니다...")
+        except: pass
         return
 
     time.sleep(1)
@@ -305,34 +287,27 @@ def main(date_from=None, date_to=None):
 
     if not sales:
         print("\n❌ 매출 데이터 없음")
-        input("\n아무 키나 누르면 닫힙니다...")
+        try: input("\n아무 키나 누르면 닫힙니다...")
+        except: pass
         return
 
     print(f"\n{'='*55}")
-    print(f"  📊 수집 결과 ({date_from})")
+    print(f"  수집 결과 ({date_from})")
     print(f"{'='*55}")
-    print(f"{'매장명':<20} {'총매출':>12} {'실매출':>12} {'주문':>6} {'고객':>6}")
-    print("-" * 60)
+    print(f"{'매장명':<20} {'총매출':>12} {'실매출':>12} {'주문':>6}")
+    print("-" * 55)
     for row in sales:
-        print(
-            f"{row.get('SHOP_NM',''):<20} "
-            f"{row.get('TOT_SALE_AMT',0):>12,} "
-            f"{row.get('DCM_SALE_AMT',0):>12,} "
-            f"{row.get('TOT_SALE_CNT',0):>6,} "
-            f"{row.get('FD_GST_CNT_T',0):>6,}"
-        )
-    total = sum(r.get("TOT_SALE_AMT", 0) for r in sales)
-    print("-" * 60)
-    print(f"{'합계':<20} {total:>12,}")
+        print(f"{row.get('SHOP_NM',''):<20} {row.get('TOT_SALE_AMT',0):>12,} {row.get('DCM_SALE_AMT',0):>12,} {row.get('TOT_SALE_CNT',0):>6,}")
+    print(f"{'합계':<20} {sum(r.get('TOT_SALE_AMT',0) for r in sales):>12,}")
     print(f"{'='*55}")
 
+    save_to_json(sales, date_from)
     if FIREBASE_ENABLED:
         save_to_firebase(sales, date_from)
-    else:
-        save_to_json(sales, date_from)
 
-    print(f"\n✅ 완료! {len(sales)}개 가맹점 수집")
-    input("\n아무 키나 누르면 닫힙니다...")
+    print(f"\n✅ 완료!")
+    try: input("\n아무 키나 누르면 닫힙니다...")
+    except: pass
 
 
 if __name__ == "__main__":
@@ -343,7 +318,7 @@ if __name__ == "__main__":
             d = (datetime.date.today()-datetime.timedelta(days=1)).strftime("%Y-%m-%d")
             main(d, d)
         schedule.every().day.at("02:00").do(job)
-        print("📅 매일 02:00 자동 수집")
+        print("매일 02:00 자동 수집 시작")
         while True:
             schedule.run_pending()
             time.sleep(60)

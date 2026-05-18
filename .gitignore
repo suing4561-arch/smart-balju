@@ -1,3 +1,9 @@
-*.env
-.env.*
-node_modules/
+# 비밀정보 - 절대 커밋하지 말것
+.env
+*.json
+!package.json
+
+# 파이썬
+__pycache__/
+*.pyc
+*.pyo

@@ -155,10 +155,10 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
   <!-- ── 대시보드 ── -->
   <div class="hqp active" id="hqp-dashboard"><div class="content">
     <div class="kpi-grid">
-      <div class="kpi"><div class="kpi-top"><div class="kpi-icon" style="background:var(--blue-bg)"><i class="ti ti-receipt" style="color:var(--blue)"></i></div><span class="kpi-trend trend-up">▲ 11.2%</span></div><div class="kpi-val">4억 8,340만</div><div class="kpi-lbl">전체 가맹점 이번달 매출</div></div>
-      <div class="kpi"><div class="kpi-top"><div class="kpi-icon" style="background:var(--green-bg)"><i class="ti ti-shopping-cart" style="color:var(--green)"></i></div><span class="kpi-trend trend-up">▲ 8.7%</span></div><div class="kpi-val">2,847건</div><div class="kpi-lbl">이번달 총 주문건수</div></div>
-      <div class="kpi"><div class="kpi-top"><div class="kpi-icon" style="background:var(--amber-bg)"><i class="ti ti-credit-card" style="color:var(--amber)"></i></div><span class="kpi-trend trend-down">▼ 미수금</span></div><div class="kpi-val" style="color:var(--red)">1,240만</div><div class="kpi-lbl">전체 미수금 잔액</div></div>
-      <div class="kpi"><div class="kpi-top"><div class="kpi-icon" style="background:var(--purple-bg)"><i class="ti ti-building-store" style="color:var(--purple)"></i></div><span class="kpi-trend trend-flat">전체 32개</span></div><div class="kpi-val">28 <span style="font-size:16px;color:var(--muted)">/ 32</span></div><div class="kpi-lbl">현재 영업중 가맹점</div></div>
+      <div class="kpi"><div class="kpi-top"><div class="kpi-icon" style="background:var(--blue-bg)"><i class="ti ti-receipt" style="color:var(--blue)"></i></div><span class="kpi-trend trend-up" id="kpi-sale-trend">-</span></div><div class="kpi-val" id="kpi-sale">불러오는 중...</div><div class="kpi-lbl">OKPos 이번달 실매출</div></div>
+      <div class="kpi"><div class="kpi-top"><div class="kpi-icon" style="background:var(--green-bg)"><i class="ti ti-shopping-cart" style="color:var(--green)"></i></div><span class="kpi-trend trend-up" id="kpi-cnt-trend">-</span></div><div class="kpi-val" id="kpi-cnt">-</div><div class="kpi-lbl">이번달 총 주문건수</div></div>
+      <div class="kpi"><div class="kpi-top"><div class="kpi-icon" style="background:var(--amber-bg)"><i class="ti ti-users" style="color:var(--amber)"></i></div><span class="kpi-trend trend-flat" id="kpi-gst-trend">-</span></div><div class="kpi-val" id="kpi-gst">-</div><div class="kpi-lbl">이번달 총 고객수</div></div>
+      <div class="kpi"><div class="kpi-top"><div class="kpi-icon" style="background:var(--purple-bg)"><i class="ti ti-building-store" style="color:var(--purple)"></i></div><span class="kpi-trend trend-flat" id="kpi-shop-trend">-</span></div><div class="kpi-val" id="kpi-shop">-</div><div class="kpi-lbl">수집된 가맹점 수</div></div>
     </div>
     <div class="two">
       <div class="card"><div class="ch"><span class="ct">전체 가맹점 월별 매출 추이</span></div><div class="cw"><canvas id="salesChart"></canvas></div></div>
@@ -260,11 +260,14 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
               <div class="fl"><div class="flb">거래처 *</div>
                 <select class="fs" id="mPartner" onchange="updateCodePreview()"><option value="">선택</option></select>
               </div>
-              <div class="fl"><div class="flb">브랜드 *</div>
-                <select class="fs" id="mBrand" onchange="updateCodePreview()"><option value="">선택</option></select>
+              <div class="fl"><div class="flb">브랜드</div>
+                <select class="fs" id="mBrand" onchange="updateCodePreview()" disabled style="opacity:.6"><option value="">선택</option></select>
               </div>
-              <div class="fl"><div class="flb">일련번호 (2자리)</div>
-                <input class="fi code" id="mSeq" placeholder="01" maxlength="2" oninput="this.value=this.value.replace(/\D/g,'');updateCodePreview()" value="01">
+              <div class="fl"><div class="flb">일련번호 (자동생성)</div>
+                <div style="display:flex;gap:6px;align-items:center">
+                  <input class="fi code" id="mSeq" placeholder="000001" maxlength="6" oninput="this.value=this.value.replace(/\D/g,'');updateCodePreview()" value="000001" style="flex:1">
+                  <button onclick="resetMenuForm()" style="padding:0 10px;height:38px;border-radius:9px;border:.5px solid var(--line);background:var(--surface2);font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;color:var(--text)">신규</button>
+                </div>
               </div>
             </div>
 
@@ -400,10 +403,14 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
         </div>
         <div class="fl"><div class="flb">주소 *</div><input class="fi" id="frAddr" placeholder="부산 수영구 광안해변로 263"></div>
         <div class="two-col">
-          <div class="fl"><div class="flb">연락처</div><input class="fi" id="frPhone" placeholder="051-000-0000"></div>
           <div class="fl"><div class="flb">점주명</div><input class="fi" id="frOwner" placeholder="홍길동"></div>
+          <div class="fl"><div class="flb">연락처</div><input class="fi" id="frPhone" placeholder="051-000-0000"></div>
         </div>
-        <button class="rb green" onclick="saveFranchise()"><i class="ti ti-plus"></i>가맹점 등록</button>
+        <div class="two-col">
+          <div class="fl"><div class="flb">로그인 ID</div><input class="fi" id="frLoginId" placeholder="가맹점 로그인 아이디"></div>
+          <div class="fl"><div class="flb">비밀번호</div><input class="fi" id="frLoginPw" type="password" placeholder="비밀번호"></div>
+        </div>
+        <button class="rb green" id="frSaveBtn" onclick="saveFranchise()"><i class="ti ti-plus"></i>가맹점 등록</button>
       </div>
     </div>
     <div class="card" style="padding:0;overflow:hidden">
@@ -433,7 +440,11 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
           <div class="fl"><div class="flb">담당자명</div><input class="fi" id="supContact" placeholder="김철수"></div>
         </div>
         <div class="fl"><div class="flb">납품 품목</div><input class="fi" id="supCategory" placeholder="면류, 소스류, 육류 등"></div>
-        <button class="rb purple" onclick="saveSupplier()"><i class="ti ti-plus"></i>납품업체 등록</button>
+        <div class="two-col">
+          <div class="fl"><div class="flb">로그인 ID</div><input class="fi" id="supLoginId" placeholder="납품업체 로그인 아이디"></div>
+          <div class="fl"><div class="flb">비밀번호</div><input class="fi" id="supLoginPw" type="password" placeholder="비밀번호"></div>
+        </div>
+        <button class="rb purple" id="supSaveBtn" onclick="saveSupplier()"><i class="ti ti-plus"></i>납품업체 등록</button>
       </div>
     </div>
     <div class="card" style="padding:0;overflow:hidden">
@@ -476,7 +487,7 @@ function goto(p){
   Object.keys(PAGES).forEach(k=>{ const el=document.getElementById('hqp-'+k); if(el) el.classList.toggle('active',k===p); });
   document.querySelectorAll('.ni').forEach(n=>n.classList.remove('active'));
   document.getElementById('ptitle').textContent=PAGES[p]||p;
-  if(p==='dashboard') initCharts();
+  if(p==='dashboard'){ chartsOk=false; initCharts(); }
   if(p==='register') loadReg();
   if(p==='partners') loadPartnersFull();
   if(p==='franchises') loadFranchises();
@@ -520,15 +531,168 @@ function updateCodePreview() {
 
 // ── 대시보드 차트 ─────────────────────────────────────────
 let chartsOk=false;
-function initCharts(){
-  if(chartsOk)return;chartsOk=true;
-  const ctx=document.getElementById('salesChart').getContext('2d');
-  new Chart(ctx,{type:'bar',data:{labels:['12월','1월','2월','3월','4월','5월'],datasets:[{label:'실매출(만원)',data:[38200,41500,36800,44200,43100,48340],backgroundColor:'rgba(26,95,168,.15)',borderColor:'#1a5fa8',borderWidth:1.5,borderRadius:6,order:2},{label:'목표',data:[40000,42000,40000,45000,45000,50000],type:'line',borderColor:'#b85c00',borderWidth:1.5,pointRadius:3,fill:false,order:1}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,position:'top',labels:{font:{size:11},boxWidth:12,padding:12}}},scales:{x:{grid:{display:false},ticks:{font:{size:11}}},y:{grid:{color:'rgba(0,0,0,.05)'},ticks:{font:{size:11},callback:v=>(v/10000).toFixed(0)+'억'}}}}});
-  const orders=[{store:'부산 1호점',item:'닭가슴살 외 3종',amt:'128,000',t:'09:12',c:'#1a5fa8',i:'부1'},{store:'서울 강남점',item:'쌀 20kg · 소스류',amt:'94,000',t:'08:47',c:'#2d9e65',i:'강'}];
-  document.getElementById('orderList').innerHTML=orders.map(o=>`<div class="oi"><div class="oa" style="background:${o.c}22;color:${o.c}">${o.i}</div><div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:700">${o.store}</div><div style="font-size:11px;color:var(--muted)">${o.item}</div></div><div style="text-align:right"><div style="font-family:var(--mono);font-size:13px;font-weight:700">${o.amt}원</div><div style="font-size:11px;color:var(--dim)">${o.t}</div></div></div>`).join('');
-  const st=[{r:1,n:'서울 강남점',s:'6,240만',a:'-'},{r:2,n:'부산 해운대점',s:'5,980만',a:'-'},{r:3,n:'부산 1호점',s:'4,834만',a:'320만'}];
-  document.getElementById('storeTable').innerHTML=st.map(s=>`<tr><td><div class="rb-badge ${s.r<=2?'top':''}">${s.r}</div></td><td>${s.n}</td><td><span class="sp">정상</span></td><td style="font-family:var(--mono);text-align:right">${s.s}</td><td style="font-family:var(--mono);text-align:right;color:${s.a!=='-'?'var(--red)':'var(--dim)'}">${s.a}</td></tr>`).join('');
-  document.getElementById('alertList').innerHTML=`<div class="ai danger"><i class="ti ti-alert-circle"></i><div><div style="font-size:12px;font-weight:700">창원점 미수금 480만 — 기한 초과</div><div style="font-size:11px;color:var(--muted)">결제 기한 3일 초과</div></div></div><div class="ai warn"><i class="ti ti-clock"></i><div><div style="font-size:12px;font-weight:700">오늘 18:00 발주 마감</div><div style="font-size:11px;color:var(--muted)">미발주 가맹점 5개점</div></div></div>`;
+let _chartInst = null;
+
+async function initCharts(){
+  if(chartsOk) return; chartsOk=true;
+  await loadOkposDashboard();
+}
+
+// ── OKPos 실매출 대시보드 로드 ────────────────────────────
+async function loadOkposDashboard(){
+  try {
+    // 이번달 날짜 범위 계산
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth()+1).padStart(2,'0');
+    const today = String(now.getDate()).padStart(2,'0');
+
+    // Firebase okpos_sales/ 에서 이번달 데이터 수집
+    const allSales = await Auth.DB.get('okpos_sales') || {};
+    const monthKey = `${year}${month}`;
+
+    // 이번달 날짜별 데이터 필터링
+    const monthDays = Object.entries(allSales)
+      .filter(([k]) => k.startsWith(monthKey))
+      .sort(([a],[b]) => a.localeCompare(b));
+
+    if(!monthDays.length){
+      // 데이터 없으면 안내 표시
+      document.getElementById('kpi-sale').textContent = '데이터 없음';
+      document.getElementById('kpi-cnt').textContent = '-';
+      document.getElementById('kpi-gst').textContent = '-';
+      document.getElementById('kpi-shop').textContent = '-';
+      document.getElementById('kpi-sale-trend').textContent = 'OKPos 미수집';
+      document.getElementById('storeTable').innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--dim);padding:20px">OKPos 매출 데이터가 없습니다.<br>okpos_scraper.py를 실행해주세요.</td></tr>';
+      renderEmptyChart();
+      return;
+    }
+
+    // 전체 집계
+    let totalSale=0, totalCnt=0, totalGst=0;
+    const shopMap = {}; // 가맹점별 누적
+    const dayMap  = {}; // 날짜별 누적
+
+    monthDays.forEach(([dateKey, dayData]) => {
+      const dayTotal = { sale:0, cnt:0 };
+      Object.entries(dayData).forEach(([shopCd, d]) => {
+        const sale = d.tot_sale_amt||d.dcm_sale_amt||0;
+        const cnt  = d.tot_sale_cnt||0;
+        const gst  = d.gst_cnt||0;
+        totalSale += sale; totalCnt += cnt; totalGst += gst;
+        dayTotal.sale += sale;
+        if(!shopMap[shopCd]) shopMap[shopCd] = {name:d.shop_nm||shopCd, sale:0, cnt:0};
+        shopMap[shopCd].sale += sale;
+        shopMap[shopCd].cnt  += cnt;
+      });
+      dayMap[dateKey] = dayTotal;
+    });
+
+    const shopCount = Object.keys(shopMap).length;
+    const lastDate = monthDays[monthDays.length-1][0];
+
+    // KPI 카드 업데이트
+    document.getElementById('kpi-sale').textContent = fmtAmt(totalSale);
+    document.getElementById('kpi-cnt').textContent = totalCnt.toLocaleString()+'건';
+    document.getElementById('kpi-gst').textContent = totalGst.toLocaleString()+'명';
+    document.getElementById('kpi-shop').textContent = shopCount+'개점';
+    document.getElementById('kpi-sale-trend').textContent = `${month}월 누계`;
+    document.getElementById('kpi-cnt-trend').textContent = `최근 ${lastDate.slice(6)}일`;
+    document.getElementById('kpi-gst-trend').textContent = '이번달';
+    document.getElementById('kpi-shop-trend').textContent = 'OKPos 연동';
+
+    // 가맹점별 매출 테이블
+    const shops = Object.values(shopMap).sort((a,b)=>b.sale-a.sale);
+    document.getElementById('storeTable').innerHTML = shops.map((s,i)=>`
+      <tr>
+        <td><div class="rb-badge ${i<2?'top':''}">${i+1}</div></td>
+        <td>${s.name}</td>
+        <td><span class="sp">정상</span></td>
+        <td style="font-family:var(--mono);text-align:right">${fmtAmt(s.sale)}</td>
+        <td style="font-family:var(--mono);text-align:right;color:var(--dim)">-</td>
+      </tr>`).join('');
+
+    // 최근 발주 현황 (Firebase franchise_orders/)
+    const orders = await Auth.DB.get('franchise_orders') || {};
+    const orderList = Object.values(orders).sort((a,b)=>(b.createdAt||'').localeCompare(a.createdAt||'')).slice(0,5);
+    document.getElementById('orderList').innerHTML = orderList.length
+      ? orderList.map(o=>{
+          const nm = o.items?.slice(0,15)||'품목';
+          const initials = o.id?.slice(-4)||'발주';
+          return `<div class="oi">
+            <div class="oa" style="background:var(--blue-bg);color:var(--blue)">${initials}</div>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:13px;font-weight:700">${nm}</div>
+              <div style="font-size:11px;color:var(--muted)">${(o.createdAt||'').slice(0,10)}</div>
+            </div>
+            <div style="font-family:var(--mono);font-size:13px;font-weight:700">${(o.amount||0).toLocaleString()}원</div>
+          </div>`;}).join('')
+      : '<div style="text-align:center;padding:20px;color:var(--dim);font-size:13px">발주 내역 없음</div>';
+
+    // 알림
+    document.getElementById('alertList').innerHTML =
+      `<div class="ai warn"><i class="ti ti-chart-bar"></i><div>
+        <div style="font-size:12px;font-weight:700">최근 수집: ${lastDate.slice(0,4)}-${lastDate.slice(4,6)}-${lastDate.slice(6)}</div>
+        <div style="font-size:11px;color:var(--muted)">${shopCount}개 가맹점 · ${totalSale.toLocaleString()}원</div>
+      </div></div>
+      <div class="ai warn"><i class="ti ti-clock"></i><div>
+        <div style="font-size:12px;font-weight:700">매일 새벽 자동 수집 설정 필요</div>
+        <div style="font-size:11px;color:var(--muted)">GitHub Actions 설정 시 자동화 가능</div>
+      </div></div>`;
+
+    // 차트 - 날짜별 매출
+    renderSalesChart(dayMap);
+
+  } catch(e) {
+    console.error('대시보드 로드 오류:', e);
+    document.getElementById('kpi-sale').textContent = '오류';
+  }
+}
+
+function fmtAmt(v){
+  if(v >= 100000000) return (v/100000000).toFixed(1)+'억';
+  if(v >= 10000)     return Math.round(v/10000).toLocaleString()+'만';
+  return v.toLocaleString()+'원';
+}
+
+function renderSalesChart(dayMap){
+  const ctx = document.getElementById('salesChart').getContext('2d');
+  if(_chartInst){ _chartInst.destroy(); }
+  const entries = Object.entries(dayMap).sort(([a],[b])=>a.localeCompare(b));
+  const labels = entries.map(([k])=>k.slice(4,6)+'/'+k.slice(6));
+  const data   = entries.map(([,v])=>Math.round(v.sale/10000));
+  _chartInst = new Chart(ctx,{
+    type:'bar',
+    data:{
+      labels,
+      datasets:[{
+        label:'실매출(만원)',
+        data,
+        backgroundColor:'rgba(26,95,168,.15)',
+        borderColor:'#1a5fa8',
+        borderWidth:1.5,
+        borderRadius:6,
+      }]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:true,position:'top',labels:{font:{size:11},boxWidth:12,padding:12}}},
+      scales:{
+        x:{grid:{display:false},ticks:{font:{size:11}}},
+        y:{grid:{color:'rgba(0,0,0,.05)'},ticks:{font:{size:11},callback:v=>v.toLocaleString()+'만'}}
+      }
+    }
+  });
+}
+
+function renderEmptyChart(){
+  const ctx = document.getElementById('salesChart').getContext('2d');
+  if(_chartInst){ _chartInst.destroy(); }
+  _chartInst = new Chart(ctx,{
+    type:'bar',
+    data:{labels:['데이터 없음'],datasets:[{label:'매출',data:[0],backgroundColor:'rgba(0,0,0,.05)'}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}}
+  });
 }
 
 // ── 기준정보 로드 ─────────────────────────────────────────
@@ -576,14 +740,33 @@ async function refreshMenuSelects(){
   const [partners, brands] = await Promise.all([Auth.loadPartners(), Auth.loadBrands()]);
   document.getElementById('mPartner').innerHTML='<option value="">거래처 선택</option>'+partners.map(p=>`<option value="${p.id}" data-code="${p.code||'00'}">[${p.code||'??'}] ${p.name}</option>`).join('');
   document.getElementById('mBrand').innerHTML='<option value="">브랜드 선택</option>'+brands.map(b=>`<option value="${b.id}" data-code="${b.code||'00'}">[${b.code||'??'}] ${b.name}</option>`).join('');
-  // 세션 브랜드 자동 선택
+  // 세션 브랜드 자동선택 고정
   if(_myBrandId){
-    const bSel = document.getElementById('mBrand');
-    bSel.value = _myBrandId;
-    bSel.disabled = true; // 본인 브랜드 고정
-    bSel.title = '연동된 브랜드: '+_myBrandName;
+    const bSel=document.getElementById('mBrand');
+    bSel.value=_myBrandId; bSel.disabled=true;
+    bSel.title='연동 브랜드: '+_myBrandName;
   }
+  await autoNextSeq();
   updateCodePreview();
+}
+
+// 다음 일련번호 자동 계산
+async function autoNextSeq(){
+  const list=await Auth.loadMenus();
+  const nums=list.map(m=>parseInt(m.code?.slice(-6)||'0')||0);
+  const next=Math.max(0,...nums)+1;
+  document.getElementById('mSeq').value=String(next).padStart(6,'0');
+  updateCodePreview();
+}
+
+// 신규 버튼 - 폼 초기화 + 다음 번호 생성
+async function resetMenuForm(){
+  _editMenuId='';
+  mName.value=mSpec.value=mUnit.value=mPrice.value=mMinQty.value=mMaxQty.value='';
+  mCat.value=''; mPartner.value='';
+  document.getElementById('menuSaveBtn').innerHTML='<i class="ti ti-plus"></i>품목·가격 등록';
+  await autoNextSeq();
+  mName.focus();
 }
 
 // ── 품목+가격 통합 등록 ───────────────────────────────────
@@ -600,7 +783,7 @@ async function saveMenu(){
 
   const pCode = pOpt.dataset.code||'00';
   const bCode = bOpt.dataset.code||'00';
-  const seq = (mSeq.value||'01').padStart(2,'0');
+  const seq = (mSeq.value||'000001').padStart(6,'0');
   const code = pCode+bCode+seq;
 
   // 세션 브랜드가 있으면 자동 설정, 없으면 선택값 사용
@@ -618,8 +801,8 @@ async function saveMenu(){
     showToast('등록 완료 ('+code+')');
   }
   mName.value=mSpec.value=mUnit.value=mPrice.value=mMinQty.value=mMaxQty.value='';
-  mCat.value=''; mPartner.value=''; mBrand.value=''; mSeq.value='01';
-  updateCodePreview(); await rMenu();
+  mCat.value=''; mPartner.value=''; mSeq.value='000001';
+  updateCodePreview(); await rMenu(); await autoNextSeq();
 }
 
 async function rMenu(){
@@ -739,8 +922,22 @@ async function loadPartnersFull(){
     <td><strong>${p.name||'-'}</strong></td><td>${p.businessNumber||'-'}</td>
     <td>${p.contactPerson||'-'}</td><td>${p.phone||'-'}</td>
     <td><span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:${p.status==='active'?'var(--green-bg)':'var(--surface2)'};color:${p.status==='active'?'var(--green)':'var(--muted)'}">${p.status==='active'?'활성':'비활성'}</span></td>
-    <td><button class="delbtn" onclick="delPFull('${p.id}')">삭제</button></td>
+    <td style="display:flex;gap:4px">
+      <button class="delbtn" style="background:var(--blue-bg);color:var(--blue);border-color:rgba(40,116,204,.3)" onclick="editPartnerFull('${p.id}')">수정</button>
+      <button class="delbtn" onclick="delPFull('${p.id}')">삭제</button>
+    </td>
   </tr>`).join('')}</tbody></table>`;
+}
+async function editPartnerFull(id){
+  const list=await Auth.loadPartners(); const p=list.find(x=>x.id===id); if(!p)return;
+  pCode.value=p.code||''; pName.value=p.name||''; pBiz.value=p.businessNumber||'';
+  pPhone.value=p.phone||''; pContact.value=p.contactPerson||'';
+  switchRegTab('code');
+  // 저장 버튼을 수정모드로
+  const btn=document.querySelector('#regp-code .rb.blue');
+  btn.innerHTML='<i class="ti ti-pencil"></i>거래처 수정 저장';
+  btn.dataset.editId=id;
+  showToast('['+p.name+'] 수정 모드');
 }
 async function delPFull(id){ if(!confirm('삭제할까요?')) return; await Auth.deletePartner(id); await loadPartnersFull(); showToast('삭제'); }
 
@@ -754,15 +951,24 @@ async function loadDelivery(){
 }
 
 // ── 가맹점 관리 ───────────────────────────────────────────
-function openFranchiseForm(){ document.getElementById('franchiseForm').style.display=''; }
-function closeFranchiseForm(){ document.getElementById('franchiseForm').style.display='none'; }
+let _editFrId='';
+function openFranchiseForm(reset=true){
+  if(reset){ _editFrId=''; clearFrForm(); document.getElementById('frSaveBtn').innerHTML='<i class="ti ti-plus"></i>가맹점 등록'; }
+  document.getElementById('franchiseForm').style.display='';
+}
+function closeFranchiseForm(){ document.getElementById('franchiseForm').style.display='none'; _editFrId=''; }
+function clearFrForm(){ ['frName','frBiz','frAddr','frPhone','frOwner','frLoginId','frLoginPw'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';}); }
 
 async function saveFranchise(){
   if(!frName.value.trim()||!frAddr.value.trim()){ showToast('상호명과 주소를 입력하세요'); return; }
-  const id='fr_'+Date.now();
-  await Auth.DB.set('hq_franchises/'+id,{id,name:frName.value,businessNumber:frBiz.value,address:frAddr.value,phone:frPhone.value,owner:frOwner.value,brandId:_myBrandId,brandName:_myBrandName,status:'active',createdAt:new Date().toISOString()});
-  frName.value=frBiz.value=frAddr.value=frPhone.value=frOwner.value='';
-  closeFranchiseForm(); await loadFranchises(); showToast('가맹점 등록 완료');
+  const id=_editFrId||'fr_'+Date.now();
+  const loginId=document.getElementById('frLoginId').value.trim();
+  const loginPw=document.getElementById('frLoginPw').value.trim();
+  await Auth.DB.set('hq_franchises/'+id,{id,name:frName.value,businessNumber:frBiz.value,address:frAddr.value,phone:frPhone.value,owner:frOwner.value,
+    ...(loginId&&{loginId}), ...(loginPw&&{loginPw}),
+    brandId:_myBrandId,brandName:_myBrandName,status:'active',createdAt:new Date().toISOString()});
+  clearFrForm(); closeFranchiseForm(); await loadFranchises();
+  showToast(_editFrId?'가맹점 수정 완료':'가맹점 등록 완료');
 }
 
 async function loadFranchises(){
@@ -770,28 +976,52 @@ async function loadFranchises(){
   const list=Object.values(data).filter(f=>!_myBrandId||f.brandId===_myBrandId);
   const el=document.getElementById('franchiseList');
   if(!list.length){ el.innerHTML='<div style="text-align:center;padding:40px;color:var(--dim)">등록된 가맹점이 없습니다</div>'; return; }
-  el.innerHTML=`<table class="lt"><thead><tr><th>상호명</th><th>주소</th><th>점주</th><th>연락처</th><th>상태</th><th></th></tr></thead><tbody>`+
+  el.innerHTML=`<table class="lt"><thead><tr><th>상호명</th><th>주소</th><th>점주</th><th>연락처</th><th>로그인ID</th><th>상태</th><th></th></tr></thead><tbody>`+
     list.map(f=>`<tr>
       <td><strong>${f.name}</strong>${f.businessNumber?`<div style="font-size:11px;color:var(--muted)">${f.businessNumber}</div>`:''}</td>
       <td style="font-size:12px;color:var(--muted)">${f.address||'-'}</td>
-      <td>${f.owner||'-'}</td>
-      <td>${f.phone||'-'}</td>
+      <td>${f.owner||'-'}</td><td>${f.phone||'-'}</td>
+      <td style="font-family:var(--mono);font-size:12px">${f.loginId||'-'}</td>
       <td><span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:var(--green-bg);color:var(--green)">활성</span></td>
-      <td><button class="delbtn" onclick="delFranchise('${f.id}')">삭제</button></td>
+      <td style="display:flex;gap:4px">
+        <button class="delbtn" style="background:var(--blue-bg);color:var(--blue);border-color:rgba(40,116,204,.3)" onclick="editFranchise('${f.id}')">수정</button>
+        <button class="delbtn" onclick="delFranchise('${f.id}')">삭제</button>
+      </td>
     </tr>`).join('')+'</tbody></table>';
+}
+
+async function editFranchise(id){
+  const data=await Auth.DB.get('hq_franchises')||{};
+  const f=Object.values(data).find(x=>x.id===id); if(!f)return;
+  _editFrId=id;
+  frName.value=f.name||''; frBiz.value=f.businessNumber||''; frAddr.value=f.address||'';
+  frPhone.value=f.phone||''; frOwner.value=f.owner||'';
+  document.getElementById('frLoginId').value=f.loginId||'';
+  document.getElementById('frLoginPw').value='';
+  document.getElementById('frSaveBtn').innerHTML='<i class="ti ti-pencil"></i>가맹점 수정 저장';
+  openFranchiseForm(false); showToast('['+f.name+'] 수정 모드');
 }
 async function delFranchise(id){ if(!confirm('삭제할까요?'))return; await Auth.DB.remove('hq_franchises/'+id); await loadFranchises(); showToast('삭제'); }
 
 // ── 납품업체 관리 ─────────────────────────────────────────
-function openSupplierForm(){ document.getElementById('supplierForm').style.display=''; }
-function closeSupplierForm(){ document.getElementById('supplierForm').style.display='none'; }
+let _editSupId='';
+function openSupplierForm(reset=true){
+  if(reset){ _editSupId=''; clearSupForm(); document.getElementById('supSaveBtn').innerHTML='<i class="ti ti-plus"></i>납품업체 등록'; }
+  document.getElementById('supplierForm').style.display='';
+}
+function closeSupplierForm(){ document.getElementById('supplierForm').style.display='none'; _editSupId=''; }
+function clearSupForm(){ ['supName','supBiz','supPhone','supContact','supCategory','supLoginId','supLoginPw'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';}); }
 
 async function saveSupplier(){
   if(!supName.value.trim()){ showToast('업체명을 입력하세요'); return; }
-  const id='sup_'+Date.now();
-  await Auth.DB.set('hq_suppliers/'+id,{id,name:supName.value,businessNumber:supBiz.value,phone:supPhone.value,contactPerson:supContact.value,category:supCategory.value,brandId:_myBrandId,brandName:_myBrandName,status:'active',createdAt:new Date().toISOString()});
-  supName.value=supBiz.value=supPhone.value=supContact.value=supCategory.value='';
-  closeSupplierForm(); await loadSuppliers(); showToast('납품업체 등록 완료');
+  const id=_editSupId||'sup_'+Date.now();
+  const loginId=document.getElementById('supLoginId').value.trim();
+  const loginPw=document.getElementById('supLoginPw').value.trim();
+  await Auth.DB.set('hq_suppliers/'+id,{id,name:supName.value,businessNumber:supBiz.value,phone:supPhone.value,contactPerson:supContact.value,category:supCategory.value,
+    ...(loginId&&{loginId}), ...(loginPw&&{loginPw}),
+    brandId:_myBrandId,brandName:_myBrandName,status:'active',createdAt:new Date().toISOString()});
+  clearSupForm(); closeSupplierForm(); await loadSuppliers();
+  showToast(_editSupId?'납품업체 수정 완료':'납품업체 등록 완료');
 }
 
 async function loadSuppliers(){
@@ -799,15 +1029,30 @@ async function loadSuppliers(){
   const list=Object.values(data).filter(s=>!_myBrandId||s.brandId===_myBrandId);
   const el=document.getElementById('supplierList');
   if(!list.length){ el.innerHTML='<div style="text-align:center;padding:40px;color:var(--dim)">등록된 납품업체가 없습니다</div>'; return; }
-  el.innerHTML=`<table class="lt"><thead><tr><th>업체명</th><th>납품품목</th><th>담당자</th><th>연락처</th><th>상태</th><th></th></tr></thead><tbody>`+
+  el.innerHTML=`<table class="lt"><thead><tr><th>업체명</th><th>납품품목</th><th>담당자</th><th>연락처</th><th>로그인ID</th><th>상태</th><th></th></tr></thead><tbody>`+
     list.map(s=>`<tr>
       <td><strong>${s.name}</strong>${s.businessNumber?`<div style="font-size:11px;color:var(--muted)">${s.businessNumber}</div>`:''}</td>
       <td style="font-size:12px;color:var(--muted)">${s.category||'-'}</td>
-      <td>${s.contactPerson||'-'}</td>
-      <td>${s.phone||'-'}</td>
+      <td>${s.contactPerson||'-'}</td><td>${s.phone||'-'}</td>
+      <td style="font-family:var(--mono);font-size:12px">${s.loginId||'-'}</td>
       <td><span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:var(--green-bg);color:var(--green)">활성</span></td>
-      <td><button class="delbtn" onclick="delSupplier('${s.id}')">삭제</button></td>
+      <td style="display:flex;gap:4px">
+        <button class="delbtn" style="background:var(--blue-bg);color:var(--blue);border-color:rgba(40,116,204,.3)" onclick="editSupplier('${s.id}')">수정</button>
+        <button class="delbtn" onclick="delSupplier('${s.id}')">삭제</button>
+      </td>
     </tr>`).join('')+'</tbody></table>';
+}
+
+async function editSupplier(id){
+  const data=await Auth.DB.get('hq_suppliers')||{};
+  const s=Object.values(data).find(x=>x.id===id); if(!s)return;
+  _editSupId=id;
+  supName.value=s.name||''; supBiz.value=s.businessNumber||''; supPhone.value=s.phone||'';
+  supContact.value=s.contactPerson||''; supCategory.value=s.category||'';
+  document.getElementById('supLoginId').value=s.loginId||'';
+  document.getElementById('supLoginPw').value='';
+  document.getElementById('supSaveBtn').innerHTML='<i class="ti ti-pencil"></i>납품업체 수정 저장';
+  openSupplierForm(false); showToast('['+s.name+'] 수정 모드');
 }
 async function delSupplier(id){ if(!confirm('삭제할까요?'))return; await Auth.DB.remove('hq_suppliers/'+id); await loadSuppliers(); showToast('삭제'); }
 
