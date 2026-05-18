@@ -595,15 +595,72 @@ function openConfirm(){
 }
 function closeConfirm(){ document.getElementById('confirmOverlay').classList.remove('show'); }
 async function submitOrder(){
-  const items=cartItems(),total=cartTotal();
+  const items=cartItems(), total=cartTotal();
+
+  // 한도 체크
+  if(_currentStore){
+    const storeData = await Auth.DB.get('hq_franchises/'+_currentStore.id);
+    if(storeData){
+      const limit = Number(storeData.orderLimit)||2000000;
+      const unpaid = Number(storeData.unpaidAmt)||0;
+      const enabled = storeData.orderEnabled !== false;
+      if(!enabled || (unpaid + total) > limit){
+        closeConfirm();
+        document.getElementById('successOverlay').style.display='flex';
+        document.getElementById('successOverlay').innerHTML=`
+          <div style="width:calc(100% - 40px);max-width:340px;background:var(--surface);border-radius:20px;padding:28px 24px;text-align:center;display:flex;flex-direction:column;gap:12px;align-items:center">
+            <div style="width:60px;height:60px;border-radius:50%;background:var(--red-bg);display:flex;align-items:center;justify-content:center;font-size:28px">⛔</div>
+            <div style="font-size:18px;font-weight:700;color:var(--red)">주문 불가</div>
+            <div style="font-size:13px;color:var(--muted);line-height:1.6">
+              미수금이 주문 한도를 초과했습니다.<br>
+              <strong>한도: ${limit.toLocaleString()}원</strong><br>
+              <strong>미수금: ${unpaid.toLocaleString()}원</strong><br>
+              <strong>이번 주문: ${total.toLocaleString()}원</strong>
+            </div>
+            <div style="font-size:12px;color:var(--muted)">본사에 입금 확인을 요청하세요.</div>
+            <button onclick="document.getElementById('successOverlay').classList.remove('show');document.getElementById('successOverlay').style.display=''" style="width:100%;padding:13px;border-radius:12px;border:none;background:var(--text);color:#fff;font-size:14px;font-weight:700;cursor:pointer">확인</button>
+          </div>`;
+        document.getElementById('successOverlay').classList.add('show');
+        return;
+      }
+    }
+  }
+
   const no='ORD-'+new Date().toISOString().slice(0,10).replace(/-/g,'')+'-'+String(Math.floor(Math.random()*900)+100);
-  // Firebase에 발주 저장
   try {
-    await Auth.DB.set('franchise_orders/'+no,{id:no,items:items.map(i=>i.name+' '+i.qty+i.unit).join(' · '),itemDetails:items,amount:total,status:'waiting',createdAt:new Date().toISOString()});
+    await Auth.DB.set('franchise_orders/'+no,{
+      id:no, items:items.map(i=>i.name+' '+i.qty+i.unit).join(' · '),
+      itemDetails:items, amount:total, status:'waiting',
+      storeName:_currentStore?.name||'', storeId:_currentStore?.id||'',
+      createdAt:new Date().toISOString()
+    });
+    // 미수금 업데이트
+    if(_currentStore?.id){
+      const storeData = await Auth.DB.get('hq_franchises/'+_currentStore.id);
+      if(storeData){
+        const newUnpaid = Number(storeData.unpaidAmt||0) + total;
+        const limit = Number(storeData.orderLimit)||2000000;
+        await Auth.DB.update('hq_franchises/'+_currentStore.id, {
+          unpaidAmt: newUnpaid,
+          orderEnabled: newUnpaid < limit,
+        });
+      }
+    }
   } catch(e){ console.warn('발주 저장 실패:', e); }
+
   closeConfirm();
   document.getElementById('orderNo').textContent='주문번호: '+no;
+  document.getElementById('successOverlay').innerHTML=''; // 초기화
   document.getElementById('successOverlay').classList.add('show');
+  // 성공 UI 복원
+  document.getElementById('successOverlay').innerHTML=`
+    <div class="success-box">
+      <div class="success-icon"><i class="ti ti-circle-check" style="color:var(--green)"></i></div>
+      <div style="font-size:20px;font-weight:700">발주 완료!</div>
+      <div style="font-size:13px;color:var(--muted);line-height:1.6">발주가 성공적으로 접수됐습니다.<br>본사에서 확인 후 출고 처리됩니다.</div>
+      <div id="orderNo" style="font-family:var(--mono);font-size:13px;color:var(--blue);background:var(--blue-bg);padding:6px 16px;border-radius:8px">${no}</div>
+      <button class="success-close" onclick="closeSuccess()">확인</button>
+    </div>`;
   cart={}; updateUI();
 }
 function closeSuccess(){ document.getElementById('successOverlay').classList.remove('show'); goTo('home'); }
@@ -660,6 +717,13 @@ async function openStoreSelect() {
 
 function selectStore(s) {
   _currentStore = s;
+  // hq_franchises에서 해당 가맹점 id 찾아서 저장
+  Auth.DB.get('hq_franchises').then(data=>{
+    if(data){
+      const fr = Object.values(data).find(f=>f.name===s.name||f.id===s.id);
+      if(fr) _currentStore = {...s, id: fr.id, frData: fr};
+    }
+  });
   document.getElementById('storeNameText').textContent = s.name;
   document.getElementById('headerDate').textContent = s.sub || '';
   document.getElementById('storeSelectModal').classList.remove('show');
