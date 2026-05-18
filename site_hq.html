@@ -130,9 +130,8 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
   <button class="ni" onclick="goto('delivery')"><i class="ti ti-truck-delivery"></i><span>배송 관리</span></button>
   <div class="slabel">기준정보</div>
   <button class="ni" onclick="goto('register')"><i class="ti ti-database-plus"></i><span>기준정보 등록</span></button>
-  <button class="ni" onclick="goto('partners')"><i class="ti ti-building-factory"></i><span>거래처 관리</span></button>
+  <button class="ni" onclick="goto('partners')"><i class="ti ti-building-factory"></i><span>거래처·납품업체</span></button>
   <button class="ni" onclick="goto('franchises')"><i class="ti ti-building-store"></i><span>가맹점 관리</span></button>
-  <button class="ni" onclick="goto('suppliers')"><i class="ti ti-truck"></i><span>납품업체 관리</span></button>
   <div class="slabel">경영</div>
   <button class="ni" onclick="goto('stats')"><i class="ti ti-chart-bar"></i><span>통계·분석</span></button>
   <button class="ni" onclick="goto('settle')"><i class="ti ti-coin"></i><span>정산 관리</span></button>
@@ -372,10 +371,59 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
   </div></div>
 
   <!-- ── 거래처 관리 ── -->
+  <!-- ── 거래처·납품업체 통합 관리 ── -->
   <div class="hqp" id="hqp-partners"><div class="content">
-    <div class="card"><div class="ch"><span class="ct">거래처 목록</span></div>
-      <div id="partnersFull"><div style="text-align:center;padding:40px;color:var(--dim)">불러오는 중...</div></div>
+
+    <!-- 탭 -->
+    <div style="display:flex;gap:0;border-bottom:.5px solid var(--line);margin-bottom:16px;background:var(--surface);border-radius:12px 12px 0 0;overflow:hidden">
+      <button class="reg-tab active" id="ptab-partner" onclick="switchPartnerTab('partner')">거래처 (공급업체)</button>
+      <button class="reg-tab" id="ptab-supplier" onclick="switchPartnerTab('supplier')">납품·배송업체</button>
     </div>
+
+    <!-- 거래처 탭 -->
+    <div id="ppanel-partner">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <div style="font-size:14px;color:var(--muted)">품목 코드에 연결되는 공급업체 목록</div>
+        <button onclick="goto('register');switchRegTab('code')" class="rb blue" style="width:auto;padding:8px 14px;font-size:12px">+ 거래처 등록 →</button>
+      </div>
+      <div class="card" style="padding:0;overflow:hidden">
+        <div id="partnersFull"><div style="text-align:center;padding:40px;color:var(--dim)">불러오는 중...</div></div>
+      </div>
+    </div>
+
+    <!-- 납품·배송업체 탭 -->
+    <div id="ppanel-supplier" style="display:none">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <div style="font-size:14px;color:var(--muted)">배송 담당 업체 · site_supplier.html 로그인 계정</div>
+        <button onclick="openSupplierForm()" class="rb purple" style="width:auto;padding:8px 14px;font-size:12px">+ 납품업체 등록</button>
+      </div>
+      <div class="rc" id="supplierForm" style="display:none;margin-bottom:12px">
+        <div class="rch"><div class="rci" style="background:var(--purple-bg)"><i class="ti ti-truck" style="color:var(--purple)"></i></div>
+          <div><div class="rct">납품업체 등록</div></div>
+          <button onclick="closeSupplierForm()" style="margin-left:auto;border:none;background:none;font-size:20px;color:var(--muted);cursor:pointer">✕</button>
+        </div>
+        <div class="rcb">
+          <div class="two-col">
+            <div class="fl"><div class="flb">업체명 *</div><input class="fi" id="supName" placeholder="(주)한국식품"></div>
+            <div class="fl"><div class="flb">사업자번호</div><input class="fi" id="supBiz" placeholder="000-00-00000"></div>
+          </div>
+          <div class="two-col">
+            <div class="fl"><div class="flb">연락처</div><input class="fi" id="supPhone" placeholder="051-000-0000"></div>
+            <div class="fl"><div class="flb">담당자명</div><input class="fi" id="supContact" placeholder="김철수"></div>
+          </div>
+          <div class="fl"><div class="flb">납품 품목</div><input class="fi" id="supCategory" placeholder="면류, 소스류, 육류 등"></div>
+          <div class="two-col">
+            <div class="fl"><div class="flb">로그인 ID</div><input class="fi" id="supLoginId" placeholder="납품업체 로그인 아이디"></div>
+            <div class="fl"><div class="flb">비밀번호</div><input class="fi" id="supLoginPw" type="password" placeholder="비밀번호"></div>
+          </div>
+          <button class="rb purple" id="supSaveBtn" onclick="saveSupplier()"><i class="ti ti-plus"></i>납품업체 등록</button>
+        </div>
+      </div>
+      <div class="card" style="padding:0;overflow:hidden">
+        <div id="supplierList"><div style="text-align:center;padding:40px;color:var(--dim)">불러오는 중...</div></div>
+      </div>
+    </div>
+
   </div></div>
 
   <!-- ── 배송 관리 ── -->
@@ -416,40 +464,6 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
     </div>
     <div class="card" style="padding:0;overflow:hidden">
       <div id="franchiseList" style="min-height:100px"><div style="text-align:center;padding:40px;color:var(--dim)">불러오는 중...</div></div>
-    </div>
-  </div></div>
-
-  <!-- ── 납품업체 관리 ── -->
-  <div class="hqp" id="hqp-suppliers"><div class="content">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-      <div style="font-size:18px;font-weight:700">납품업체 관리</div>
-      <button onclick="openSupplierForm()" class="rb blue" style="width:auto;padding:9px 16px">+ 납품업체 등록</button>
-    </div>
-    <!-- 등록 폼 -->
-    <div class="rc" id="supplierForm" style="display:none;margin-bottom:16px">
-      <div class="rch"><div class="rci" style="background:var(--purple-bg)"><i class="ti ti-truck" style="color:var(--purple)"></i></div>
-        <div><div class="rct">납품업체 등록</div></div>
-        <button onclick="closeSupplierForm()" style="margin-left:auto;border:none;background:none;font-size:20px;color:var(--muted);cursor:pointer">✕</button>
-      </div>
-      <div class="rcb">
-        <div class="two-col">
-          <div class="fl"><div class="flb">업체명 *</div><input class="fi" id="supName" placeholder="(주)한국식품"></div>
-          <div class="fl"><div class="flb">사업자번호</div><input class="fi" id="supBiz" placeholder="000-00-00000"></div>
-        </div>
-        <div class="two-col">
-          <div class="fl"><div class="flb">연락처</div><input class="fi" id="supPhone" placeholder="051-000-0000"></div>
-          <div class="fl"><div class="flb">담당자명</div><input class="fi" id="supContact" placeholder="김철수"></div>
-        </div>
-        <div class="fl"><div class="flb">납품 품목</div><input class="fi" id="supCategory" placeholder="면류, 소스류, 육류 등"></div>
-        <div class="two-col">
-          <div class="fl"><div class="flb">로그인 ID</div><input class="fi" id="supLoginId" placeholder="납품업체 로그인 아이디"></div>
-          <div class="fl"><div class="flb">비밀번호</div><input class="fi" id="supLoginPw" type="password" placeholder="비밀번호"></div>
-        </div>
-        <button class="rb purple" id="supSaveBtn" onclick="saveSupplier()"><i class="ti ti-plus"></i>납품업체 등록</button>
-      </div>
-    </div>
-    <div class="card" style="padding:0;overflow:hidden">
-      <div id="supplierList" style="min-height:100px"><div style="text-align:center;padding:40px;color:var(--dim)">불러오는 중...</div></div>
     </div>
   </div></div>
 
@@ -526,7 +540,7 @@ if(_myBrandId){
 // 사이드바 아바타
 const _myName = _session?.name || _session?.businessName || '관리자';
 document.querySelector('.sfooter').innerHTML = `<div style="display:flex;align-items:center;gap:10px"><div style="width:32px;height:32px;border-radius:50%;background:var(--blue-mid);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;flex-shrink:0">${_myName.slice(0,1)}</div><div><div style="font-size:12px;font-weight:500;color:#fff">${_myName}</div><div style="font-size:11px;color:rgba(255,255,255,.4)">${_myBrandName||'본사 관리자'}</div></div></div>`;
-const PAGES = {dashboard:'대시보드',register:'기준정보 등록',partners:'거래처 관리',franchises:'가맹점 관리',suppliers:'납품업체 관리',orders:'주문 통합 관리',delivery:'배송 관리',stats:'통계·분석',settle:'정산 관리',notice:'공지·레시피',settings:'설정'};
+const PAGES = {dashboard:'대시보드',register:'기준정보 등록',partners:'거래처·납품업체 관리',franchises:'가맹점 관리',orders:'주문 통합 관리',delivery:'배송 관리',stats:'통계·분석',settle:'정산 관리',notice:'공지·레시피',settings:'설정'};
 
 function goto(p){
   Object.keys(PAGES).forEach(k=>{ const el=document.getElementById('hqp-'+k); if(el) el.classList.toggle('active',k===p); });
@@ -536,7 +550,6 @@ function goto(p){
   if(p==='register') loadReg();
   if(p==='partners') loadPartnersFull();
   if(p==='franchises') loadFranchises();
-  if(p==='suppliers') loadSuppliers();
   if(p==='delivery') loadDelivery();
   if(p==='settings') loadSettings();
 }
@@ -691,11 +704,7 @@ async function loadOkposDashboard(){
     document.getElementById('alertList').innerHTML =
       `<div class="ai warn"><i class="ti ti-chart-bar"></i><div>
         <div style="font-size:12px;font-weight:700">최근 수집: ${lastDate.slice(0,4)}-${lastDate.slice(4,6)}-${lastDate.slice(6)}</div>
-        <div style="font-size:11px;color:var(--muted)">${shopCount}개 가맹점 · ${totalSale.toLocaleString()}원</div>
-      </div></div>
-      <div class="ai warn"><i class="ti ti-clock"></i><div>
-        <div style="font-size:12px;font-weight:700">매일 새벽 자동 수집 설정 필요</div>
-        <div style="font-size:11px;color:var(--muted)">GitHub Actions 설정 시 자동화 가능</div>
+        <div style="font-size:11px;color:var(--muted)">${shopCount}개 가맹점 · 총 ${totalSale.toLocaleString()}원</div>
       </div></div>`;
 
     // 차트 - 날짜별 매출
@@ -970,7 +979,15 @@ async function loadRecipes(){
 }
 async function delRecipe(id){ if(!confirm('삭제할까요?')) return; await Auth.DB.remove('recipes/'+id); await loadRecipes(); showToast('삭제'); }
 
-// ── 거래처 관리 페이지 ────────────────────────────────────
+// ── 거래처·납품업체 탭 전환 ──────────────────────────────
+function switchPartnerTab(tab){
+  ['partner','supplier'].forEach(t=>{
+    document.getElementById('ptab-'+t).classList.toggle('active',t===tab);
+    document.getElementById('ppanel-'+t).style.display=t===tab?'':'none';
+  });
+  if(tab==='supplier') loadSuppliers();
+  else loadPartnersFull();
+}
 async function loadPartnersFull(){
   const list=await Auth.loadPartners();
   const el=document.getElementById('partnersFull');

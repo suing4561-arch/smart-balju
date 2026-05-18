@@ -130,9 +130,10 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 
 <script src="auth.js"></script>
 <script>
-// auth.js 로드 후 실행
-window.addEventListener('load', function() {
+// Firebase 준비 완료 후 실행
+function initApp() {
   const Auth = window.SmartBaljuAuth;
+  if(!Auth) { setTimeout(initApp, 300); return; }
 
   const PAGE_MAP = {
     master:    {title:'Master 관리자',    url:'master.html',         color:'#f1f5f9', tc:'#334155'},
@@ -268,7 +269,10 @@ window.addEventListener('load', function() {
   function closeModal(){
     document.getElementById('modalOverlay').classList.remove('show');
   }
-});
+}
+
+document.addEventListener('firebaseReady', initApp);
+setTimeout(initApp, 1000); // 폴백
 </script>
 </body>
 </html>
