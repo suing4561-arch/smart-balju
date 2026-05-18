@@ -5,171 +5,210 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>대상정보통신 Master 계정관리</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <style>
-:root{--bg:#f4f7fb;--panel:#fff;--text:#162033;--muted:#6b7280;--line:#dbe3ee;--navy:#17233c;--blue:#2563eb;--green:#16a34a;--yellow:#d97706;--red:#dc2626;--purple:#7c3aed;--shadow:0 14px 40px rgba(20,31,51,.08)}
+:root{--bg:#f4f7fb;--panel:#fff;--text:#162033;--muted:#6b7280;--line:#dbe3ee;--navy:#17233c;--blue:#2563eb;--green:#16a34a;--yellow:#d97706;--red:#dc2626;--shadow:0 14px 40px rgba(20,31,51,.08)}
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:"Noto Sans KR",sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
-button,input,select,textarea{font:inherit}button{cursor:pointer}
-.shell{display:grid;grid-template-columns:260px 1fr;min-height:100vh}
-.side{background:var(--navy);color:#fff;padding:24px 18px}
-.brand{font-size:20px;font-weight:900}.brand small{display:block;margin-top:4px;color:rgba(255,255,255,.55);font-size:12px}
-.nav{display:grid;gap:8px;margin-top:30px}.nav button{border:0;border-radius:10px;padding:12px 14px;text-align:left;background:rgba(255,255,255,.08);color:#fff;font-weight:700;transition:background .15s}
-.nav button:hover{background:rgba(255,255,255,.15)}.nav button.active{background:#fff;color:var(--navy)}
+button,input,select{font:inherit}button{cursor:pointer}
+.shell{display:grid;grid-template-columns:230px 1fr;min-height:100vh}
+.side{background:var(--navy);color:#fff;padding:22px 16px;display:flex;flex-direction:column;gap:0}
+.brand-name{font-size:17px;font-weight:900;color:#fff}
+.brand-sub{font-size:11px;color:rgba(255,255,255,.5);margin-top:3px}
+.side-section{font-size:10px;font-weight:700;color:rgba(255,255,255,.35);letter-spacing:1px;text-transform:uppercase;padding:18px 4px 6px}
+.side-btn{border:0;border-radius:9px;padding:10px 13px;text-align:left;background:rgba(255,255,255,.07);color:rgba(255,255,255,.8);font-weight:700;font-size:13px;transition:background .15s;margin-bottom:5px;width:100%}
+.side-btn:hover{background:rgba(255,255,255,.14)}
+.side-btn.active{background:#fff;color:var(--navy)}
+.side-footer{margin-top:auto;padding-top:14px;border-top:.5px solid rgba(255,255,255,.1)}
 .main{padding:26px;overflow:auto}
-.top{display:flex;align-items:center;gap:12px;margin-bottom:18px}.title{font-size:26px;font-weight:900}.top-actions{margin-left:auto;display:flex;gap:8px}
-.btn{border:1px solid var(--line);border-radius:9px;padding:9px 13px;background:var(--panel);color:var(--text);font-weight:700;transition:background .15s}
-.btn:hover{background:var(--bg)}.btn.primary{background:var(--blue);border-color:var(--blue);color:#fff}.btn.primary:hover{opacity:.9}
-.card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:18px;box-shadow:var(--shadow);margin-bottom:14px}
-.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px}
+.page-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px}
+.page-title{font-size:22px;font-weight:900}
+.page-sub{font-size:13px;color:var(--muted);margin-top:3px}
+.btn{border:1px solid var(--line);border-radius:9px;padding:9px 14px;background:var(--panel);color:var(--text);font-weight:700}
+.btn.primary{background:var(--blue);border-color:var(--blue);color:#fff}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px;box-shadow:var(--shadow)}
 label{display:block;margin-bottom:5px;color:var(--muted);font-size:12px;font-weight:700}
-input,select,textarea{width:100%;border:1px solid var(--line);border-radius:9px;padding:10px 12px;background:#fff;color:var(--text);outline:none;transition:border-color .15s}
-input:focus,select:focus,textarea:focus{border-color:var(--blue)}
-.filters{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:12px}
-.filter{border:1px solid var(--line);border-radius:999px;padding:7px 12px;background:#fff;color:var(--muted);font-size:12px;font-weight:700;cursor:pointer;transition:all .15s}
-.filter.active{border-color:var(--blue);background:#eff6ff;color:var(--blue)}
+input,select{width:100%;border:1px solid var(--line);border-radius:9px;padding:10px 12px;background:#fff;color:var(--text);outline:none}
+input:focus,select:focus{border-color:var(--blue)}
+.filter-bar{display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap}
+.status-filters{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+.sf{border:1px solid var(--line);border-radius:999px;padding:6px 13px;background:#fff;color:var(--muted);font-size:12px;font-weight:700;cursor:pointer}
+.sf.active{border-color:var(--blue);background:#eff6ff;color:var(--blue)}
 table{width:100%;border-collapse:collapse;font-size:13px}
 th,td{padding:11px 8px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
 th{color:var(--muted);font-size:11px;text-transform:uppercase}
-.actions{display:flex;gap:5px;flex-wrap:wrap}
 .pill{display:inline-flex;align-items:center;border-radius:999px;padding:3px 9px;font-size:11px;font-weight:700}
-.role-franchise{background:#ecfdf5;color:#047857}.role-hq{background:#eff6ff;color:#1d4ed8}
+.role-hq{background:#eff6ff;color:#1d4ed8}.role-franchise{background:#ecfdf5;color:#047857}
 .role-supplier{background:#fff7ed;color:#c2410c}.role-driver{background:#f5f3ff;color:#6d28d9}.role-master{background:#f8fafc;color:#334155}
 .status-active{background:#ecfdf5;color:#047857}.status-inactive{background:#f1f5f9;color:#475569}
 .status-suspended{background:#fef2f2;color:#b91c1c}.status-expired{background:#fff7ed;color:#c2410c}
-.status-password_reset_required{background:#fefce8;color:#a16207}
-.mini{border:1px solid var(--line);border-radius:7px;background:#fff;padding:5px 8px;font-size:11px;font-weight:700;cursor:pointer;transition:background .15s}
-.mini:hover{background:var(--bg)}.mini.green{color:var(--green)}.mini.red{color:var(--red)}.mini.yellow{color:var(--yellow)}.mini.blue{color:var(--blue)}
-.muted{color:var(--muted);font-size:12px}.login-ok{color:var(--green);font-weight:700}.login-no{color:var(--red);font-weight:700}
-.modal{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(15,23,42,.55);z-index:30;padding:18px}
+.mini{border:1px solid var(--line);border-radius:7px;background:#fff;padding:5px 8px;font-size:11px;font-weight:700;cursor:pointer;margin:2px}
+.mini.blue{color:var(--blue)}.mini.green{color:var(--green)}.mini.red{color:var(--red)}.mini.yellow{color:var(--yellow)}
+.muted{color:var(--muted);font-size:12px}
+.login-ok{color:var(--green);font-weight:700}.login-no{color:var(--red);font-weight:700}
+.modal{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(15,23,42,.55);z-index:50;padding:16px}
 .modal.show{display:flex}
-.box{width:100%;max-width:580px;background:#fff;border-radius:18px;padding:22px;box-shadow:0 24px 80px rgba(0,0,0,.25);max-height:90vh;overflow-y:auto}
-.box h2{margin-bottom:14px}
-/* 권한부여 모달 */
-.perm-section{margin-bottom:16px}
-.perm-section-title{font-size:13px;font-weight:900;color:var(--navy);margin-bottom:8px;display:flex;align-items:center;gap:6px;padding:8px 12px;background:var(--bg);border-radius:8px}
-.perm-section-title .dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
-.sub-perms{display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:0 4px}
-.sub-perm-row{display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;cursor:pointer;transition:all .15s}
-.sub-perm-row:hover{background:var(--bg)}
-.sub-perm-row.active{background:#eff6ff;border-color:var(--blue)}
-.sub-perm-row input[type=checkbox]{width:16px;height:16px;accent-color:var(--blue);cursor:pointer;flex-shrink:0}
-.sub-perm-label{font-size:12px;font-weight:700;color:var(--text)}
-.sub-perm-sub{font-size:10px;color:var(--muted);margin-top:1px}
-.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(16px);background:var(--navy);color:#fff;border-radius:999px;padding:11px 18px;font-weight:700;font-size:13px;opacity:0;transition:.2s;z-index:100}
+.modal-box{width:100%;max-width:580px;background:#fff;border-radius:18px;padding:24px;box-shadow:0 24px 80px rgba(0,0,0,.25);max-height:92vh;overflow-y:auto}
+.modal-box h2{font-size:17px;margin-bottom:16px}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.form-divider{grid-column:1/-1;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;padding-top:10px;margin-top:4px;border-top:1px solid var(--line)}
+.form-full{grid-column:1/-1}
+.acct-item{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border:1px solid var(--line);border-radius:10px;cursor:pointer;margin-bottom:8px;transition:background .15s}
+.acct-item:hover{background:var(--bg)}
+.perm-section{margin-bottom:14px}
+.perm-title{font-size:13px;font-weight:900;color:var(--navy);display:flex;align-items:center;gap:6px;padding:8px 12px;background:var(--bg);border-radius:8px;margin-bottom:8px}
+.perm-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.perm-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.perm-row{display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;cursor:pointer}
+.perm-row.active{background:#eff6ff;border-color:var(--blue)}
+.perm-row input{width:16px;height:16px;accent-color:var(--blue);cursor:pointer;flex-shrink:0}
+.perm-lbl{font-size:12px;font-weight:700}.perm-sub{font-size:10px;color:var(--muted);margin-top:1px}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(16px);background:var(--navy);color:#fff;border-radius:999px;padding:11px 20px;font-weight:700;font-size:13px;opacity:0;transition:.2s;z-index:200}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
-.loading{display:flex;align-items:center;justify-content:center;padding:60px;color:var(--muted);gap:10px}
 .spinner{width:20px;height:20px;border:2px solid var(--line);border-top-color:var(--blue);border-radius:50%;animation:spin .7s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
-.section-divider{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;grid-column:1/-1;margin-top:6px;padding-top:10px;border-top:1px solid var(--line)}
-.brand-filter-bar{display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap}
-.brand-filter-bar label{margin:0;white-space:nowrap}
-.brand-filter-bar select{width:auto;min-width:200px}
-@media(max-width:820px){.shell{grid-template-columns:1fr}.side{position:sticky;top:0;z-index:10}}
 </style>
 </head>
 <body>
 <div class="shell">
+
+  <!-- 사이드바 -->
   <aside class="side">
-    <div class="brand">대상정보통신<small>Smart Balju Master</small></div>
-    <div class="nav">
-      <button class="active" onclick="showSection('accounts')">계정관리</button>
-      <button onclick="goToSite('hq')">본사 화면</button>
-      <button onclick="goToSite('franchise')">가맹점 화면</button>
-      <button onclick="goToSite('supplier')">납품업체 화면</button>
-      <button onclick="goToSite('driver')">배송기사 화면</button>
-      <button onclick="Auth.logout()" style="margin-top:20px;background:rgba(220,38,38,.2);color:#fca5a5">로그아웃</button>
+    <div>
+      <div class="brand-name">대상정보통신</div>
+      <div class="brand-sub">Smart Balju Master</div>
+    </div>
+
+    <div class="side-section">계정 관리</div>
+    <button class="side-btn active" id="tab-all"       onclick="switchTab('all')">전체 계정</button>
+    <button class="side-btn"        id="tab-hq"        onclick="switchTab('hq')">본사 (HQ)</button>
+    <button class="side-btn"        id="tab-franchise" onclick="switchTab('franchise')">가맹점</button>
+    <button class="side-btn"        id="tab-supplier"  onclick="switchTab('supplier')">납품업체</button>
+    <button class="side-btn"        id="tab-driver"    onclick="switchTab('driver')">배송기사</button>
+
+    <div class="side-section">화면 이동</div>
+    <button class="side-btn" onclick="goToSite('hq')">본사 화면 →</button>
+    <button class="side-btn" onclick="goToSite('franchise')">가맹점 화면 →</button>
+    <button class="side-btn" onclick="goToSite('supplier')">납품업체 화면 →</button>
+    <button class="side-btn" onclick="goToSite('driver')">배송기사 화면 →</button>
+
+    <div class="side-footer">
+      <button class="side-btn" onclick="Auth.logout()" style="background:rgba(220,38,38,.2);color:#fca5a5">로그아웃</button>
     </div>
   </aside>
-  <main class="main">
 
-    <!-- 계정관리 -->
-    <div id="section-accounts">
-      <div class="top">
-        <div><div class="title">Master 계정관리</div><div class="muted">계정 생성·수정·권한 부여</div></div>
-        <div class="top-actions">
-          <button class="btn" onclick="seedMenuData()">밀면 메뉴 등록</button>
-          <button class="btn" onclick="resetMock()">초기화</button>
-          <button class="btn primary" onclick="openEditor()">+ 계정 생성</button>
-        </div>
+  <!-- 메인 -->
+  <main class="main">
+    <div class="page-top">
+      <div>
+        <div class="page-title" id="pageTitle">전체 계정</div>
+        <div class="page-sub muted" id="pageSub">모든 역할의 계정을 관리합니다</div>
       </div>
-      <div class="card">
-        <!-- 브랜드(본사) 필터 -->
-        <div class="brand-filter-bar">
-          <label>브랜드(본사) 필터</label>
-          <select id="brandFilter" onchange="setBrandFilter(this.value)">
-            <option value="">전체 브랜드</option>
-          </select>
-        </div>
-        <div class="filters" id="filters"></div>
-        <div style="overflow:auto">
-          <table>
-            <thead><tr><th>역할 · 브랜드</th><th>계정</th><th>상태</th><th>로그인</th><th>부여된 권한</th><th>관리</th></tr></thead>
-            <tbody id="userBody"><tr><td colspan="6"><div class="loading"><div class="spinner"></div>불러오는 중..</div></td></tr></tbody>
-          </table>
-        </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn" onclick="resetAccounts()">초기화</button>
+        <button class="btn primary" onclick="openEditor()">+ 계정 생성</button>
       </div>
     </div>
 
+    <div class="card">
+      <!-- 브랜드 필터 -->
+      <div class="filter-bar" id="brandFilterBar">
+        <label style="margin:0;white-space:nowrap;font-size:13px">브랜드 필터</label>
+        <select id="brandFilter" onchange="setBrand(this.value)" style="min-width:200px;width:auto">
+          <option value="">전체 브랜드</option>
+        </select>
+        <span id="countBadge" style="font-size:12px;color:var(--muted)"></span>
+      </div>
+      <!-- 역할 필터 -->
+      <div class="status-filters" id="roleFilters"></div>
+      <!-- 상태 필터 -->
+      <div class="status-filters" id="statusFilters"></div>
+      <!-- 테이블 -->
+      <div style="overflow:auto">
+        <table>
+          <thead><tr>
+            <th>역할·브랜드</th><th>계정 정보</th><th>상태</th>
+            <th>로그인</th><th>부여된 권한</th><th>관리</th>
+          </tr></thead>
+          <tbody id="userBody">
+            <tr><td colspan="6" style="text-align:center;padding:40px">
+              <div style="display:flex;align-items:center;justify-content:center;gap:8px;color:var(--muted)">
+                <div class="spinner"></div>불러오는 중...
+              </div>
+            </td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
   </main>
 </div>
 
-<!-- 계정 선택 모달 (본사가 여러 곳일 때) -->
-<div class="modal" id="siteSelectModal">
-  <div class="box" style="max-width:480px">
-    <h2 id="siteSelectTitle">계정 선택</h2>
-    <div class="muted" style="margin-bottom:12px">접속할 계정을 선택하세요.</div>
-    <div id="siteSelectList"></div>
-    <div style="margin-top:14px;text-align:right">
-      <button class="btn" onclick="closeSiteSelect()">취소</button>
+<!-- 계정선택 모달 (화면이동 시) -->
+<div class="modal" id="siteModal">
+  <div class="modal-box" style="max-width:420px">
+    <h2 id="siteModalTitle">계정 선택</h2>
+    <div class="muted" style="margin-bottom:14px">접속할 계정을 선택하세요.</div>
+    <div id="siteModalList"></div>
+    <div style="text-align:right;margin-top:12px">
+      <button class="btn" onclick="closeModal('siteModal')">취소</button>
     </div>
   </div>
 </div>
 
 <!-- 계정 생성/수정 모달 -->
 <div class="modal" id="editorModal">
-  <div class="box">
+  <div class="modal-box">
     <h2 id="editorTitle">계정 생성</h2>
-    <div class="grid">
-      <div><label>역할</label><select id="fRole" onchange="toggleOkposFields()">
-        <option value="hq">프랜차이즈 본사</option>
-        <option value="franchise">가맹점</option>
-        <option value="supplier">납품업체</option>
-        <option value="driver">배송기사</option>
-        <option value="master">Master</option>
-      </select></div>
-      <div><label>상태</label><select id="fStatus">
-        <option value="active">정상</option>
-        <option value="inactive">비활성</option>
-        <option value="suspended">사용중지</option>
-        <option value="expired">계약만료</option>
-        <option value="password_reset_required">비밀번호 재설정 필요</option>
-      </select></div>
-
-      <div class="section-divider">기본 정보</div>
-      <div><label>담당자명</label><input id="fName"></div>
-      <div><label>상호명</label><input id="fBusinessName"></div>
-      <div><label>사업자번호</label><input id="fBusinessNumber"></div>
-      <div><label>연락처</label><input id="fPhone"></div>
-
-      <div class="section-divider">로그인 정보</div>
-      <div><label>로그인 ID</label><input id="fLoginId"></div>
-      <div><label>비밀번호 <span style="color:var(--muted);font-weight:400">(수정 시 비워두면 유지)</span></label><input id="fPassword" type="password"></div>
-
-      <!-- 브랜드 연동 (본사/가맹점/납품업체 역할일 때만 표시) -->
-      <div class="section-divider" id="brandDivider" style="display:none">브랜드 연동</div>
-      <div id="brandSelectWrap" style="display:none">
-        <label>연동 브랜드 <span style="color:var(--muted);font-weight:400">(본사에서 등록한 브랜드)</span></label>
-        <select id="fBrandSelect"></select>
-        <div id="brandPreview" style="margin-top:6px;padding:8px 12px;background:var(--bg);border-radius:8px;font-size:12px;color:var(--muted);display:none"></div>
+    <div class="form-grid">
+      <div><label>역할</label>
+        <select id="fRole" onchange="onRoleChange()">
+          <option value="hq">프랜차이즈 본사 (HQ)</option>
+          <option value="franchise">가맹점</option>
+          <option value="supplier">납품업체</option>
+          <option value="driver">배송기사</option>
+          <option value="master">Master</option>
+        </select>
+      </div>
+      <div><label>상태</label>
+        <select id="fStatus">
+          <option value="active">정상</option>
+          <option value="inactive">비활성</option>
+          <option value="suspended">사용중지</option>
+          <option value="expired">계약만료</option>
+          <option value="password_reset_required">비밀번호 재설정 필요</option>
+        </select>
       </div>
 
-      <!-- OKPos 정보 (가맹점/본사 역할일 때만 표시) -->
-      <div class="section-divider" id="okposDivider" style="display:none">OKPos 연동</div>
-      <div id="okposIdWrap" style="display:none"><label>OKPos 아이디</label><input id="fOkposId" placeholder="OKPos 로그인 아이디"></div>
-      <div id="okposPwWrap" style="display:none"><label>OKPos 비밀번호</label><input id="fOkposPw" type="password" placeholder="OKPos 비밀번호"></div>
+      <div class="form-divider">기본 정보</div>
+      <div><label>담당자명</label><input id="fName" placeholder="홍길동"></div>
+      <div><label>상호명</label><input id="fBusinessName" placeholder="부산 1호점"></div>
+      <div><label>사업자번호</label><input id="fBusinessNumber" placeholder="000-00-00000"></div>
+      <div><label>연락처</label><input id="fPhone" placeholder="010-0000-0000"></div>
+
+      <div class="form-divider">로그인 정보</div>
+      <div><label>로그인 ID</label><input id="fLoginId" placeholder="아이디"></div>
+      <div><label>비밀번호 <span style="font-weight:400;color:var(--muted)">(수정시 비워두면 유지)</span></label>
+        <input id="fPassword" type="password" placeholder="비밀번호"></div>
+
+      <!-- 브랜드 연동 -->
+      <div class="form-divider" id="divBrand" style="display:none">브랜드 연동</div>
+      <div class="form-full" id="wrapBrand" style="display:none">
+        <label>연동 브랜드</label>
+        <select id="fBrand" onchange="onBrandChange()">
+          <option value="">브랜드 선택</option>
+        </select>
+        <div id="brandPreview" style="display:none;margin-top:6px;padding:8px 12px;background:var(--bg);border-radius:8px;font-size:12px;color:var(--muted)"></div>
+      </div>
+
+      <!-- OKPos 연동 -->
+      <div class="form-divider" id="divOkpos" style="display:none">OKPos 연동</div>
+      <div id="wrapOkposId" style="display:none"><label>OKPos 아이디</label><input id="fOkposId" placeholder="OKPos 아이디"></div>
+      <div id="wrapOkposPw" style="display:none"><label>OKPos 비밀번호</label><input id="fOkposPw" type="password" placeholder="OKPos 비밀번호"></div>
     </div>
-    <div style="display:flex;gap:8px;margin-top:16px;justify-content:flex-end">
-      <button class="btn" onclick="closeEditor()">취소</button>
+
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:18px">
+      <button class="btn" onclick="closeModal('editorModal')">취소</button>
       <button class="btn primary" onclick="saveEditor()">저장</button>
     </div>
   </div>
@@ -177,202 +216,169 @@ th{color:var(--muted);font-size:11px;text-transform:uppercase}
 
 <!-- 권한부여 모달 -->
 <div class="modal" id="permModal">
-  <div class="box" style="max-width:620px">
+  <div class="modal-box" style="max-width:640px">
     <h2>권한부여</h2>
-    <div id="permTargetName" style="color:var(--muted);margin-bottom:16px;font-size:14px"></div>
+    <div id="permTarget" style="color:var(--muted);margin-bottom:16px;font-size:14px"></div>
     <div id="permGrid"></div>
-    <div style="margin-top:8px;padding:10px;background:#f8fafc;border-radius:8px;font-size:12px;color:var(--muted)">
-      ※ 체크된 기능만 해당 계정에서 탭/메뉴가 보입니다. 결제 플랜에 따라 차등 부여하세요.
+    <div style="margin-top:8px;padding:10px 14px;background:#f8fafc;border-radius:8px;font-size:12px;color:var(--muted)">
+      체크된 기능만 해당 계정에서 표시됩니다. 결제 플랜에 따라 차등 부여하세요.
     </div>
-    <div style="display:flex;gap:8px;margin-top:16px;justify-content:flex-end">
-      <button class="btn" onclick="closePerm()">취소</button>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px">
+      <button class="btn" onclick="closeModal('permModal')">취소</button>
       <button class="btn primary" onclick="savePerm()">저장</button>
     </div>
   </div>
 </div>
 
-<!-- 계정 상세보기 모달 -->
+<!-- 상세보기 모달 -->
 <div class="modal" id="detailModal">
-  <div class="box">
-    <h2>계정 상세보기</h2>
-    <pre id="detailText" style="white-space:pre-wrap;background:#f8fafc;border:1px solid var(--line);border-radius:12px;padding:14px;font-size:12px;max-height:60vh;overflow:auto"></pre>
-    <div style="margin-top:14px;text-align:right"><button class="btn primary" onclick="closeDetail()">닫기</button></div>
+  <div class="modal-box">
+    <h2>계정 상세</h2>
+    <pre id="detailPre" style="white-space:pre-wrap;background:#f8fafc;border:1px solid var(--line);border-radius:10px;padding:14px;font-size:12px;max-height:55vh;overflow:auto"></pre>
+    <div style="text-align:right;margin-top:14px">
+      <button class="btn primary" onclick="closeModal('detailModal')">닫기</button>
+    </div>
   </div>
 </div>
 
 <div class="toast" id="toast"></div>
+
 <script src="auth.js"></script>
 <script>
 const Auth = window.SmartBaljuAuth;
-let filter='all', brandFilter='', editingUid='', permUid='', _users=[];
 
-const FILTERS=[
-  ['all','All'],['hq','HQ'],['franchise','Franchise'],['supplier','Supplier'],['driver','Driver'],
-  ['active','Active'],['inactive','Inactive'],['suspended','Suspended'],
-];
+// ── 상태 ───────────────────────────────────────────────────
+let _users=[], _brands=[];
+let _tab='all', _status='all', _brand='';
+let _editUid='', _permUid='';
 
+const ROLE_LABEL = {master:'Master',hq:'본사(HQ)',franchise:'가맹점',supplier:'납품업체',driver:'배송기사'};
+const SITE_URL   = {hq:'site_hq.html',franchise:'site_franchise.html',supplier:'site_supplier.html',driver:'site_driver.html'};
+const TAB_INFO   = {
+  all:      ['전체 계정',  '모든 역할의 계정을 관리합니다'],
+  hq:       ['본사 (HQ)', '프랜차이즈 본사 계정 관리'],
+  franchise:['가맹점',    '가맹점 계정 관리'],
+  supplier: ['납품업체',  '납품업체 계정 관리'],
+  driver:   ['배송기사',  '배송기사 계정 관리'],
+};
+const STATUS_LIST = [['all','전체'],['active','활성'],['inactive','비활성'],['suspended','중지'],['expired','만료']];
+const ROLE_FILTERS = [['all','전체'],['hq','본사'],['franchise','가맹점'],['supplier','납품업체'],['driver','배송기사']];
 const PERM_DEFS = {
-  hq: {
-    label:'Franchise HQ', color:'#1d4ed8', bg:'#eff6ff', dot:'#3b82f6',
-    items:[
-      {key:'hq_dashboard', label:'Dashboard', sub:'Sales and KPI'},
-      {key:'hq_orders', label:'Order management', sub:'Approve or reject orders'},
-      {key:'hq_delivery', label:'Delivery management', sub:'Delivery status'},
-      {key:'hq_register', label:'Register data', sub:'Partners, brands, menus, prices'},
-      {key:'hq_partners', label:'Partner management', sub:'Supplier list'},
-      {key:'hq_stats', label:'Statistics', sub:'Sales analysis'},
-      {key:'hq_settle', label:'Settlement', sub:'Payments and settlement'},
-      {key:'hq_notice', label:'Notices', sub:'Notice management'},
-      {key:'hq_okpos', label:'OKPos sales sync', sub:'Automatic sales collection'},
-    ]
-  },
-  franchise: {
-    label:'Franchise', color:'#047857', bg:'#ecfdf5', dot:'#10b981',
-    items:[
-      {key:'fr_home', label:'Home dashboard', sub:'Order and stock status'},
-      {key:'fr_order', label:'Place order', sub:'Select items and cart'},
-      {key:'fr_delivery', label:'Delivery tracking', sub:'Real-time delivery status'},
-      {key:'fr_sales', label:'Sales status', sub:'Daily and monthly sales'},
-      {key:'fr_stats', label:'Statistics', sub:'Sales charts'},
-    ]
-  },
-  supplier: {
-    label:'Supplier', color:'#c2410c', bg:'#fff7ed', dot:'#f97316',
-    items:[
-      {key:'sup_register', label:'Registration', sub:'Drivers and franchise stores'},
-      {key:'sup_assign', label:'Delivery assignment', sub:'Create and assign deliveries'},
-      {key:'sup_slip', label:'Delivery slip', sub:'Print slips and copy links'},
-      {key:'sup_settle', label:'Settlement', sub:'Supply history and settlement'},
-    ]
-  },
+  hq:{label:'본사 기능',dot:'#3b82f6',items:[
+    {key:'hq_dashboard',label:'대시보드',sub:'매출·KPI'},
+    {key:'hq_orders',label:'주문 관리',sub:'발주 승인·반려'},
+    {key:'hq_delivery',label:'배송 관리',sub:'배송 현황'},
+    {key:'hq_register',label:'기준정보 등록',sub:'거래처·메뉴·가격'},
+    {key:'hq_partners',label:'거래처 관리',sub:'납품업체 목록'},
+    {key:'hq_stats',label:'통계·분석',sub:'매출 분석'},
+    {key:'hq_settle',label:'정산 관리',sub:'입출금 정산'},
+    {key:'hq_notice',label:'공지·레시피',sub:'공지사항 관리'},
+    {key:'hq_okpos',label:'OKPos 연동',sub:'자동 매출 수집'},
+  ]},
+  franchise:{label:'가맹점 기능',dot:'#10b981',items:[
+    {key:'fr_home',label:'홈·대시보드',sub:'수발주·재고'},
+    {key:'fr_order',label:'발주하기',sub:'품목 선택·장바구니'},
+    {key:'fr_delivery',label:'배송 추적',sub:'실시간 배송'},
+    {key:'fr_sales',label:'매출 현황',sub:'일별·월별 매출'},
+    {key:'fr_stats',label:'통계',sub:'매출 분석 차트'},
+  ]},
+  supplier:{label:'납품업체 기능',dot:'#f97316',items:[
+    {key:'sup_register',label:'등록관리',sub:'기사·가맹점 등록'},
+    {key:'sup_assign',label:'배송배정',sub:'배송 생성·기사 배정'},
+    {key:'sup_slip',label:'전표출력',sub:'배송전표·링크복사'},
+    {key:'sup_settle',label:'정산관리',sub:'납품 내역·정산'},
+  ]},
 };
 
-function esc(v){ return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c])); }
-function toast(msg){ const el=document.getElementById('toast'); el.textContent=msg; el.classList.add('show'); setTimeout(()=>el.classList.remove('show'),2600); }
+function esc(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));}
+let _tt;
+function toast(m){const el=document.getElementById('toast');el.textContent=m;el.classList.add('show');clearTimeout(_tt);_tt=setTimeout(()=>el.classList.remove('show'),2600);}
+function closeModal(id){document.getElementById(id).classList.remove('show');}
 
-function showSection(id){
-  document.getElementById('section-accounts').style.display='';
-  document.querySelectorAll('.side .nav button').forEach((b,i)=>b.classList.toggle('active',i===0));
-}
-
-// 사이트 이동 - 계정이 여러 개면 선택 모달 표시
-const SITE_MAP = { hq:'site_hq.html', franchise:'site_franchise.html', supplier:'site_supplier.html', driver:'site_driver.html' };
-
-async function goToSite(role){
-  const accounts = _users.filter(u=>u.role===role && u.status==='active');
-  if(!accounts.length){ toast(Auth.ROLE_LABELS[role]+' 활성 계정이 없습니다.'); return; }
-  if(accounts.length===1){ Auth.setSession(accounts[0]); location.href=SITE_MAP[role]; return; }
-  // 여러 계정 → 선택 모달
-  document.getElementById('siteSelectTitle').textContent = Auth.ROLE_LABELS[role]+' 계정 선택';
-  document.getElementById('siteSelectList').innerHTML = accounts.map(a=>`
-    <button class="btn" style="width:100%;text-align:left;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center"
-      onclick="selectSiteAccount('${esc(a.uid)}','${SITE_MAP[role]}')">
-      <span><strong>${esc(a.businessName||a.name||'-')}</strong>
-        ${a.brandName?`<span class="muted" style="margin-left:6px">${esc(a.brandName)}</span>`:''}
-      </span>
-      <span class="muted">${esc(a.loginId)}</span>
-    </button>`).join('');
-  document.getElementById('siteSelectModal').classList.add('show');
-}
-
-function selectSiteAccount(uid,url){
-  const user=_users.find(u=>u.uid===uid);
-  if(user) Auth.setSession(user);
-  closeSiteSelect();
-  location.href=url;
-}
-function closeSiteSelect(){ document.getElementById('siteSelectModal').classList.remove('show'); }
-
-// OKPos·브랜드 필드 토글
-async function toggleOkposFields(){
-  const role = document.getElementById('fRole').value;
-  const showOkpos = ['franchise','hq'].includes(role);
-  const showBrand = ['hq','franchise','supplier'].includes(role);
-  ['okposDivider','okposIdWrap','okposPwWrap'].forEach(id=>{
-    document.getElementById(id).style.display = showOkpos ? '' : 'none';
+// ── 탭 전환 ────────────────────────────────────────────────
+function switchTab(tab){
+  _tab=tab; _status='all';
+  ['all','hq','franchise','supplier','driver'].forEach(t=>{
+    document.getElementById('tab-'+t).classList.toggle('active',t===tab);
   });
-  ['brandDivider','brandSelectWrap'].forEach(id=>{
-    document.getElementById(id).style.display = showBrand ? '' : 'none';
-  });
-  if(showBrand) await loadBrandSelect();
+  const [title,sub]=TAB_INFO[tab]||TAB_INFO.all;
+  document.getElementById('pageTitle').textContent=title;
+  document.getElementById('pageSub').textContent=sub;
+  // 배송기사는 브랜드 필터 숨김
+  document.getElementById('brandFilterBar').style.display=tab==='driver'?'none':'';
+  renderStatusFilters();
+  render();
 }
 
-async function loadBrandSelect(){
-  const brands = await Auth.loadBrands();
-  const sel = document.getElementById('fBrandSelect');
-  const current = sel.value;
-  sel.innerHTML = '<option value="">브랜드 선택</option>' +
-    brands.map(b=>`<option value="${b.id}" data-code="${b.code||''}" data-name="${b.name}">[${b.code||'-'}] ${b.name}${b.category?' ('+b.category+')':''}</option>`).join('');
-  if(current) sel.value = current;
-  sel.onchange = function(){
-    const opt = sel.options[sel.selectedIndex];
-    const prev = document.getElementById('brandPreview');
-    if(sel.value){ prev.style.display=''; prev.innerHTML=`브랜드: <strong>${opt.dataset.name}</strong>`; }
-    else { prev.style.display='none'; }
-  };
-  sel.dispatchEvent(new Event('change'));
-}
-
-async function loadBrandFilterDropdown(){
-  const brands = await Auth.loadBrands();
-  const sel = document.getElementById('brandFilter');
-  const current = sel.value;
-  sel.innerHTML = '<option value="">전체 브랜드</option>' +
-    brands.map(b=>`<option value="${b.id}">${b.name}</option>`).join('');
-  if(current) sel.value = current;
-}
-
-function setBrandFilter(val){ brandFilter=val; render(); }
-
-function loginAvailable(u){ return !Auth.BLOCKED_LOGIN_STATUSES.includes(u.status); }
-
-function renderFilters(){
-  document.getElementById('filters').innerHTML=FILTERS.map(([k,l])=>
-    `<button class="filter ${filter===k?'active':''}" onclick="setFilter('${k}')">${l}</button>`
+// ── 상태 필터 ──────────────────────────────────────────────
+function renderStatusFilters(){
+  document.getElementById('statusFilters').innerHTML=STATUS_LIST.map(([k,l])=>
+    `<button class="sf ${_status===k?'active':''}" onclick="setStatus('${k}')">${l}</button>`
+  ).join('');
+  document.getElementById('roleFilters').innerHTML=ROLE_FILTERS.map(([k,l])=>
+    `<button class="sf ${_tab===k?'active':''}" onclick="switchTab('${k}')">${l}</button>`
   ).join('');
 }
-function setFilter(key){ filter=key; render(); }
-function filteredUsers(){
+function setStatus(s){_status=s;renderStatusFilters();render();}
+
+// ── 브랜드 필터 ────────────────────────────────────────────
+async function loadBrandFilter(){
+  _brands=await Auth.loadBrands();
+  const sel=document.getElementById('brandFilter');
+  const cur=sel.value;
+  sel.innerHTML='<option value="">전체 브랜드</option>'+_brands.map(b=>`<option value="${b.id}">${b.name}</option>`).join('');
+  if(cur)sel.value=cur;
+}
+function setBrand(v){_brand=v;render();}
+
+// ── 필터링·렌더 ────────────────────────────────────────────
+function filtered(){
   return _users.filter(u=>{
-    if(filter!=='all' && u.role!==filter && u.status!==filter) return false;
-    if(brandFilter && u.brandId!==brandFilter) return false;
+    if(_tab!=='all'&&u.role!==_tab)return false;
+    if(_status!=='all'&&u.status!==_status)return false;
+    if(_brand&&u.brandId!==_brand)return false;
     return true;
   });
 }
 
 function permBadges(u){
   const p=u.permissions||{};
-  const active=Object.keys(p).filter(k=>p[k]);
-  if(!active.length) return '<span style="color:var(--muted);font-size:11px">없음</span>';
-  const groups={hq:0,fr:0,sup:0};
-  active.forEach(k=>{ if(k.startsWith('hq_'))groups.hq++; else if(k.startsWith('fr_'))groups.fr++; else if(k.startsWith('sup_'))groups.sup++; });
-  let badges='';
-  if(groups.hq) badges+=`<span class="pill role-hq" style="font-size:10px;margin:1px">본사 ${groups.hq}개</span>`;
-  if(groups.fr) badges+=`<span class="pill role-franchise" style="font-size:10px;margin:1px">가맹점 ${groups.fr}개</span>`;
-  if(groups.sup) badges+=`<span class="pill role-supplier" style="font-size:10px;margin:1px">납품업체 ${groups.sup}개</span>`;
-  return badges||'<span style="color:var(--muted);font-size:11px">없음</span>';
+  const a=Object.keys(p).filter(k=>p[k]);
+  if(!a.length)return '<span style="color:var(--muted);font-size:11px">없음</span>';
+  const g={hq:0,fr:0,sup:0};
+  a.forEach(k=>{if(k.startsWith('hq_'))g.hq++;else if(k.startsWith('fr_'))g.fr++;else if(k.startsWith('sup_'))g.sup++;});
+  return [g.hq&&`<span class="pill role-hq" style="font-size:10px;margin:1px">본사 ${g.hq}</span>`,
+    g.fr&&`<span class="pill role-franchise" style="font-size:10px;margin:1px">가맹점 ${g.fr}</span>`,
+    g.sup&&`<span class="pill role-supplier" style="font-size:10px;margin:1px">납품업체 ${g.sup}</span>`]
+    .filter(Boolean).join('')||'<span style="color:var(--muted);font-size:11px">없음</span>';
 }
 
 function render(){
-  renderFilters();
-  const users=filteredUsers();
-  document.getElementById('userBody').innerHTML=users.length===0
-    ?'<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:30px">계정이 없습니다.</td></tr>'
-    :users.map(u=>`<tr>
+  const list=filtered();
+  document.getElementById('countBadge').textContent=list.length+'명';
+  document.getElementById('userBody').innerHTML=!list.length
+    ?'<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:32px">계정이 없습니다.</td></tr>'
+    :list.map(u=>`<tr>
       <td>
-        <span class="pill role-${esc(u.role)}">${esc(Auth.ROLE_LABELS[u.role]||u.role)}</span>
-        ${u.brandName?`<div style="font-size:11px;color:var(--muted);margin-top:3px">${esc(u.brandName)} · ${esc(Auth.ROLE_LABELS[u.role]||u.role)}</div>`:''}
+        <span class="pill role-${esc(u.role)}">${esc(ROLE_LABEL[u.role]||u.role)}</span>
+        ${u.brandName?`<div style="font-size:11px;color:var(--muted);margin-top:3px">${esc(u.brandName)}</div>`:''}
       </td>
-      <td><strong>${esc(u.businessName||u.name||'-')}</strong>
-        <div class="muted">${esc(u.name)} · ${esc(u.loginId)}</div>
+      <td>
+        <strong>${esc(u.businessName||u.name||'-')}</strong>
+        <div class="muted">${esc(u.name||'')} · ${esc(u.loginId)}</div>
         ${u.okposId?`<div style="font-size:11px;color:#6366f1">OKPos: ${esc(u.okposId)}</div>`:''}
-        <div class="muted">${esc(u.businessNumber||'')}</div></td>
+        ${u.businessNumber?`<div class="muted">${esc(u.businessNumber)}</div>`:''}
+      </td>
       <td><span class="pill status-${esc(u.status)}">${esc(Auth.STATUS_LABELS[u.status]||u.status)}</span></td>
-      <td>${loginAvailable(u)?'<span class="login-ok">가능</span>':'<span class="login-no">불가</span>'}
-        ${u.mustChangePassword?'<div class="muted" style="font-size:10px">비번변경필요</div>':''}</td>
-      <td>${permBadges(u)}
-        ${u.role!=='master'?`<br><button class="mini blue" style="margin-top:4px" onclick="openPerm('${esc(u.uid)}')">권한부여</button>`:''}</td>
-      <td><div class="actions">
+      <td>
+        ${!Auth.BLOCKED_LOGIN_STATUSES.includes(u.status)?'<span class="login-ok">가능</span>':'<span class="login-no">불가</span>'}
+        ${u.mustChangePassword?'<div class="muted" style="font-size:10px">비번변경필요</div>':''}
+      </td>
+      <td>
+        ${permBadges(u)}
+        ${u.role!=='master'?`<br><button class="mini blue" style="margin-top:4px" onclick="openPerm('${esc(u.uid)}')">권한부여</button>`:''}
+      </td>
+      <td><div style="display:flex;flex-wrap:wrap">
         <button class="mini blue" onclick="openEditor('${esc(u.uid)}')">수정</button>
         <button class="mini green" onclick="doStatus('${esc(u.uid)}','active')">활성</button>
         <button class="mini" onclick="doStatus('${esc(u.uid)}','inactive')">비활성</button>
@@ -385,170 +391,161 @@ function render(){
     </tr>`).join('');
 }
 
-async function refreshUsers(){
+async function refreshAll(){
   _users=await Auth.loadUsers();
-  await loadBrandFilterDropdown();
+  await loadBrandFilter();
+  renderStatusFilters();
   render();
 }
 
-// 계정 편집
+// ── 화면이동 ───────────────────────────────────────────────
+async function goToSite(role){
+  const list=_users.filter(u=>u.role===role&&u.status==='active');
+  if(!list.length){toast(ROLE_LABEL[role]+' 활성 계정이 없습니다');return;}
+  if(list.length===1){Auth.setSession(list[0]);location.href=SITE_URL[role];return;}
+  // 여러 계정 → 선택 모달
+  document.getElementById('siteModalTitle').textContent=ROLE_LABEL[role]+' 계정 선택';
+  document.getElementById('siteModalList').innerHTML=list.map(a=>`
+    <div class="acct-item" onclick="pickSite('${esc(a.uid)}','${SITE_URL[role]}')">
+      <div>
+        <strong>${esc(a.businessName||a.name||a.loginId)}</strong>
+        ${a.brandName?`<span class="muted" style="margin-left:6px">${esc(a.brandName)}</span>`:''}
+        <div class="muted">${esc(a.loginId)}</div>
+      </div>
+      <span style="color:var(--blue);font-size:20px">›</span>
+    </div>`).join('');
+  document.getElementById('siteModal').classList.add('show');
+}
+function pickSite(uid,url){
+  const u=_users.find(x=>x.uid===uid);
+  if(u)Auth.setSession(u);
+  closeModal('siteModal');
+  location.href=url;
+}
+
+// ── 계정 편집 ──────────────────────────────────────────────
 async function openEditor(uid){
-  editingUid=uid||'';
+  _editUid=uid||'';
   const u=uid?_users.find(x=>x.uid===uid):null;
   document.getElementById('editorTitle').textContent=u?'계정 수정':'계정 생성';
-  ['fRole','fStatus','fName','fBusinessName','fBusinessNumber','fPhone','fLoginId','fPassword','fOkposId','fOkposPw']
-    .forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
-  document.getElementById('fBrandSelect').value='';
+  ['fName','fBusinessName','fBusinessNumber','fPhone','fLoginId','fPassword','fOkposId','fOkposPw']
+    .forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  document.getElementById('fBrand').value='';
+  document.getElementById('brandPreview').style.display='none';
   if(u){
-    fRole.value=u.role; fStatus.value=u.status; fName.value=u.name||'';
-    fBusinessName.value=u.businessName||''; fBusinessNumber.value=u.businessNumber||'';
-    fPhone.value=u.phone||''; fLoginId.value=u.loginId||'';
-    fOkposId.value=u.okposId||''; fOkposPw.value='';
-    await toggleOkposFields();
-    if(u.brandId) document.getElementById('fBrandSelect').value=u.brandId;
-    document.getElementById('fBrandSelect').dispatchEvent(new Event('change'));
+    fRole.value=u.role;fStatus.value=u.status;fName.value=u.name||'';
+    fBusinessName.value=u.businessName||'';fBusinessNumber.value=u.businessNumber||'';
+    fPhone.value=u.phone||'';fLoginId.value=u.loginId||'';fOkposId.value=u.okposId||'';
+    await onRoleChange();
+    if(u.brandId){document.getElementById('fBrand').value=u.brandId;onBrandChange();}
   } else {
-    fRole.value='franchise'; fStatus.value='active'; fPassword.value='1234';
-    await toggleOkposFields();
+    fRole.value=_tab!=='all'?_tab:'franchise';
+    fStatus.value='active';fPassword.value='1234';
+    await onRoleChange();
   }
-  editorModal.classList.add('show');
-}
-function closeEditor(){ editorModal.classList.remove('show'); }
-async function saveEditor(){
-  if(!fLoginId.value.trim()){ toast('Login ID를 입력하세요.'); return; }
-  const brandSel=document.getElementById('fBrandSelect');
-  await Auth.upsertUser({
-    uid:editingUid, role:fRole.value, status:fStatus.value,
-    name:fName.value, businessName:fBusinessName.value,
-    businessNumber:fBusinessNumber.value, phone:fPhone.value,
-    loginId:fLoginId.value, password:fPassword.value||undefined,
-    okposId:fOkposId.value, okposPw:fOkposPw.value||undefined,
-    brandId: brandSel.value||'',
-    brandName: brandSel.options[brandSel.selectedIndex]?.dataset?.name||'',
-  });
-  closeEditor(); await refreshUsers(); toast('계정 저장 완료');
+  document.getElementById('editorModal').classList.add('show');
 }
 
-async function doStatus(uid,status){ await Auth.setUserStatus(uid,status); await refreshUsers(); toast('상태 변경 완료'); }
-async function doResetPw(uid){
-  const result=await Auth.resetPasswordByMaster(uid);
-  await refreshUsers();
-  alert(`임시 비밀번호 발급\n\n계정: ${result.user.loginId}\n임시 비밀번호: ${result.tempPassword}\n\n사용자는 로그인 후 임시 비밀번호로 변경해야 합니다.`);
+async function onRoleChange(){
+  const role=fRole.value;
+  const showBrand=['hq','franchise','supplier'].includes(role);
+  const showOkpos=['hq','franchise'].includes(role);
+  ['divBrand','wrapBrand'].forEach(id=>document.getElementById(id).style.display=showBrand?'':'none');
+  ['divOkpos','wrapOkposId','wrapOkposPw'].forEach(id=>document.getElementById(id).style.display=showOkpos?'':'none');
+  if(showBrand){
+    const brands=await Auth.loadBrands();
+    const sel=document.getElementById('fBrand');
+    const cur=sel.value;
+    sel.innerHTML='<option value="">브랜드 선택</option>'+brands.map(b=>`<option value="${b.id}" data-name="${b.name}">[${b.code||'-'}] ${b.name}${b.category?' ('+b.category+')':''}</option>`).join('');
+    if(cur)sel.value=cur;
+  }
 }
-async function doDelete(uid){ if(!confirm('정말 삭제하시겠습니까?')) return; await Auth.deleteUser(uid); await refreshUsers(); toast('삭제 완료'); }
+
+function onBrandChange(){
+  const sel=document.getElementById('fBrand');
+  const opt=sel.options[sel.selectedIndex];
+  const prev=document.getElementById('brandPreview');
+  if(sel.value){prev.style.display='';prev.textContent='연동 브랜드: '+opt.dataset.name;}
+  else prev.style.display='none';
+}
+
+async function saveEditor(){
+  if(!fLoginId.value.trim()){toast('로그인 ID를 입력하세요');return;}
+  const bSel=document.getElementById('fBrand');
+  const bOpt=bSel.options[bSel.selectedIndex];
+  await Auth.upsertUser({
+    uid:_editUid,role:fRole.value,status:fStatus.value,
+    name:fName.value,businessName:fBusinessName.value,
+    businessNumber:fBusinessNumber.value,phone:fPhone.value,
+    loginId:fLoginId.value,password:fPassword.value||undefined,
+    okposId:fOkposId.value,okposPw:fOkposPw.value||undefined,
+    brandId:bSel.value||'',
+    brandName:bOpt?.dataset?.name||'',
+  });
+  closeModal('editorModal');
+  await refreshAll();
+  toast('계정 저장 완료');
+}
+
+async function doStatus(uid,s){await Auth.setUserStatus(uid,s);await refreshAll();toast('상태 변경');}
+async function doResetPw(uid){
+  const r=await Auth.resetPasswordByMaster(uid);
+  await refreshAll();
+  alert(`임시 비밀번호 발급\n\n계정: ${r.user.loginId}\n임시 비밀번호: ${r.tempPassword}\n\n로그인 후 변경 필요`);
+}
+async function doDelete(uid){if(!confirm('삭제할까요?'))return;await Auth.deleteUser(uid);await refreshAll();toast('삭제 완료');}
 function showDetail(uid){
   const u=_users.find(x=>x.uid===uid);
-  const safe={...u}; delete safe.passwordHash; delete safe.okposPwHash;
-  detailText.textContent=JSON.stringify(safe,null,2);
-  detailModal.classList.add('show');
+  const s={...u};delete s.passwordHash;delete s.okposPw;
+  document.getElementById('detailPre').textContent=JSON.stringify(s,null,2);
+  document.getElementById('detailModal').classList.add('show');
 }
-function closeDetail(){ detailModal.classList.remove('show'); }
 
-// 권한부여 모달
+// ── 권한부여 ───────────────────────────────────────────────
 function openPerm(uid){
-  permUid=uid;
+  _permUid=uid;
   const u=_users.find(x=>x.uid===uid);
   const p=u?.permissions||{};
-  document.getElementById('permTargetName').innerHTML=
-    `<strong>${u?.businessName||u?.name||uid}</strong> 에게 부여할 권한을 설정합니다.`;
-  const sections=Object.entries(PERM_DEFS);
-  document.getElementById('permGrid').innerHTML=sections.map(([roleKey,def])=>`
+  document.getElementById('permTarget').innerHTML=`<strong>${u?.businessName||u?.name||uid}</strong> 에게 부여할 기능을 선택하세요.`;
+  document.getElementById('permGrid').innerHTML=Object.entries(PERM_DEFS).map(([rk,def])=>`
     <div class="perm-section">
-      <div class="perm-section-title">
-        <div class="dot" style="background:${def.dot}"></div>
-        <span>${def.label}</span>
-        <button onclick="toggleAll('${roleKey}',true)" style="margin-left:auto;font-size:11px;font-weight:700;padding:2px 8px;border-radius:5px;border:1px solid var(--line);background:#fff;cursor:pointer">전체선택</button>
-        <button onclick="toggleAll('${roleKey}',false)" style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:5px;border:1px solid var(--line);background:#fff;cursor:pointer">전체제거</button>
+      <div class="perm-title">
+        <div class="perm-dot" style="background:${def.dot}"></div>
+        ${def.label}
+        <button onclick="setAll('${rk}',true)" style="margin-left:auto;font-size:11px;padding:2px 8px;border-radius:5px;border:1px solid var(--line);background:#fff;cursor:pointer">전체선택</button>
+        <button onclick="setAll('${rk}',false)" style="font-size:11px;padding:2px 8px;border-radius:5px;border:1px solid var(--line);background:#fff;cursor:pointer">전체제거</button>
       </div>
-      <div class="sub-perms">
-        ${def.items.map(item=>`
-          <label class="sub-perm-row ${p[item.key]?'active':''}" id="permrow_${item.key}">
-            <input type="checkbox" id="perm_${item.key}" data-role="${roleKey}" ${p[item.key]?'checked':''} onchange="togglePermRow('${item.key}')">
-            <div>
-              <div class="sub-perm-label">${item.label}</div>
-              <div class="sub-perm-sub">${item.sub}</div>
-            </div>
+      <div class="perm-grid">
+        ${def.items.map(it=>`
+          <label class="perm-row ${p[it.key]?'active':''}" id="pr_${it.key}">
+            <input type="checkbox" id="pc_${it.key}" ${p[it.key]?'checked':''} onchange="togglePerm('${it.key}')">
+            <div><div class="perm-lbl">${it.label}</div><div class="perm-sub">${it.sub}</div></div>
           </label>`).join('')}
       </div>
     </div>`).join('');
-  permModal.classList.add('show');
+  document.getElementById('permModal').classList.add('show');
 }
-function togglePermRow(key){
-  const checked=document.getElementById('perm_'+key).checked;
-  document.getElementById('permrow_'+key).classList.toggle('active',checked);
-}
-function toggleAll(roleKey,val){
-  PERM_DEFS[roleKey].items.forEach(item=>{
-    const el=document.getElementById('perm_'+item.key);
-    if(el){ el.checked=val; document.getElementById('permrow_'+item.key).classList.toggle('active',val); }
-  });
-}
-function closePerm(){ permModal.classList.remove('show'); }
+function togglePerm(k){const c=document.getElementById('pc_'+k).checked;document.getElementById('pr_'+k).classList.toggle('active',c);}
+function setAll(rk,v){PERM_DEFS[rk].items.forEach(it=>{const el=document.getElementById('pc_'+it.key);if(el){el.checked=v;document.getElementById('pr_'+it.key).classList.toggle('active',v);}});}
 async function savePerm(){
   const perms={};
-  Object.values(PERM_DEFS).forEach(def=>{
-    def.items.forEach(item=>{ perms[item.key]=document.getElementById('perm_'+item.key)?.checked||false; });
-  });
-  await Auth.setPermissions(permUid,perms);
-  await refreshUsers(); closePerm(); toast('권한 저장 완료');
+  Object.values(PERM_DEFS).forEach(def=>def.items.forEach(it=>{perms[it.key]=document.getElementById('pc_'+it.key)?.checked||false;}));
+  await Auth.setPermissions(_permUid,perms);
+  await refreshAll();closeModal('permModal');toast('권한 저장 완료');
 }
 
-// 초기화
-async function resetMock(){
-  if(!confirm('master 계정을 제외한 모든 계정을 삭제하시겠습니까?')) return;
+// ── 초기화 ─────────────────────────────────────────────────
+async function resetAccounts(){
+  if(!confirm('master 계정 외 모든 계정을 삭제할까요?'))return;
   const users=await Auth.loadUsers();
-  for(const u of users){ if(u.role!=='master') await Auth.deleteUser(u.uid); }
-  await refreshUsers(); toast('초기화 완료');
+  for(const u of users){if(u.role!=='master')await Auth.deleteUser(u.uid);}
+  await refreshAll();toast('초기화 완료');
 }
 
-// 이바구밀면 메뉴 초기 데이터 등록
-async function seedMenuData(){
-  if(!confirm('1984이바구밀면 브랜드와 메뉴 데이터를 Firebase에 등록합니다.\n이미 등록된 경우 중복될 수 있습니다. 계속하시겠습니까?')) return;
-  toast('메뉴 데이터 등록 중...');
-  const brand = await Auth.registerBrand({
-    name:'1984이바구밀면', code:'IBAGU', category:'밀면',
-    description:'부산 이바구밀면 프랜차이즈',
-  });
-  const bid = brand.id;
-  const menus = [
-    // 밀면
-    {brandId:bid,category:'밀면',name:'물밀면',price:10000,
-      ingredients:[{name:'밀면면(생면)',amount:'180g'},{name:'육수',amount:'500ml'},{name:'무김치',amount:'50g'},{name:'수육',amount:'30g'}]},
-    {brandId:bid,category:'밀면',name:'물밀면(곱빼기)',price:11000,
-      ingredients:[{name:'밀면면(생면)',amount:'270g'},{name:'육수',amount:'600ml'},{name:'무김치',amount:'70g'},{name:'수육',amount:'40g'}]},
-    {brandId:bid,category:'밀면',name:'매운물밀면',price:11000,
-      ingredients:[{name:'밀면면(생면)',amount:'180g'},{name:'육수',amount:'500ml'},{name:'매운소스',amount:'30g'},{name:'무김치',amount:'50g'}]},
-    {brandId:bid,category:'밀면',name:'매운물밀면(곱빼기)',price:12000,
-      ingredients:[{name:'밀면면(생면)',amount:'270g'},{name:'육수',amount:'600ml'},{name:'매운소스',amount:'40g'},{name:'무김치',amount:'70g'}]},
-    {brandId:bid,category:'밀면',name:'비빔밀면',price:10000,
-      ingredients:[{name:'밀면면(생면)',amount:'180g'},{name:'비빔소스',amount:'80g'},{name:'무김치',amount:'50g'}]},
-    {brandId:bid,category:'밀면',name:'비빔밀면(곱빼기)',price:11000,
-      ingredients:[{name:'밀면면(생면)',amount:'270g'},{name:'비빔소스',amount:'100g'},{name:'무김치',amount:'70g'}]},
-    {brandId:bid,category:'밀면',name:'매운비빔밀면',price:11000,
-      ingredients:[{name:'밀면면(생면)',amount:'180g'},{name:'비빔소스',amount:'80g'},{name:'매운소스',amount:'30g'},{name:'무김치',amount:'50g'}]},
-    {brandId:bid,category:'밀면',name:'매운비빔밀면(곱빼기)',price:12000,
-      ingredients:[{name:'밀면면(생면)',amount:'270g'},{name:'비빔소스',amount:'100g'},{name:'매운소스',amount:'40g'},{name:'무김치',amount:'70g'}]},
-    {brandId:bid,category:'밀면',name:'아기밀면(13세 이하)',price:5000,
-      ingredients:[{name:'밀면면(생면)',amount:'120g'},{name:'육수',amount:'400ml'},{name:'무김치',amount:'30g'}]},
-    // 안주/전
-    {brandId:bid,category:'안주/전',name:'이바구육전',price:13000,
-      ingredients:[{name:'우육슬라이스',amount:'150g'},{name:'달걀',amount:'2개'},{name:'밀가루',amount:'20g'},{name:'식용유',amount:'30ml'}]},
-    {brandId:bid,category:'안주/전',name:'육전(대)',price:25000,
-      ingredients:[{name:'우육슬라이스',amount:'300g'},{name:'달걀',amount:'3개'},{name:'밀가루',amount:'40g'},{name:'식용유',amount:'50ml'}]},
-    // 만두
-    {brandId:bid,category:'만두',name:'이바구만두',price:7000,
-      ingredients:[{name:'이바구만두(냉동)',amount:'5개'}]},
-    {brandId:bid,category:'만두',name:'갈비만두',price:8000,
-      ingredients:[{name:'갈비만두(냉동)',amount:'4개'}]},
-  ];
-  for(const m of menus) await Auth.registerMenu(m);
-  await loadBrandFilterDropdown();
-  toast(`'1984이바구밀면' 브랜드 및 메뉴 ${menus.length}개 등록 완료!`);
-}
-
-document.addEventListener('firebaseReady', refreshUsers);
-if(Auth.isFirebaseReady) refreshUsers();
-else setTimeout(refreshUsers, 2000);
+// ── 시작 ───────────────────────────────────────────────────
+document.addEventListener('firebaseReady',refreshAll);
+if(Auth.isFirebaseReady)refreshAll();
+else setTimeout(refreshAll,2000);
 </script>
 </body>
 </html>
