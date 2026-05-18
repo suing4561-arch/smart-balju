@@ -134,6 +134,10 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 function initApp() {
   const Auth = window.SmartBaljuAuth;
   if(!Auth) { setTimeout(initApp, 300); return; }
+  if(!Auth.isFirebaseReady) { 
+    document.addEventListener('firebaseReady', initApp, {once:true});
+    return;
+  }
 
   const PAGE_MAP = {
     master:    {title:'Master 관리자',    url:'master.html',         color:'#f1f5f9', tc:'#334155'},
@@ -207,10 +211,15 @@ function initApp() {
 
     try {
       const users = await Auth.loadUsers();
+      console.log('[모달] 전체 users:', users.length, '개, role 필터:', role);
       const filtered = users.filter(u=>u.role===role && u.status==='active');
+      console.log('[모달] 필터된 users:', filtered.length, '개');
       renderModalList(filtered, cfg, role);
     } catch(e) {
-      document.getElementById('modalList').innerHTML = '<div class="modal-empty">불러오기 실패<br>'+e.message+'</div>';
+      console.error('[모달] loadUsers 오류:', e);
+      document.getElementById('modalList').innerHTML = 
+        `<div class="modal-empty">불러오기 실패<br><small>${e.message}</small><br><br>
+        <button onclick="openModal('${role}')" style="padding:8px 16px;border-radius:8px;border:none;background:var(--navy);color:#fff;cursor:pointer;font-family:var(--sans);font-weight:700">다시 시도</button></div>`;
     }
   }
 
