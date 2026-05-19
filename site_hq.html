@@ -151,31 +151,6 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
     </div>
   </div>
 
-  <div class="hqp" id="hqp-dashboard"><div class="content">
-    <div class="kpi-grid">
-      <div class="kpi"><div class="kpi-top"><div class="kpi-icon" style="background:var(--blue-bg)"><i class="ti ti-receipt" style="color:var(--blue)"></i></div><span class="kpi-trend trend-up" id="kpi-sale-trend">-</span></div><div class="kpi-val" id="kpi-sale">불러오는 중...</div><div class="kpi-lbl">OKPos 이번달 실매출</div></div>
-      <div class="kpi"><div class="kpi-top"><div class="kpi-icon" style="background:var(--green-bg)"><i class="ti ti-shopping-cart" style="color:var(--green)"></i></div><span class="kpi-trend trend-up" id="kpi-cnt-trend">-</span></div><div class="kpi-val" id="kpi-cnt">-</div><div class="kpi-lbl">이번달 총 주문건수</div></div>
-      <div class="kpi"><div class="kpi-top"><div class="kpi-icon" style="background:var(--amber-bg)"><i class="ti ti-users" style="color:var(--amber)"></i></div><span class="kpi-trend trend-flat" id="kpi-gst-trend">-</span></div><div class="kpi-val" id="kpi-gst">-</div><div class="kpi-lbl">이번달 총 고객수</div></div>
-      <div class="kpi"><div class="kpi-top"><div class="kpi-icon" style="background:var(--purple-bg)"><i class="ti ti-building-store" style="color:var(--purple)"></i></div><span class="kpi-trend trend-flat" id="kpi-shop-trend">-</span></div><div class="kpi-val" id="kpi-shop">-</div><div class="kpi-lbl">수집된 가맹점 수</div></div>
-    </div>
-    <div class="two">
-      <div class="card"><div class="ch"><span class="ct">전체 가맹점 월별 매출 추이</span></div><div class="cw"><canvas id="salesChart"></canvas></div></div>
-      <div class="card"><div class="ch"><span class="ct">최근 발주 현황</span></div><div id="orderList"></div></div>
-    </div>
-    <div class="two">
-      <div class="card"><div class="ch"><span class="ct">가맹점별 이번달 매출</span></div><table class="sto"><thead><tr><th>순위</th><th>가맹점</th><th>상태</th><th style="text-align:right">매출</th><th style="text-align:right">미수금</th></tr></thead><tbody id="storeTable"></tbody></table></div>
-      <div style="display:flex;flex-direction:column;gap:16px">
-        <div class="card"><div class="ch"><span class="ct">알림·긴급</span></div><div id="alertList"></div></div>
-        <div class="card"><div class="ch"><span class="ct">이번달 정산 요약</span></div>
-          <div class="sr"><div><div style="font-size:13px">가맹점 입금 확인</div><div style="font-size:11px;color:var(--dim)">28개점</div></div><div class="sa pos">+3억 6,120만</div></div>
-          <div class="sr"><div style="font-size:13px">납품업체 대금</div><div class="sa neg">-2억 1,480만</div></div>
-          <div class="sr"><div style="font-size:13px">미수금</div><div class="sa neg">-1,240만</div></div>
-          <div class="sr"><div style="font-size:13px;font-weight:700">순 정산 예상</div><div class="sa pos" style="font-size:16px">+1억 3,400만</div></div>
-        </div>
-      </div>
-    </div>
-  </div></div>
-
   <!-- ── 기준정보 등록 ── -->
   <div class="hqp" id="hqp-register"><div class="content">
 
@@ -556,39 +531,45 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
       <div><div style="font-size:18px;font-weight:700">매출·통계</div><div style="font-size:13px;color:var(--muted);margin-top:2px">OKPos 매출 기반 분석</div></div>
       <div style="display:flex;gap:8px;align-items:center">
         <select id="statsMonth" onchange="loadStats()" style="padding:7px 12px;border-radius:9px;border:.5px solid var(--line);background:var(--surface2);font-size:12px;font-family:var(--sans)"></select>
-        <button onclick="loadStats()" style="padding:8px 14px;border-radius:9px;border:.5px solid var(--line);background:var(--surface2);font-size:12px;font-weight:700;cursor:pointer"><i class="ti ti-refresh" style="font-size:13px"></i></button>
+        <button onclick="loadOkposDashboard();loadStats()" style="padding:8px 14px;border-radius:9px;border:.5px solid var(--line);background:var(--surface2);font-size:12px;font-weight:700;cursor:pointer"><i class="ti ti-refresh" style="font-size:13px"></i></button>
       </div>
     </div>
-    <!-- 이번달 OKPos 매출 요약 -->
-    <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:16px">
-      <div class="kpi" style="padding:14px"><div class="kpi-val" id="kpi-sale" style="font-size:18px">-</div><div class="kpi-lbl">이번달 실매출</div></div>
-      <div class="kpi" style="padding:14px"><div class="kpi-val" id="kpi-cnt" style="font-size:18px">-</div><div class="kpi-lbl">이번달 주문</div></div>
-      <div class="kpi" style="padding:14px"><div class="kpi-val" id="kpi-gst" style="font-size:18px">-</div><div class="kpi-lbl">이번달 고객</div></div>
-      <div class="kpi" style="padding:14px"><div class="kpi-val" id="kpi-shop" style="font-size:18px">-</div><div class="kpi-lbl">수집 가맹점</div></div>
+    <!-- 이번달 OKPos KPI (원래 대시보드와 동일) -->
+    <div class="kpi-grid">
+      <div class="kpi"><div class="kpi-top"><div class="kpi-icon" style="background:var(--blue-bg)"><i class="ti ti-receipt" style="color:var(--blue)"></i></div><span class="kpi-trend trend-up" id="kpi-sale-trend">-</span></div><div class="kpi-val" id="kpi-sale">불러오는 중...</div><div class="kpi-lbl">OKPos 이번달 실매출</div></div>
+      <div class="kpi"><div class="kpi-top"><div class="kpi-icon" style="background:var(--green-bg)"><i class="ti ti-shopping-cart" style="color:var(--green)"></i></div><span class="kpi-trend trend-up" id="kpi-cnt-trend">-</span></div><div class="kpi-val" id="kpi-cnt">-</div><div class="kpi-lbl">이번달 총 주문건수</div></div>
+      <div class="kpi"><div class="kpi-top"><div class="kpi-icon" style="background:var(--amber-bg)"><i class="ti ti-users" style="color:var(--amber)"></i></div><span class="kpi-trend trend-flat" id="kpi-gst-trend">-</span></div><div class="kpi-val" id="kpi-gst">-</div><div class="kpi-lbl">이번달 총 고객수</div></div>
+      <div class="kpi"><div class="kpi-top"><div class="kpi-icon" style="background:var(--purple-bg)"><i class="ti ti-building-store" style="color:var(--purple)"></i></div><span class="kpi-trend trend-flat" id="kpi-shop-trend">-</span></div><div class="kpi-val" id="kpi-shop">-</div><div class="kpi-lbl">수집된 가맹점 수</div></div>
     </div>
-    <!-- 월별 선택 KPI -->
-    <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:16px">
+    <!-- 차트 + 발주현황 -->
+    <div class="two" style="margin-top:14px">
+      <div class="card"><div class="ch"><span class="ct">전체 가맹점 매출 추이</span></div><div class="cw"><canvas id="salesChart"></canvas></div></div>
+      <div class="card"><div class="ch"><span class="ct">최근 발주 현황</span></div><div id="orderList"></div></div>
+    </div>
+    <!-- 가맹점별 매출 + 알림 -->
+    <div class="two" style="margin-top:14px">
+      <div class="card"><div class="ch"><span class="ct">가맹점별 이번달 매출</span></div>
+        <table class="sto"><thead><tr><th>순위</th><th>가맹점</th><th>상태</th><th style="text-align:right">매출</th><th style="text-align:right">미수금</th></tr></thead><tbody id="storeTable"></tbody></table>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div class="card"><div class="ch"><span class="ct">알림·긴급</span></div><div id="alertList"></div></div>
+      </div>
+    </div>
+    <!-- 월별 상세 분석 -->
+    <div style="margin-top:20px;padding:12px 0 8px;border-top:.5px solid var(--line);font-size:14px;font-weight:700;color:var(--text)">월별 상세 분석</div>
+    <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:14px">
       <div class="kpi" style="padding:14px"><div class="kpi-val" id="st-sale" style="font-size:20px">-</div><div class="kpi-lbl">총 매출</div></div>
       <div class="kpi" style="padding:14px"><div class="kpi-val" id="st-cnt" style="font-size:20px">-</div><div class="kpi-lbl">총 주문</div></div>
       <div class="kpi" style="padding:14px"><div class="kpi-val" id="st-avg" style="font-size:20px">-</div><div class="kpi-lbl">객단가</div></div>
       <div class="kpi" style="padding:14px"><div class="kpi-val" id="st-shops" style="font-size:20px">-</div><div class="kpi-lbl">수집 가맹점</div></div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
-      <!-- 일별 매출 차트 -->
-      <div class="card">
-        <div class="ch"><span class="ct">일별 매출 추이</span></div>
-        <div style="position:relative;height:200px"><canvas id="statsChart"></canvas></div>
-      </div>
-      <!-- 가맹점별 매출 -->
-      <div class="card">
-        <div class="ch"><span class="ct">가맹점별 매출 순위</span></div>
-        <div id="statsShopRank" style="max-height:200px;overflow-y:auto"></div>
-      </div>
+      <div class="card"><div class="ch"><span class="ct">월별 매출 차트</span></div><div style="position:relative;height:200px"><canvas id="statsChart"></canvas></div></div>
+      <div class="card"><div class="ch"><span class="ct">가맹점별 매출 순위</span></div><div id="statsShopRank" style="max-height:200px;overflow-y:auto"></div></div>
     </div>
-    <!-- 상세 테이블 -->
     <div class="card" style="padding:0;overflow:hidden;margin-top:14px">
       <div style="padding:14px 16px;border-bottom:.5px solid var(--line);font-size:14px;font-weight:700">가맹점별 상세</div>
-      <div id="statsTable" style="overflow:auto"><div style="text-align:center;padding:30px;color:var(--dim)">불러오는 중...</div></div>
+      <div id="statsTable" style="overflow:auto"><div style="text-align:center;padding:30px;color:var(--dim)">월 선택 후 새로고침</div></div>
     </div>
   </div></div>
 
@@ -649,7 +630,7 @@ function goto(p){
   if(p==='delivery') loadDelivery();
   if(p==='settings') loadSettings();
   if(p==='orders') loadOrders();
-  if(p==='stats') { document.getElementById('hqp-stats').classList.add('active'); initStatsMonth(); loadStats(); loadOkposDashboard(); }
+  if(p==='stats') { document.getElementById('hqp-stats').classList.add('active'); initStatsMonth(); loadOkposDashboard(); loadStats(); }
   if(p==='settle') loadSettle();
 }
 
