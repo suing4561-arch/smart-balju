@@ -518,9 +518,83 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
   </div></div>
 
   <!-- 기타 -->
-  <div class="hqp" id="hqp-orders"><div class="content"><div style="padding:60px;text-align:center;color:var(--dim)"><i class="ti ti-circles-relation" style="font-size:48px;opacity:.4;display:block;margin-bottom:12px"></i><div style="font-size:18px;font-weight:700;color:var(--muted)">주문 통합 관리</div><div style="margin-top:6px">다음 업데이트 예정</div></div></div></div>
-  <div class="hqp" id="hqp-stats"><div class="content"><div style="padding:60px;text-align:center;color:var(--dim)"><i class="ti ti-chart-bar" style="font-size:48px;opacity:.4;display:block;margin-bottom:12px"></i><div style="font-size:18px;font-weight:700;color:var(--muted)">통계·분석</div><div style="margin-top:6px">다음 업데이트 예정</div></div></div></div>
-  <div class="hqp" id="hqp-settle"><div class="content"><div style="padding:60px;text-align:center;color:var(--dim)"><i class="ti ti-coin" style="font-size:48px;opacity:.4;display:block;margin-bottom:12px"></i><div style="font-size:18px;font-weight:700;color:var(--muted)">정산 관리</div><div style="margin-top:6px">다음 업데이트 예정</div></div></div></div>
+  <!-- ── 주문 통합 관리 ── -->
+  <div class="hqp" id="hqp-orders"><div class="content">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <div>
+        <div style="font-size:18px;font-weight:700">주문 통합 관리</div>
+        <div style="font-size:13px;color:var(--muted);margin-top:2px">가맹점 발주 현황 및 승인 처리</div>
+      </div>
+      <button onclick="loadOrders()" style="padding:8px 14px;border-radius:9px;border:.5px solid var(--line);background:var(--surface2);font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:5px"><i class="ti ti-refresh" style="font-size:13px"></i>새로고침</button>
+    </div>
+    <!-- 요약 카드 -->
+    <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:16px">
+      <div class="kpi" style="padding:14px"><div class="kpi-val" id="ord-waiting" style="font-size:20px">-</div><div class="kpi-lbl">대기중</div></div>
+      <div class="kpi" style="padding:14px"><div class="kpi-val" id="ord-confirmed" style="font-size:20px">-</div><div class="kpi-lbl">승인됨</div></div>
+      <div class="kpi" style="padding:14px"><div class="kpi-val" id="ord-shipping" style="font-size:20px">-</div><div class="kpi-lbl">배송중</div></div>
+      <div class="kpi" style="padding:14px"><div class="kpi-val" id="ord-total-amt" style="font-size:20px">-</div><div class="kpi-lbl">이번달 총액</div></div>
+    </div>
+    <!-- 필터 -->
+    <div style="display:flex;gap:6px;margin-bottom:12px" id="ordFilters"></div>
+    <!-- 주문 목록 -->
+    <div class="card" style="padding:0;overflow:hidden">
+      <div id="orderBody"><div style="text-align:center;padding:40px;color:var(--dim)">불러오는 중...</div></div>
+    </div>
+  </div></div>
+
+  <!-- ── 통계·분석 ── -->
+  <div class="hqp" id="hqp-stats"><div class="content">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <div><div style="font-size:18px;font-weight:700">통계·분석</div><div style="font-size:13px;color:var(--muted);margin-top:2px">OKPos 매출 기반 분석</div></div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <select id="statsMonth" onchange="loadStats()" style="padding:7px 12px;border-radius:9px;border:.5px solid var(--line);background:var(--surface2);font-size:12px;font-family:var(--sans)"></select>
+        <button onclick="loadStats()" style="padding:8px 14px;border-radius:9px;border:.5px solid var(--line);background:var(--surface2);font-size:12px;font-weight:700;cursor:pointer"><i class="ti ti-refresh" style="font-size:13px"></i></button>
+      </div>
+    </div>
+    <!-- KPI -->
+    <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:16px">
+      <div class="kpi" style="padding:14px"><div class="kpi-val" id="st-sale" style="font-size:20px">-</div><div class="kpi-lbl">총 매출</div></div>
+      <div class="kpi" style="padding:14px"><div class="kpi-val" id="st-cnt" style="font-size:20px">-</div><div class="kpi-lbl">총 주문</div></div>
+      <div class="kpi" style="padding:14px"><div class="kpi-val" id="st-avg" style="font-size:20px">-</div><div class="kpi-lbl">객단가</div></div>
+      <div class="kpi" style="padding:14px"><div class="kpi-val" id="st-shops" style="font-size:20px">-</div><div class="kpi-lbl">수집 가맹점</div></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+      <!-- 일별 매출 차트 -->
+      <div class="card">
+        <div class="ch"><span class="ct">일별 매출 추이</span></div>
+        <div style="position:relative;height:200px"><canvas id="statsChart"></canvas></div>
+      </div>
+      <!-- 가맹점별 매출 -->
+      <div class="card">
+        <div class="ch"><span class="ct">가맹점별 매출 순위</span></div>
+        <div id="statsShopRank" style="max-height:200px;overflow-y:auto"></div>
+      </div>
+    </div>
+    <!-- 상세 테이블 -->
+    <div class="card" style="padding:0;overflow:hidden;margin-top:14px">
+      <div style="padding:14px 16px;border-bottom:.5px solid var(--line);font-size:14px;font-weight:700">가맹점별 상세</div>
+      <div id="statsTable" style="overflow:auto"><div style="text-align:center;padding:30px;color:var(--dim)">불러오는 중...</div></div>
+    </div>
+  </div></div>
+
+  <!-- ── 정산 관리 ── -->
+  <div class="hqp" id="hqp-settle"><div class="content">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <div><div style="font-size:18px;font-weight:700">정산 관리</div><div style="font-size:13px;color:var(--muted);margin-top:2px">가맹점 미수금 및 입금 관리</div></div>
+      <button onclick="loadSettle()" style="padding:8px 14px;border-radius:9px;border:.5px solid var(--line);background:var(--surface2);font-size:12px;font-weight:700;cursor:pointer"><i class="ti ti-refresh" style="font-size:13px"></i> 새로고침</button>
+    </div>
+    <!-- 요약 -->
+    <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:16px">
+      <div class="kpi" style="padding:14px"><div class="kpi-val" id="set-total-unpaid" style="font-size:20px;color:var(--red)">-</div><div class="kpi-lbl">전체 미수금</div></div>
+      <div class="kpi" style="padding:14px"><div class="kpi-val" id="set-over-limit" style="font-size:20px;color:var(--amber)">-</div><div class="kpi-lbl">한도 초과 가맹점</div></div>
+      <div class="kpi" style="padding:14px"><div class="kpi-val" id="set-this-month" style="font-size:20px;color:var(--green)">-</div><div class="kpi-lbl">이달 발주 총액</div></div>
+    </div>
+    <!-- 가맹점별 정산 목록 -->
+    <div class="card" style="padding:0;overflow:hidden">
+      <div id="settleBody"><div style="text-align:center;padding:40px;color:var(--dim)">불러오는 중...</div></div>
+    </div>
+  </div></div>
+
   <div class="hqp" id="hqp-notice"><div class="content"><div style="padding:60px;text-align:center;color:var(--dim)"><i class="ti ti-speakerphone" style="font-size:48px;opacity:.4;display:block;margin-bottom:12px"></i><div style="font-size:18px;font-weight:700;color:var(--muted)">공지·레시피</div><div style="margin-top:6px">다음 업데이트 예정</div></div></div></div>
 </div>
 
@@ -558,6 +632,9 @@ function goto(p){
   if(p==='franchises') loadFranchises();
   if(p==='delivery') loadDelivery();
   if(p==='settings') loadSettings();
+  if(p==='orders') loadOrders();
+  if(p==='stats') initStatsMonth(), loadStats();
+  if(p==='settle') loadSettle();
 }
 
 async function switchRegTab(tab) {
@@ -1339,6 +1416,197 @@ async function seedIbaguData(){
 
   await Promise.all([rMenu(),loadFranchises(),loadSuppliers(),loadRecipes()]);
   showToast('이바구밀면 예시 데이터 등록 완료! 품목 '+menuItems.length+'개·가맹점 '+frData.length+'개·납품업체 '+supData.length+'개');
+}
+// ── 주문 통합 관리 ────────────────────────────────────────
+let _ordFilter = 'all';
+const ORD_STATUS = {
+  waiting:   {l:'대기중',  c:'var(--amber)',  bg:'var(--amber-bg)'},
+  confirmed: {l:'승인됨',  c:'var(--blue)',   bg:'var(--blue-bg)'},
+  shipping:  {l:'배송중',  c:'var(--purple)', bg:'var(--purple-bg)'},
+  done:      {l:'완료',    c:'var(--green)',  bg:'var(--green-bg)'},
+  rejected:  {l:'반려',    c:'var(--red)',    bg:'var(--red-bg)'},
+};
+
+async function loadOrders(){
+  const data = await Auth.DB.get('franchise_orders') || {};
+  const list = Object.values(data).sort((a,b)=>(b.createdAt||'').localeCompare(a.createdAt||''));
+
+  // 요약
+  const now = new Date();
+  const thisMonth = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+  const monthOrders = list.filter(o=>(o.createdAt||'').startsWith(thisMonth));
+  document.getElementById('ord-waiting').textContent = list.filter(o=>o.status==='waiting').length+'건';
+  document.getElementById('ord-confirmed').textContent = list.filter(o=>o.status==='confirmed').length+'건';
+  document.getElementById('ord-shipping').textContent = list.filter(o=>o.status==='shipping').length+'건';
+  document.getElementById('ord-total-amt').textContent = fmtAmt(monthOrders.reduce((s,o)=>s+Number(o.amount||0),0));
+
+  // 필터
+  const filters = [['all','전체'],['waiting','대기중'],['confirmed','승인됨'],['shipping','배송중'],['done','완료'],['rejected','반려']];
+  document.getElementById('ordFilters').innerHTML = filters.map(([k,l])=>
+    `<button class="sf ${_ordFilter===k?'active':''}" onclick="_ordFilter='${k}';loadOrders()">${l}</button>`
+  ).join('');
+
+  const filtered = _ordFilter==='all' ? list : list.filter(o=>o.status===_ordFilter);
+  const el = document.getElementById('orderBody');
+  if(!filtered.length){ el.innerHTML='<div style="text-align:center;padding:40px;color:var(--dim)">발주 내역이 없습니다</div>'; return; }
+
+  el.innerHTML=`<table class="lt"><thead><tr><th>주문번호</th><th>가맹점</th><th>품목</th><th>금액</th><th>상태</th><th>일시</th><th>관리</th></tr></thead><tbody>`+
+    filtered.map(o=>{
+      const st = ORD_STATUS[o.status]||ORD_STATUS.waiting;
+      return `<tr>
+        <td style="font-family:var(--mono);font-size:11px">${o.id}</td>
+        <td><strong>${o.storeName||'-'}</strong></td>
+        <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;color:var(--muted)">${o.items||'-'}</td>
+        <td style="font-family:var(--mono);font-weight:700">${Number(o.amount||0).toLocaleString()}원</td>
+        <td><span style="font-size:11px;font-weight:700;padding:3px 8px;border-radius:999px;background:${st.bg};color:${st.c}">${st.l}</span></td>
+        <td style="font-size:11px;color:var(--muted)">${(o.createdAt||'').slice(0,16).replace('T',' ')}</td>
+        <td><div style="display:flex;gap:4px;flex-wrap:wrap">
+          ${o.status==='waiting'?`
+            <button class="delbtn" style="background:var(--green-bg);color:var(--green);border-color:rgba(26,122,74,.3)" onclick="updateOrderStatus('${o.id}','confirmed')">승인</button>
+            <button class="delbtn" style="background:var(--red-bg);color:var(--red);border-color:rgba(192,57,43,.3)" onclick="updateOrderStatus('${o.id}','rejected')">반려</button>
+          `:''}
+          ${o.status==='confirmed'?`<button class="delbtn" style="background:var(--blue-bg);color:var(--blue);border-color:rgba(40,116,204,.3)" onclick="updateOrderStatus('${o.id}','shipping')">배송시작</button>`:''}
+          ${o.status==='shipping'?`<button class="delbtn" style="background:var(--purple-bg);color:var(--purple)" onclick="updateOrderStatus('${o.id}','done')">완료</button>`:''}
+        </div></td>
+      </tr>`;
+    }).join('')+'</tbody></table>';
+}
+
+async function updateOrderStatus(id, status){
+  await Auth.DB.update('franchise_orders/'+id, {status, updatedAt:new Date().toISOString()});
+  await loadOrders();
+  showToast('상태 변경: '+ORD_STATUS[status]?.l);
+}
+
+// ── 통계·분석 ─────────────────────────────────────────────
+let _statsChart = null;
+
+function initStatsMonth(){
+  const sel = document.getElementById('statsMonth');
+  if(sel.options.length) return;
+  const now = new Date();
+  for(let i=0;i<6;i++){
+    const d = new Date(now.getFullYear(), now.getMonth()-i, 1);
+    const val = `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}`;
+    const label = `${d.getFullYear()}년 ${d.getMonth()+1}월`;
+    sel.innerHTML += `<option value="${val}" ${i===0?'selected':''}>${label}</option>`;
+  }
+}
+
+async function loadStats(){
+  const month = document.getElementById('statsMonth')?.value || '';
+  if(!month) return;
+  const allSales = await Auth.DB.get('okpos_sales') || {};
+  const monthDays = Object.entries(allSales).filter(([k])=>k.startsWith(month)).sort(([a],[b])=>a.localeCompare(b));
+
+  if(!monthDays.length){
+    ['st-sale','st-cnt','st-avg','st-shops'].forEach(id=>document.getElementById(id).textContent='-');
+    document.getElementById('statsTable').innerHTML='<div style="text-align:center;padding:30px;color:var(--dim)">해당 월 OKPos 데이터 없음<br><small>okpos_scraper.py를 실행하세요</small></div>';
+    document.getElementById('statsShopRank').innerHTML='';
+    return;
+  }
+
+  let totalSale=0,totalCnt=0,totalGst=0;
+  const shopMap={},dayMap={};
+  monthDays.forEach(([dateKey,dayData])=>{
+    const dayTotal={sale:0};
+    const firstVal=Object.values(dayData)[0];
+    const isNested=firstVal&&typeof firstVal==='object'&&!firstVal.shop_nm;
+    const shops=isNested?Object.values(dayData).flatMap(bd=>Object.entries(bd||{})):Object.entries(dayData);
+    shops.forEach(([shopCd,d])=>{
+      if(!d||!d.shop_nm) return;
+      if(_myBrandId&&d.brand_id&&d.brand_id!==_myBrandId) return;
+      const sale=d.tot_sale_amt||0,cnt=d.tot_sale_cnt||0,gst=d.gst_cnt||0;
+      totalSale+=sale;totalCnt+=cnt;totalGst+=gst;dayTotal.sale+=sale;
+      if(!shopMap[shopCd])shopMap[shopCd]={name:d.shop_nm,sale:0,cnt:0,gst:0};
+      shopMap[shopCd].sale+=sale;shopMap[shopCd].cnt+=cnt;shopMap[shopCd].gst+=gst;
+    });
+    dayMap[dateKey]=dayTotal;
+  });
+
+  const shopCount=Object.keys(shopMap).length;
+  document.getElementById('st-sale').textContent=fmtAmt(totalSale);
+  document.getElementById('st-cnt').textContent=totalCnt.toLocaleString()+'건';
+  document.getElementById('st-avg').textContent=totalGst?fmtAmt(Math.round(totalSale/totalGst)):'-';
+  document.getElementById('st-shops').textContent=shopCount+'개';
+
+  // 차트
+  const ctx=document.getElementById('statsChart').getContext('2d');
+  if(_statsChart)_statsChart.destroy();
+  const entries=Object.entries(dayMap).sort(([a],[b])=>a.localeCompare(b));
+  _statsChart=new Chart(ctx,{type:'bar',data:{
+    labels:entries.map(([k])=>k.slice(6)+'일'),
+    datasets:[{label:'매출(만원)',data:entries.map(([,v])=>Math.round(v.sale/10000)),
+      backgroundColor:'rgba(26,95,168,.15)',borderColor:'#1a5fa8',borderWidth:1.5,borderRadius:4}]
+  },options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+    scales:{x:{grid:{display:false},ticks:{font:{size:10}}},y:{ticks:{font:{size:10},callback:v=>v+'만'}}}}});
+
+  // 가맹점 순위
+  const shops=Object.values(shopMap).sort((a,b)=>b.sale-a.sale);
+  document.getElementById('statsShopRank').innerHTML=shops.map((s,i)=>`
+    <div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:.5px solid var(--line)">
+      <div style="width:20px;height:20px;border-radius:5px;background:${i<3?'var(--amber-bg)':'var(--surface2)'};color:${i<3?'var(--amber)':'var(--muted)'};font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center">${i+1}</div>
+      <div style="flex:1;font-size:13px;font-weight:700">${s.name}</div>
+      <div style="font-family:var(--mono);font-size:12px">${fmtAmt(s.sale)}</div>
+    </div>`).join('');
+
+  // 상세 테이블
+  document.getElementById('statsTable').innerHTML=`<table class="lt"><thead><tr><th>가맹점</th><th style="text-align:right">총매출</th><th style="text-align:right">주문건</th><th style="text-align:right">고객수</th><th style="text-align:right">객단가</th></tr></thead><tbody>`+
+    shops.map(s=>`<tr>
+      <td><strong>${s.name}</strong></td>
+      <td style="font-family:var(--mono);text-align:right">${s.sale.toLocaleString()}원</td>
+      <td style="text-align:right">${s.cnt}건</td>
+      <td style="text-align:right">${s.gst}명</td>
+      <td style="font-family:var(--mono);text-align:right">${s.gst?Math.round(s.sale/s.gst).toLocaleString():'- '}원</td>
+    </tr>`).join('')+'</tbody></table>';
+}
+
+// ── 정산 관리 ─────────────────────────────────────────────
+async function loadSettle(){
+  const [frData, ordData] = await Promise.all([
+    Auth.DB.get('hq_franchises'),
+    Auth.DB.get('franchise_orders'),
+  ]);
+  const franchises = Object.values(frData||{}).filter(f=>!_myBrandId||f.brandId===_myBrandId);
+  const orders = Object.values(ordData||{});
+  const now = new Date();
+  const thisMonth = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+  const monthAmt = orders.filter(o=>(o.createdAt||'').startsWith(thisMonth)).reduce((s,o)=>s+Number(o.amount||0),0);
+
+  const totalUnpaid = franchises.reduce((s,f)=>s+Number(f.unpaidAmt||0),0);
+  const overLimit = franchises.filter(f=>Number(f.unpaidAmt||0)>=Number(f.orderLimit||2000000)).length;
+
+  document.getElementById('set-total-unpaid').textContent = totalUnpaid.toLocaleString()+'원';
+  document.getElementById('set-over-limit').textContent = overLimit+'개점';
+  document.getElementById('set-this-month').textContent = fmtAmt(monthAmt);
+
+  const el = document.getElementById('settleBody');
+  if(!franchises.length){ el.innerHTML='<div style="text-align:center;padding:40px;color:var(--dim)">등록된 가맹점 없음</div>'; return; }
+
+  el.innerHTML=`<table class="lt"><thead><tr><th>가맹점</th><th style="text-align:right">주문 한도</th><th style="text-align:right">미수금</th><th style="text-align:right">잔여 한도</th><th>주문</th><th>최근 입금</th><th>관리</th></tr></thead><tbody>`+
+    franchises.map(f=>{
+      const limit=Number(f.orderLimit||2000000),unpaid=Number(f.unpaidAmt||0),remain=limit-unpaid;
+      const enabled=f.orderEnabled!==false&&unpaid<limit;
+      const overdue=unpaid>=limit;
+      return `<tr style="${overdue?'background:var(--red-bg)':''}">
+        <td><strong>${f.name}</strong><div style="font-size:11px;color:var(--muted)">${f.owner||''} ${f.phone||''}</div></td>
+        <td style="font-family:var(--mono);text-align:right">${limit.toLocaleString()}원</td>
+        <td style="font-family:var(--mono);text-align:right;color:${unpaid>0?'var(--red)':'var(--green)'};font-weight:700">${unpaid.toLocaleString()}원</td>
+        <td style="font-family:var(--mono);text-align:right;color:${remain<0?'var(--red)':'var(--text)'}">${remain.toLocaleString()}원</td>
+        <td><span style="font-size:11px;font-weight:700;padding:3px 8px;border-radius:999px;background:${enabled?'var(--green-bg)':'var(--red-bg)'};color:${enabled?'var(--green)':'var(--red)'}">${enabled?'가능':'불가'}</span></td>
+        <td style="font-size:11px;color:var(--muted)">${f.lastPaymentAt?(f.lastPaymentAt.slice(0,10)+' '+f.lastPaymentAmt?.toLocaleString()+'원'):'-'}</td>
+        <td><div style="display:flex;flex-direction:column;gap:4px">
+          <button class="delbtn" style="background:var(--green-bg);color:var(--green);border-color:rgba(26,122,74,.3)" onclick="confirmPayment('${f.id}')">입금확인</button>
+          <button class="delbtn" style="background:${enabled?'var(--red-bg)':'var(--green-bg)'};color:${enabled?'var(--red)':'var(--green)'}" onclick="toggleOrderEnabled('${f.id}',${!enabled})">${enabled?'주문중지':'주문허용'}</button>
+        </div></td>
+      </tr>`;
+    }).join('')+'</tbody></table>';
+}
+
+async function toggleOrderEnabled(id, enabled){
+  await Auth.DB.update('hq_franchises/'+id, {orderEnabled: enabled});
+  await loadSettle();
+  showToast(enabled?'주문 허용됨':'주문 중지됨');
 }
 document.addEventListener('firebaseReady', initCharts);
 if(Auth.isFirebaseReady) initCharts();
