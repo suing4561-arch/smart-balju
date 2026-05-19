@@ -282,6 +282,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
   </div>
 </div>
 
+<!-- 배송전표 모달 -->
 <!-- 업체 선택 모달 -->
 <div class="modal-overlay" id="bizSelectModal" onclick="if(event.target===this)closeModal('bizSelectModal')">
   <div class="modal-sheet">
@@ -323,15 +324,15 @@ let _slipDeliveryId = '';
 (function(){ const days=['일','월','화','수','목','금','토'],n=new Date(); document.getElementById('supDate').textContent=n.getFullYear()+'.'+(n.getMonth()+1)+'.'+(n.getDate())+' ('+days[n.getDay()]+') · 담당자 김철수 과장'; })();
 
 // 탭 전환
-function switchTab(tab) {
+async function switchTab(tab) {
   currentTab = tab;
   ['register','assign','settle'].forEach(t => {
     document.getElementById('page-'+t).classList.toggle('active', t===tab);
-    document.querySelectorAll('.tab-btn').forEach((b,i) => { if(['register','assign','settle'][i]===tab) b.classList.add('active'); else b.classList.remove('active'); });
+    document.querySelectorAll('.tab-btn').forEach((b,i) => { if(['register','assign','settle'][i]===tab) b.classList.add('active'); else if(['register','assign','settle'][i]!==tab) b.classList.remove('active'); });
     document.getElementById('ni-'+t).className = 'ti ti-'+(t==='register'?'list-check':t==='assign'?'truck-delivery':'coin')+(t===tab?' active':'');
     document.getElementById('nl-'+t).className = 'nav-lbl'+(t===tab?' active':'');
   });
-  if(tab==='assign') { loadDeliveries(); refreshAssignSelects(); }
+  if(tab==='assign') { await loadDeliveries(); await refreshAssignSelects(); }
 }
 
 let _tt;
@@ -340,9 +341,6 @@ function closeModal(id){ document.getElementById(id).classList.remove('show'); }
 
 // ── 배송기사 ──────────────────────────────────────────────
 async function addDriver() {
-  const drvName = document.getElementById('drvName');
-  const drvPhone = document.getElementById('drvPhone');
-  const drvCar = document.getElementById('drvCar');
   if(!drvName.value.trim()||!drvPhone.value.trim()){ showToast('성함과 연락처를 입력하세요'); return; }
   await Auth.registerSupplierDriver({ name:drvName.value.trim(), phone:drvPhone.value.trim(), car:drvCar.value.trim() });
   drvName.value=drvPhone.value=drvCar.value='';
@@ -366,10 +364,6 @@ async function delDriver(id){ if(!confirm('삭제할까요?')) return; await Aut
 
 // ── 가맹점(배송지) ─────────────────────────────────────────
 async function addStore() {
-  const stName = document.getElementById('stName');
-  const stAddr = document.getElementById('stAddr');
-  const stBiz = document.getElementById('stBiz');
-  const stPhone = document.getElementById('stPhone');
   if(!stName.value.trim()||!stAddr.value.trim()){ showToast('상호명과 주소를 입력하세요'); return; }
   await Auth.registerSupplierFranchise({ businessName:stName.value.trim(), businessNumber:stBiz.value.trim(), address:stAddr.value.trim(), phone:stPhone.value.trim() });
   stName.value=stBiz.value=stAddr.value=stPhone.value='';
@@ -390,11 +384,13 @@ async function loadStores() {
 }
 async function delStore(id){ if(!confirm('삭제할까요?')) return; await Auth.deleteSupplierFranchise(id); await loadStores(); showToast('삭제 완료'); }
 
+// ── 배송 배정 ─────────────────────────────────────────────
 // ── 본사 등록 품목/거래처 연동 ────────────────────────────
 let _hqMenus = [], _hqPrices = [], _selectedItems = [];
 
 async function loadHqData() {
   [_hqMenus, _hqPrices] = await Promise.all([Auth.loadMenus(), Auth.loadPrices()]);
+  // 품목 셀렉트 채우기
   const sel = document.getElementById('menuSelect');
   if(sel) {
     sel.innerHTML = '<option value="">품목 선택</option>'
@@ -415,6 +411,7 @@ function addItemToList() {
   const name = opt.text.split(' — ')[0];
   const price = parseInt(opt.dataset.price) || 0;
   const unit = opt.dataset.unit || '';
+  // 중복 시 수량 합산
   const exist = _selectedItems.find(x => x.menuId === menuId);
   if(exist) { exist.qty += qty; }
   else { _selectedItems.push({ menuId, name, price, unit, qty }); }
@@ -447,68 +444,127 @@ async function refreshAssignSelects() {
 }
 
 async function createDelivery() {
-  const storeId = document.getElementById('newStore').value;
+  const storeId = newStore.value;
   if(!storeId){ showToast('배송지를 선택하세요'); return; }
   const store = _stores.find(s=>s.id===storeId);
-  const driverId = document.getElementById('newDriver').value;
+  const driverId = newDriver.value;
   const driver = _drivers.find(d=>d.id===driverId);
+
+  // 품목 내역 조합 (선택 품목 + 직접 입력)
   let itemsText = _selectedItems.map(x=>`${x.name} ${x.qty}${x.unit}`).join(' · ');
-  const newItemsVal = document.getElementById('newItems').value.trim();
-  if(newItemsVal) itemsText += (itemsText ? ' · ' : '') + newItemsVal;
+  if(newItems.value.trim()) itemsText += (itemsText ? ' · ' : '') + newItems.value.trim();
   if(!itemsText){ showToast('품목을 선택하거나 직접 입력하세요'); return; }
+
+  // 금액 자동 계산
   const amount = _selectedItems.reduce((s,x)=>s+x.price*x.qty, 0);
+
   await Auth.createDelivery({
     storeId, storeName: store?.businessName||'', address: store?.address||'',
     driverId: driverId||'', driverName: driver?.name||'', driverPhone: driver?.phone||'',
-    items: itemsText, itemDetails: _selectedItems, amount,
-    note: document.getElementById('newNote').value.trim(),
+    items: itemsText,
+    itemDetails: _selectedItems,
+    amount,
+    note: newNote.value.trim(),
   });
-  document.getElementById('newStore').value=''; document.getElementById('newDriver').value='';
-  document.getElementById('newItems').value=''; document.getElementById('newNote').value='';
+  newStore.value=''; newDriver.value=''; newItems.value=''; newNote.value='';
   _selectedItems=[]; renderItemList();
   await loadDeliveries(); showToast('배송 생성 완료 · '+amount.toLocaleString()+'원');
 }
 
 async function loadDeliveries() {
   _deliveries = await Auth.loadDeliveries();
-  const badge = _deliveries.filter(d=>d.status==='assigned').length;
+
+  const ordData = await Auth.DB.get('franchise_orders') || {};
+  const pendingOrders = Object.values(ordData)
+    .filter(o => ['waiting','confirmed'].includes(o.status))
+    .sort((a,b) => (b.createdAt||'').localeCompare(a.createdAt||''));
+
+  const badge = _deliveries.filter(d=>d.status==='assigned').length + pendingOrders.filter(o=>o.status==='confirmed').length;
   document.getElementById('assignBadge').textContent = badge;
+
   const el = document.getElementById('deliveryList');
-  if(!_deliveries.length){ el.innerHTML='<div class="empty-state">등록된 배송 없음</div>'; return; }
   const ST = {assigned:{l:'배정됨',cls:'sc-assigned'},shipping:{l:'배송중',cls:'sc-shipping'},done:{l:'완료',cls:'sc-done'},issue:{l:'이슈',cls:'sc-issue'}};
-  el.innerHTML = _deliveries.map(d=>{
-    const st = ST[d.status]||ST.assigned;
-    const driverSel = '<select class="driver-select" id="dsel-'+d.id+'" onchange="assignDriver(\''+d.id+'\',this.value)">'
-      +'<option value="">기사 미배정</option>'
-      +_drivers.map(dr=>`<option value="${dr.id}" ${dr.id===d.driverId?'selected':''}>${dr.name}</option>`).join('')
-      +'</select>';
-    return `<div class="assign-card">
-      <div class="ac-header">
-        <div>
-          <div class="ac-id">${d.id}</div>
-          <div class="ac-store">${d.storeName||'-'}</div>
-          <div class="ac-addr">${d.address||''}</div>
-          <div class="ac-items">${d.items||''}</div>
-        </div>
-        <span class="status-chip ${st.cls}">${st.l}</span>
-      </div>
-      <div class="ac-body">
-        <div class="driver-select-wrap">
-          ${driverSel}
-          <button class="assign-btn" onclick="assignDriver('${d.id}', document.getElementById('dsel-${d.id}').value)">배정</button>
-        </div>
-        ${d.amount?`<div style="font-family:var(--mono);font-size:13px;font-weight:700;color:var(--text)">${Number(d.amount).toLocaleString()}원</div>`:''}
-        ${d.note?`<div style="font-size:12px;color:var(--muted)">메모: ${d.note}</div>`:''}
-      </div>
-      <div class="ac-footer">
-        ${d.status==='assigned'?`<button class="af-btn green" onclick="startDelivery('${d.id}')"><i class="ti ti-truck-delivery" style="font-size:15px"></i>배송 시작</button>`:''}
-        <button class="af-btn" onclick="openSlip('${d.id}')"><i class="ti ti-file-text" style="font-size:15px"></i>전표</button>
-        <button class="af-btn blue" onclick="copyDeliveryLink('${d.id}')"><i class="ti ti-link" style="font-size:15px"></i>링크복사</button>
-        ${d.status!=='done'?`<button class="af-btn" style="color:var(--red)" onclick="delDelivery('${d.id}')"><i class="ti ti-trash" style="font-size:14px"></i></button>`:''}
-      </div>
+
+  let html = '';
+
+  // 가맹점 발주 목록 (대기중 + 승인됨)
+  if(pendingOrders.length){
+    html += `<div style="font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.4px;text-transform:uppercase;padding:8px 4px;margin-bottom:8px">
+      가맹점 발주 <span style="background:var(--amber-bg);color:var(--amber);padding:1px 7px;border-radius:999px;font-size:10px">${pendingOrders.length}건</span>
     </div>`;
-  }).join('');
+    html += pendingOrders.map(o=>`
+      <div class="assign-card" style="border-color:${o.status==='confirmed'?'var(--blue)':'var(--line)'};margin-bottom:10px">
+        <div class="ac-header">
+          <div>
+            <div class="ac-id" style="font-family:var(--mono);font-size:11px;color:var(--dim)">${o.id}</div>
+            <div class="ac-store">${o.storeName||'가맹점'}</div>
+            <div class="ac-items">${(o.items||'').slice(0,50)}</div>
+            <div style="font-family:var(--mono);font-size:13px;font-weight:700;margin-top:4px">${Number(o.amount||0).toLocaleString()}원</div>
+          </div>
+          <span class="status-chip" style="background:${o.status==='confirmed'?'var(--blue-bg)':'var(--surface2)'};color:${o.status==='confirmed'?'var(--blue)':'var(--muted)'}">
+            ${o.status==='confirmed'?'승인됨':'승인대기'}
+          </span>
+        </div>
+        <div class="ac-body">
+          <div style="font-size:12px;color:var(--muted)">${(o.createdAt||'').slice(0,16).replace('T',' ')}</div>
+          ${o.status==='confirmed'?`
+          <div class="driver-select-wrap">
+            <select class="driver-select" id="osel-${o.id}">
+              <option value="">기사 선택</option>
+              ${_drivers.map(d=>`<option value="${d.id}">${d.name} (${d.phone})</option>`).join('')}
+            </select>
+            <button class="assign-btn" onclick="createDeliveryFromOrder('${o.id}')">배송 생성</button>
+          </div>`:'<div style="font-size:12px;color:var(--amber);padding:6px;background:var(--amber-bg);border-radius:8px">⏳ 본사 승인 대기중</div>'}
+          <div style="display:flex;gap:6px;margin-top:4px">
+            <button class="af-btn" onclick="printOrderSlip(${JSON.stringify(o).replace(/"/g,'&quot;')})" style="flex:1"><i class="ti ti-printer"></i>납품서 출력</button>
+          </div>
+        </div>
+      </div>`).join('');
+  }
+
+  // 배송 진행 목록
+  if(_deliveries.length){
+    html += `<div style="font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.4px;text-transform:uppercase;padding:8px 4px;margin-bottom:8px;margin-top:${pendingOrders.length?'16px':'0'}">
+      배송 진행 현황
+    </div>`;
+    html += _deliveries.map(d=>{
+      const st=ST[d.status]||ST.assigned;
+      const driverSel='<select class="driver-select" id="dsel-'+d.id+'">'
+        +'<option value="">기사 미배정</option>'
+        +_drivers.map(dr=>`<option value="${dr.id}" ${dr.id===d.driverId?'selected':''}>${dr.name}</option>`).join('')
+        +'</select>';
+      return `<div class="assign-card">
+        <div class="ac-header">
+          <div>
+            <div class="ac-id" style="font-family:var(--mono);font-size:11px;color:var(--dim)">${d.id}</div>
+            <div class="ac-store">${d.storeName||'-'}</div>
+            <div class="ac-addr">${d.address||''}</div>
+            <div class="ac-items">${d.items||''}</div>
+            <div style="font-family:var(--mono);font-size:13px;font-weight:700;margin-top:4px">${Number(d.amount||0).toLocaleString()}원</div>
+          </div>
+          <span class="status-chip ${st.cls}">${st.l}</span>
+        </div>
+        <div class="ac-body">
+          <div class="driver-select-wrap">
+            ${driverSel}
+            <button class="assign-btn" onclick="assignDriver('${d.id}',document.getElementById('dsel-${d.id}').value)">배정</button>
+          </div>
+          ${d.driverName?`<div style="font-size:12px;color:var(--muted)">기사: ${d.driverName} ${d.driverPhone||''}</div>`:''}
+        </div>
+        <div class="ac-footer">
+          ${d.status==='assigned'?`<button class="af-btn green" onclick="startDelivery('${d.id}')"><i class="ti ti-truck-delivery"></i>배송 시작</button>`:''}
+          <button class="af-btn" onclick="printDeliverySlip('${d.id}')"><i class="ti ti-printer"></i>납품서</button>
+          <button class="af-btn blue" onclick="copyDeliveryLink('${d.id}')"><i class="ti ti-link"></i>링크복사</button>
+          ${d.status!=='done'?`<button class="af-btn" style="color:var(--red)" onclick="delDelivery('${d.id}')"><i class="ti ti-trash"></i></button>`:''}
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  if(!html) html = '<div class="empty-state">발주 및 배송 내역 없음</div>';
+  el.innerHTML = html;
 }
+
 
 async function assignDriver(deliveryId, driverId) {
   if(!driverId){ showToast('기사를 선택하세요'); return; }
@@ -531,7 +587,7 @@ async function delDelivery(id) {
 // ── 배송전표 ─────────────────────────────────────────────
 async function openSlip(id) {
   _slipDeliveryId = id;
-  const d = _deliveries.find(x=>x.id===id);
+  const d = _deliveries.find(x=>x.id===id) || await Auth.DB.get('deliveries/'+id);
   if(!d) return;
   document.getElementById('slipContent').innerHTML = `
     <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:.5px solid var(--line)"><span style="color:var(--muted)">배송ID</span><span style="font-family:var(--mono);font-size:12px">${d.id}</span></div>
@@ -551,7 +607,8 @@ function printSlip() {
   if(!d) return;
   Auth.getDeliverySlipHtml(_slipDeliveryId).then(html=>{
     const w = window.open('','_blank');
-    w.document.write(html); w.document.close();
+    w.document.write(html);
+    w.document.close();
     setTimeout(()=>w.print(), 300);
   });
 }
@@ -571,16 +628,20 @@ async function openBizSelect() {
   const el = document.getElementById('bizSelectList');
   el.innerHTML = '<div class="loading-wrap"><div class="spinner"></div>불러오는 중...</div>';
 
+  // 본사 등록 거래처 + master 등록 납품업체 계정 모두 로드
   const [partners, users] = await Promise.all([
     Auth.loadPartners(),
     Auth.loadUsers()
   ]);
   const supplierUsers = users.filter(u => u.role === 'supplier' && u.status === 'active');
 
+  // 거래처 목록과 계정 목록 합치기
   const bizList = [];
+  // 거래처 등록 목록
   partners.filter(p => p.status === 'active').forEach(p => {
     bizList.push({ id: p.id, name: p.name, sub: p.businessNumber || p.phone || '', type: 'partner', data: p });
   });
+  // 납품업체 계정
   supplierUsers.forEach(u => {
     if(!bizList.find(b => b.name === (u.businessName || u.name))) {
       bizList.push({ id: u.uid, name: u.businessName || u.name || u.loginId, sub: u.phone || u.loginId, type: 'user', data: u });
@@ -613,12 +674,86 @@ function selectBiz(b) {
   showToast(b.name + ' 선택됨');
 }
 
+// 세션에서 업체 자동 복원
 (async function restoreBizSession() {
   const session = Auth.getSession();
   if(session && session.role === 'supplier') {
     document.getElementById('supNameText').textContent = session.businessName || session.name || '납품업체';
   }
 })();
+// ── 납품서 출력 ───────────────────────────────────────────
+function printOrderSlip(order){
+  const w = window.open('','_blank','width=800,height=600');
+  const now = new Date().toLocaleDateString('ko-KR');
+  w.document.write(`<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8">
+  <title>납품서</title>
+  <style>
+    body{font-family:"Noto Sans KR",sans-serif;padding:30px;color:#000;max-width:700px;margin:0 auto}
+    h2{text-align:center;font-size:22px;margin-bottom:6px}
+    .sub{text-align:center;color:#666;margin-bottom:24px}
+    table{width:100%;border-collapse:collapse;margin-bottom:20px}
+    th,td{padding:10px 12px;border:1px solid #ddd;text-align:left}
+    th{background:#f5f5f5;font-weight:700}
+    .total{text-align:right;font-size:16px;font-weight:700;margin-top:10px}
+    .sign-area{display:flex;justify-content:space-between;margin-top:40px}
+    .sign-box{text-align:center;border-top:1px solid #000;width:150px;padding-top:6px;font-size:13px}
+    @media print{button{display:none}}
+  </style></head><body>
+  <h2>납 품 서</h2>
+  <div class="sub">발행일: ${now}</div>
+  <table>
+    <tr><th>수신처</th><td>${order.storeName||'-'}</td><th>주문번호</th><td style="font-family:monospace;font-size:12px">${order.id}</td></tr>
+    <tr><th>주문일시</th><td>${(order.createdAt||'').slice(0,16).replace('T',' ')}</td><th>금액</th><td style="font-weight:700">${Number(order.amount||0).toLocaleString()}원</td></tr>
+  </table>
+  <table>
+    <thead><tr><th>품목명</th><th>수량</th><th>단가</th><th>금액</th></tr></thead>
+    <tbody>
+      ${(order.itemDetails||[]).map(i=>`<tr>
+        <td>${i.name}</td>
+        <td>${i.qty}${i.unit||''}</td>
+        <td style="font-family:monospace">${Number(i.price||0).toLocaleString()}원</td>
+        <td style="font-family:monospace">${Number((i.price||0)*(i.qty||1)).toLocaleString()}원</td>
+      </tr>`).join('') || `<tr><td colspan="4">${order.items||'-'}</td></tr>`}
+    </tbody>
+  </table>
+  <div class="total">합계: ${Number(order.amount||0).toLocaleString()}원</div>
+  <div class="sign-area">
+    <div class="sign-box">공급자<br>(인)</div>
+    <div class="sign-box">수령자<br>(인)</div>
+  </div>
+  <div style="text-align:center;margin-top:20px">
+    <button onclick="window.print()" style="padding:10px 24px;font-size:14px;cursor:pointer">인쇄</button>
+    <button onclick="window.close()" style="padding:10px 24px;font-size:14px;cursor:pointer;margin-left:10px">닫기</button>
+  </div>
+  </body></html>`);
+  w.document.close();
+}
+
+async function printDeliverySlip(id){
+  const d = _deliveries.find(x=>x.id===id);
+  if(!d) return;
+  printOrderSlip({...d, storeName:d.storeName, id:d.id, amount:d.amount, items:d.items, itemDetails:d.itemDetails||[], createdAt:d.createdAt});
+}
+
+async function createDeliveryFromOrder(orderId){
+  const sel = document.getElementById('osel-'+orderId);
+  const driverId = sel?.value||'';
+  const ordData = await Auth.DB.get('franchise_orders/'+orderId);
+  if(!ordData){ showToast('발주 정보를 찾을 수 없습니다'); return; }
+  const driver = _drivers.find(d=>d.id===driverId);
+  const frData = await Auth.DB.get('hq_franchises')||{};
+  const store = Object.values(frData).find(f=>f.name===ordData.storeName)||{};
+  await Auth.createDelivery({
+    storeId:store.id||'', storeName:ordData.storeName||'',
+    address:store.address||'',
+    driverId:driverId||'', driverName:driver?.name||'', driverPhone:driver?.phone||'',
+    items:ordData.items||'', amount:ordData.amount||0,
+    fromOrderId:orderId,
+  });
+  await Auth.DB.update('franchise_orders/'+orderId, {status:'shipping'});
+  await loadDeliveries();
+  showToast('배송 생성 완료!');
+}
 
 async function init() {
   await Promise.all([loadDrivers(), loadStores(), loadHqData()]);
