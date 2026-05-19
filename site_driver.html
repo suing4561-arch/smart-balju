@@ -214,6 +214,14 @@ function now(){ return new Date().toTimeString().slice(0,5); }
 function closeModal(id){ document.getElementById(id).classList.remove('show'); }
 let _tt;
 function showToast(msg){ const el=document.getElementById('toast'); el.textContent=msg; el.classList.add('show'); clearTimeout(_tt); _tt=setTimeout(()=>el.classList.remove('show'),2500); }
+function visibleDeliveries(list){
+  return (list || []).filter(d => {
+    if(!d) return false;
+    if(targetDeliveryId) return d.id === targetDeliveryId;
+    if(targetDriverId) return d.driverId === targetDriverId;
+    return true;
+  });
+}
 
 function updateProgress(){
   const done = deliveries.filter(d=>d.status==='done').length;
@@ -265,6 +273,10 @@ function render(){
     }
     if(isWaiting && isFirst){
       body += `<button class="big-btn btn-start" onclick="startDlv('${d.id}')"><i class="ti ti-truck-delivery"></i>배송 출발</button>`;
+      body += `<button class="big-btn btn-done" onclick="openDone('${d.id}')"><i class="ti ti-circle-check"></i>도착 완료</button>`;
+    }
+    if(isWaiting && !isFirst){
+      body += `<button class="big-btn btn-done" onclick="openDone('${d.id}')"><i class="ti ti-circle-check"></i>도착 완료</button>`;
     }
     if(isDone){
       body = `<div class="done-stamp"><i class="ti ti-circle-check"></i><div><div class="done-stamp-title">납품 완료</div><div class="done-stamp-time">${d.doneAt?.slice(11,16)||''} 도착 확인</div></div></div>`;
@@ -328,11 +340,11 @@ async function confirmDone(){
 }
 
 async function bulkDone(){
-  const ids=[..._selectedIdsDriver||checked].filter(id=>{
+  const ids=[...checked].filter(id=>{
     const d=deliveries.find(x=>x.id===id);
-    return d&&d.status==='shipping';
+    return d&&d.status!=='done';
   });
-  if(!ids.length){showToast('배송중인 항목을 선택하세요');return;}
+  if(!ids.length){showToast('완료 처리할 항목을 선택하세요');return;}
   if(!confirm(ids.length+'건을 일괄 완료 처리할까요?'))return;
   for(const id of ids){
     await Auth.markDeliveryDone(id);
@@ -386,7 +398,7 @@ async function init(){
         if(idx>=0) deliveries[idx]={...deliveries[idx],...val};
         else deliveries=[val];
       } else {
-        deliveries = Object.values(val).filter(Boolean);
+        deliveries = visibleDeliveries(Object.values(val));
       }
       render();
     });
