@@ -229,18 +229,22 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);display:flex
 
         <!-- 매출 탭 -->
         <div class="home-tab-panel" id="panel-sales">
-          <div class="stat-grid">
-            <div class="stat-card"><div class="stat-label">매출액</div><div class="stat-value">1,248만</div><div class="stat-sub up">▲ 전일 +8.3%</div></div>
-            <div class="stat-card"><div class="stat-label">주문건수</div><div class="stat-value">87건</div><div class="stat-sub up">▲ 전일 +5건</div></div>
-            <div class="stat-card"><div class="stat-label">객단가</div><div class="stat-value">143,000</div><div class="stat-sub muted">원/건</div></div>
-            <div class="stat-card"><div class="stat-label">미수금</div><div class="stat-value" style="color:var(--red)">320만</div><div class="stat-sub down">D-3 마감</div></div>
+          <div class="stat-grid" id="salesKpi">
+            <div class="stat-card"><div class="stat-label">이번달 매출</div><div class="stat-value" id="fr-sale">-</div><div class="stat-sub muted" id="fr-sale-sub">OKPos 연동 중</div></div>
+            <div class="stat-card"><div class="stat-label">이번달 주문</div><div class="stat-value" id="fr-cnt">-</div><div class="stat-sub muted">건</div></div>
+            <div class="stat-card"><div class="stat-label">객단가</div><div class="stat-value" id="fr-avg">-</div><div class="stat-sub muted">원/명</div></div>
+            <div class="stat-card"><div class="stat-label">미수금</div><div class="stat-value" id="fr-unpaid" style="color:var(--red)">-</div><div class="stat-sub down" id="fr-unpaid-sub">한도 확인 중</div></div>
           </div>
+          <!-- 미수금 상세 -->
+          <div class="card" id="unpaidCard" style="display:none">
+            <div class="card-header"><span class="card-title">미수금 현황</span></div>
+            <div id="unpaidDetail"></div>
+          </div>
+          <!-- 일별 매출 -->
           <div class="card">
-            <div class="card-header"><span class="card-title">이번달 누계</span></div>
-            <div style="display:flex;flex-direction:column;gap:8px">
-              <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:.5px solid var(--line);font-size:13px"><span style="color:var(--muted)">총 매출</span><span style="font-family:var(--mono);font-weight:700">4,834만원</span></div>
-              <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:.5px solid var(--line);font-size:13px"><span style="color:var(--muted)">발주 총액</span><span style="font-family:var(--mono);font-weight:700">1,240만원</span></div>
-              <div style="display:flex;justify-content:space-between;padding:8px 0;font-size:13px"><span style="color:var(--muted)">원가율</span><span style="font-family:var(--mono);font-weight:700;color:var(--green)">25.6%</span></div>
+            <div class="card-header"><span class="card-title">일별 매출</span><span class="card-link" id="frSaleDate"></span></div>
+            <div id="frSaleList" style="max-height:200px;overflow-y:auto">
+              <div style="text-align:center;padding:20px;color:var(--dim);font-size:13px">OKPos 데이터 불러오는 중...</div>
             </div>
           </div>
         </div>
@@ -404,6 +408,74 @@ function goTo(id){
 function switchHomeTab(tab){
   ['order','sales'].forEach(t=>{ document.getElementById('htab-'+t)?.classList.toggle('active',t===tab); });
   ['order','sales'].forEach(t=>{ document.getElementById('panel-'+t).classList.toggle('active',t===tab); });
+  if(tab==='sales') loadFranchiseSales();
+}
+
+async function loadFranchiseSales(){
+  const storeName = _currentStore?.name || document.getElementById('storeNameText').textContent;
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth()+1).padStart(2,'0');
+  const monthKey = `${year}${month}`;
+
+  // OKPos 매출 로드
+  const allSales = await Auth.DB.get('okpos_sales') || {};
+  const monthDays = Object.entries(allSales).filter(([k])=>k.startsWith(monthKey)).sort(([a],[b])=>a.localeCompare(b));
+
+  let totalSale=0, totalCnt=0, totalGst=0;
+  const dayList=[];
+
+  monthDays.forEach(([dateKey,dayData])=>{
+    const firstVal=Object.values(dayData)[0];
+    const isNested=firstVal&&typeof firstVal==='object'&&!firstVal.shop_nm;
+    const shops=isNested?Object.values(dayData).flatMap(bd=>Object.entries(bd||{})):Object.entries(dayData);
+    let daySale=0,dayCnt=0;
+    shops.forEach(([,d])=>{
+      if(!d||!d.shop_nm) return;
+      // 내 가맹점 필터 (가맹점명으로 매칭)
+      if(storeName&&storeName!=='가맹점을 선택하세요'&&!d.shop_nm.includes(storeName.replace('1984 ','').replace('이바구밀면 ',''))) return;
+      daySale+=d.tot_sale_amt||0; dayCnt+=d.tot_sale_cnt||0; totalGst+=d.gst_cnt||0;
+    });
+    totalSale+=daySale; totalCnt+=dayCnt;
+    if(daySale>0) dayList.push({date:dateKey,sale:daySale,cnt:dayCnt});
+  });
+
+  // KPI 업데이트
+  const fmt=v=>v>=10000?Math.round(v/10000).toLocaleString()+'만':v.toLocaleString();
+  document.getElementById('fr-sale').textContent=totalSale?fmt(totalSale):'데이터없음';
+  document.getElementById('fr-sale-sub').textContent=month+'월 누계';
+  document.getElementById('fr-cnt').textContent=totalCnt?totalCnt+'건':'-';
+  document.getElementById('fr-avg').textContent=totalGst?Math.round(totalSale/totalGst).toLocaleString():'-';
+
+  // 미수금 로드
+  const frData=await Auth.DB.get('hq_franchises')||{};
+  const myStore=Object.values(frData).find(f=>f.name===storeName);
+  if(myStore){
+    const unpaid=Number(myStore.unpaidAmt||0);
+    const limit=Number(myStore.orderLimit||2000000);
+    const remain=limit-unpaid;
+    document.getElementById('fr-unpaid').textContent=unpaid.toLocaleString()+'원';
+    document.getElementById('fr-unpaid-sub').textContent=`한도 ${limit.toLocaleString()}원 · 잔여 ${remain.toLocaleString()}원`;
+    const card=document.getElementById('unpaidCard');
+    card.style.display='';
+    document.getElementById('unpaidDetail').innerHTML=`
+      <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:.5px solid var(--line);font-size:13px"><span style="color:var(--muted)">주문 한도</span><span style="font-family:var(--mono);font-weight:700">${limit.toLocaleString()}원</span></div>
+      <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:.5px solid var(--line);font-size:13px"><span style="color:var(--muted)">미수금</span><span style="font-family:var(--mono);font-weight:700;color:var(--red)">${unpaid.toLocaleString()}원</span></div>
+      <div style="display:flex;justify-content:space-between;padding:8px 0;font-size:13px"><span style="color:var(--muted)">잔여 한도</span><span style="font-family:var(--mono);font-weight:700;color:${remain>0?'var(--green)':'var(--red)'}">${remain.toLocaleString()}원</span></div>
+      <div style="margin-top:8px;padding:8px 10px;background:${myStore.orderEnabled!==false?'var(--green-bg)':'var(--red-bg)'};border-radius:8px;font-size:12px;font-weight:700;color:${myStore.orderEnabled!==false?'var(--green)':'var(--red)'}">
+        주문 ${myStore.orderEnabled!==false?'가능':'불가'}
+      </div>`;
+  }
+
+  // 일별 매출 목록
+  const listEl=document.getElementById('frSaleList');
+  if(!dayList.length){listEl.innerHTML='<div style="text-align:center;padding:20px;color:var(--dim);font-size:13px">매출 데이터 없음<br>OKPos 수집 후 표시됩니다</div>';return;}
+  listEl.innerHTML=dayList.reverse().map(d=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:.5px solid var(--line);font-size:13px">
+    <span style="color:var(--muted)">${d.date.slice(4,6)}/${d.date.slice(6)}일</span>
+    <span style="font-family:var(--mono);font-weight:700">${d.sale.toLocaleString()}원</span>
+    <span style="font-size:12px;color:var(--muted)">${d.cnt}건</span>
+  </div>`).join('');
+  document.getElementById('frSaleDate').textContent=year+'년 '+month+'월';
 }
 // 홈탭 버튼 id 수정
 document.querySelectorAll('.home-tab').forEach((b,i)=>b.id='htab-'+['order','sales'][i]);
@@ -668,10 +740,82 @@ function closeSuccess(){ document.getElementById('successOverlay').classList.rem
 // ── 배송 현황 ──────────────────────────────────────────────
 async function loadDeliveryPage(){
   const el=document.getElementById('deliveryPage');
-  const list=await Auth.loadDeliveries();
-  if(!list.length){ el.innerHTML='<div class="empty-state">진행중인 배송 없음</div>'; return; }
-  const ST={assigned:{l:'준비중',cls:'sc-p',bg:'var(--surface2)'},shipping:{l:'배송중',cls:'sc-s',bg:'var(--blue-bg)'},done:{l:'완료',cls:'sc-d',bg:'var(--green-bg)'},issue:{l:'이슈',cls:'',bg:'var(--red-bg)'}};
-  el.innerHTML=list.map(d=>{const s=ST[d.status]||ST.assigned;return`<div class="dlv-card"><div class="dlv-hdr"><div class="dlv-icon" style="background:${s.bg}"><i class="ti ti-truck-delivery" style="color:var(--blue)"></i></div><div style="flex:1"><div class="dlv-title">${d.items?.slice(0,30)||'품목 없음'}</div><div class="dlv-sub">${d.driverName||'기사 미배정'}</div><div class="dlv-sub">${(d.createdAt||'').slice(0,10)}</div></div><span class="sc ${s.cls}">${s.l}</span></div></div>`;}).join('');
+
+  // 내 가맹점 발주 내역 로드
+  const ordData = await Auth.DB.get('franchise_orders') || {};
+  const myOrders = Object.values(ordData)
+    .filter(o => !_currentStore || o.storeName === _currentStore.name || o.storeId === _currentStore.id)
+    .sort((a,b)=>(b.createdAt||'').localeCompare(a.createdAt||''));
+
+  // 배송 내역도 로드
+  const deliveries = await Auth.loadDeliveries();
+  const myDeliveries = deliveries.filter(d =>
+    !_currentStore || d.storeName === _currentStore.name || d.storeId === _currentStore.id
+  );
+
+  if(!myOrders.length && !myDeliveries.length){
+    el.innerHTML='<div class="empty-state" style="padding:40px;text-align:center;color:var(--dim)">배송 내역이 없습니다</div>';
+    return;
+  }
+
+  const ORD_ST = {
+    waiting:   {l:'대기중',  bg:'var(--surface2)', c:'var(--muted)',   icon:'ti-clock'},
+    confirmed: {l:'승인됨',  bg:'var(--blue-bg)',  c:'var(--blue)',    icon:'ti-circle-check'},
+    shipping:  {l:'배송중',  bg:'var(--purple-bg)',c:'var(--purple)',  icon:'ti-truck-delivery'},
+    done:      {l:'완료',    bg:'var(--green-bg)', c:'var(--green)',   icon:'ti-circle-check'},
+    rejected:  {l:'반려됨',  bg:'var(--red-bg)',   c:'var(--red)',     icon:'ti-x'},
+  };
+
+  let html = '';
+
+  // 발주 내역
+  if(myOrders.length){
+    html += `<div style="font-size:11px;font-weight:700;color:var(--dim);letter-spacing:.4px;text-transform:uppercase;padding:4px 0 10px">발주 현황</div>`;
+    html += myOrders.map(o=>{
+      const st = ORD_ST[o.status] || ORD_ST.waiting;
+      return `<div class="dlv-card">
+        <div class="dlv-hdr">
+          <div class="dlv-icon" style="background:${st.bg}"><i class="ti ${st.icon}" style="color:${st.c}"></i></div>
+          <div style="flex:1">
+            <div class="dlv-title">${(o.items||'').slice(0,30)||'품목 없음'}</div>
+            <div class="dlv-sub" style="font-family:var(--mono)">${Number(o.amount||0).toLocaleString()}원</div>
+            <div class="dlv-sub">${(o.createdAt||'').slice(0,16).replace('T',' ')}</div>
+          </div>
+          <span class="sc" style="background:${st.bg};color:${st.c}">${st.l}</span>
+        </div>
+        ${o.status==='rejected'?`<div style="padding:10px 14px;font-size:12px;color:var(--red);border-top:.5px solid var(--line)">반려됨 - 본사에 문의하세요</div>`:''}
+      </div>`;
+    }).join('');
+  }
+
+  // 배송 진행 내역
+  if(myDeliveries.length){
+    html += `<div style="font-size:11px;font-weight:700;color:var(--dim);letter-spacing:.4px;text-transform:uppercase;padding:${myOrders.length?'16px':'4px'} 0 10px">배송 진행</div>`;
+    const DLV_ST = {
+      assigned:{l:'배송준비',bg:'var(--surface2)',c:'var(--muted)',cls:'sc-p'},
+      shipping:{l:'배송중',bg:'var(--blue-bg)',c:'var(--blue)',cls:'sc-s'},
+      done:{l:'배송완료',bg:'var(--green-bg)',c:'var(--green)',cls:'sc-d'},
+      issue:{l:'이슈',bg:'var(--red-bg)',c:'var(--red)',cls:''},
+    };
+    html += myDeliveries.map(d=>{
+      const s=DLV_ST[d.status]||DLV_ST.assigned;
+      return `<div class="dlv-card">
+        <div class="dlv-hdr">
+          <div class="dlv-icon" style="background:${s.bg}"><i class="ti ti-truck-delivery" style="color:${s.c}"></i></div>
+          <div style="flex:1">
+            <div class="dlv-title">${(d.items||'').slice(0,30)||'품목 없음'}</div>
+            <div class="dlv-sub">${d.driverName||'기사 미배정'} ${d.driverPhone?'· '+d.driverPhone:''}</div>
+            <div class="dlv-sub" style="font-family:var(--mono)">${Number(d.amount||0).toLocaleString()}원</div>
+            <div class="dlv-sub">${(d.createdAt||'').slice(0,10)}</div>
+          </div>
+          <span class="sc ${s.cls}" style="background:${s.bg};color:${s.c}">${s.l}</span>
+        </div>
+        ${d.status==='done'?`<div style="padding:10px 14px;font-size:12px;color:var(--green);border-top:.5px solid var(--line)">✓ ${(d.doneAt||'').slice(11,16)} 배송 완료</div>`:''}
+      </div>`;
+    }).join('');
+  }
+
+  el.innerHTML = html;
 }
 
 // ── 가맹점 선택 ────────────────────────────────────────────

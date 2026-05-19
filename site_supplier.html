@@ -3,242 +3,199 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>한국식품 — 납품업체 SCM</title>
+<title>납품업체 SCM</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
 <style>
 :root{--bg:#f5f4f0;--surface:#fff;--surface2:#f0ede8;--line:#e4e0d8;--text:#1a1916;--muted:#6b6860;--dim:#a8a49c;--green:#1a7a4a;--green-bg:#e8f5ee;--green-mid:#2d9e65;--red:#c0392b;--red-bg:#fdecea;--amber:#b85c00;--amber-bg:#fef3e2;--blue:#1a5fa8;--blue-bg:#e8f0fb;--blue-mid:#2874cc;--purple:#5a3fb5;--purple-bg:#f0eeff;--mono:"Space Mono",monospace;--sans:"Noto Sans KR",sans-serif}
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:100vh}
-.app{max-width:480px;margin:0 auto;background:var(--surface);min-height:100vh;display:flex;flex-direction:column}
+body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:100vh;display:flex;justify-content:center}
+.app{width:100%;max-width:480px;background:var(--surface);min-height:100vh;display:flex;flex-direction:column}
 .status-bar{padding:12px 20px 0;display:flex;justify-content:space-between;align-items:center}
 .st-time{font-family:var(--mono);font-size:13px;font-weight:700}
-.st-icons{display:flex;gap:5px;color:var(--muted);font-size:14px}
-.app-header{padding:14px 20px 12px;border-bottom:.5px solid var(--line)}
-.header-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
-.sup-badge{display:inline-flex;align-items:center;gap:6px;background:var(--purple-bg);color:var(--purple);font-size:11px;font-weight:700;padding:4px 12px;border-radius:999px;border:.5px solid rgba(90,63,181,.2)}
-.notif-btn{width:36px;height:36px;border-radius:50%;background:var(--surface2);border:.5px solid var(--line);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:18px;color:var(--muted);position:relative}
-.ndot{position:absolute;top:7px;right:7px;width:7px;height:7px;border-radius:50%;background:var(--red);border:1.5px solid var(--surface)}
-.sup-name{font-size:20px;font-weight:700;letter-spacing:-.3px}
-.sup-sub{font-size:12px;color:var(--dim);margin-top:3px}
+.app-header{padding:12px 20px 10px;border-bottom:.5px solid var(--line)}
+.header-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.sup-badge{display:inline-flex;align-items:center;gap:5px;background:var(--purple-bg);color:var(--purple);font-size:11px;font-weight:700;padding:3px 10px;border-radius:999px;border:.5px solid rgba(90,63,181,.2)}
+.sup-name{font-size:18px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:5px}
+.sup-sub{font-size:11px;color:var(--dim);margin-top:2px}
+.biz-select-btn{display:flex;align-items:center;gap:5px;padding:5px 11px;border-radius:8px;border:.5px solid var(--line);background:var(--surface2);font-size:11px;font-weight:700;color:var(--text);cursor:pointer;font-family:var(--sans)}
 /* 탭 */
-.tab-bar{display:flex;padding:0 20px;border-bottom:.5px solid var(--line);gap:0;background:var(--surface)}
-.tab-btn{flex:1;padding:12px 4px;text-align:center;font-size:13px;font-weight:500;color:var(--dim);border-bottom:2px solid transparent;cursor:pointer;transition:color .15s,border-color .15s;white-space:nowrap;background:none;border-top:none;border-left:none;border-right:none;font-family:var(--sans)}
+.tab-bar{display:flex;padding:0 20px;border-bottom:.5px solid var(--line);background:var(--surface);overflow-x:auto;scrollbar-width:none}
+.tab-bar::-webkit-scrollbar{display:none}
+.tab-btn{flex-shrink:0;padding:11px 14px;text-align:center;font-size:12px;font-weight:500;color:var(--dim);border-bottom:2px solid transparent;cursor:pointer;white-space:nowrap;background:none;border-top:none;border-left:none;border-right:none;font-family:var(--sans);transition:color .15s,border-color .15s}
 .tab-btn.active{color:var(--text);border-bottom-color:var(--text);font-weight:700}
-.tbadge{display:inline-block;margin-left:4px;background:var(--red);color:#fff;font-size:10px;font-weight:700;padding:1px 5px;border-radius:999px;vertical-align:middle}
+.tbadge{display:inline-block;margin-left:3px;background:var(--red);color:#fff;font-size:10px;font-weight:700;padding:1px 5px;border-radius:999px}
 /* 페이지 */
-.page{display:none;flex-direction:column}.page.active{display:flex}
-.scroll-body{padding:16px 20px;display:flex;flex-direction:column;gap:14px;flex:1}
-/* 카드 */
-.section-label{font-size:11px;font-weight:700;color:var(--dim);letter-spacing:.5px;text-transform:uppercase}
-.card{background:var(--surface);border:.5px solid var(--line);border-radius:14px;padding:14px 16px}
-.card-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
-.card-title{font-size:14px;font-weight:700}
+.page{display:none;flex-direction:column;flex:1;overflow-y:auto}.page.active{display:flex}
+.scroll-body{padding:14px 20px;display:flex;flex-direction:column;gap:12px;padding-bottom:80px}
+/* 섹션 라벨 */
+.section-label{font-size:11px;font-weight:700;color:var(--dim);letter-spacing:.4px;text-transform:uppercase}
 /* 폼 */
-.form-field{display:flex;flex-direction:column;gap:5px}
-.form-label{font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.3px}
-.form-input{width:100%;padding:10px 12px;border-radius:10px;border:.5px solid var(--line);background:var(--surface2);font-size:14px;font-family:var(--sans);color:var(--text);outline:none;transition:border-color .15s}
-.form-input:focus{border-color:var(--text);background:var(--surface)}
-.form-select{width:100%;padding:10px 12px;border-radius:10px;border:.5px solid var(--line);background:var(--surface2);font-size:14px;font-family:var(--sans);color:var(--text);outline:none;appearance:none}
+.card{background:var(--surface);border:.5px solid var(--line);border-radius:14px;padding:14px 16px}
+.form-field{display:flex;flex-direction:column;gap:4px}
+.form-label{font-size:11px;font-weight:700;color:var(--muted)}
+.form-input{width:100%;padding:9px 11px;border-radius:9px;border:.5px solid var(--line);background:var(--surface2);font-size:13px;font-family:var(--sans);color:var(--text);outline:none}
+.form-input:focus{border-color:var(--blue-mid);background:var(--surface)}
+.form-select{width:100%;padding:9px 11px;border-radius:9px;border:.5px solid var(--line);background:var(--surface2);font-size:13px;font-family:var(--sans);color:var(--text);outline:none;appearance:none}
 .two-col{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 /* 버튼 */
-.reg-btn{width:100%;padding:12px;border-radius:11px;border:none;font-size:13px;font-weight:700;font-family:var(--sans);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:opacity .15s}
-.reg-btn:active{opacity:.85}
-.reg-btn.blue{background:var(--blue-mid);color:#fff}
-.reg-btn.green{background:var(--green-mid);color:#fff}
-.reg-btn.purple{background:var(--purple);color:#fff}
-.reg-btn.outline{background:var(--surface2);border:.5px solid var(--line);color:var(--text)}
-/* 배송기사/가맹점 아이템 */
-.list-item{display:flex;align-items:center;gap:10px;padding:11px 14px;border:.5px solid var(--line);border-radius:12px;background:var(--surface)}
-.li-icon{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
-.li-info{flex:1;min-width:0}
-.li-name{font-size:13px;font-weight:700;color:var(--text)}
-.li-sub{font-size:11px;color:var(--muted);margin-top:2px}
-.li-actions{display:flex;gap:5px;flex-shrink:0}
-.act-btn{padding:5px 9px;border-radius:7px;font-size:11px;font-weight:700;font-family:var(--sans);cursor:pointer;border:.5px solid var(--line);background:var(--surface2);color:var(--text)}
+.rb{width:100%;padding:11px;border-radius:10px;border:none;font-size:13px;font-weight:700;font-family:var(--sans);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:opacity .15s}
+.rb:active{opacity:.85}
+.rb.blue{background:var(--blue-mid);color:#fff}.rb.green{background:var(--green-mid);color:#fff}
+.rb.purple{background:var(--purple);color:#fff}.rb.outline{background:var(--surface2);border:.5px solid var(--line);color:var(--text)}
+.rb.amber{background:var(--amber);color:#fff}
+/* ── 한줄 배송 아이템 ── */
+.dlv-row{display:flex;align-items:center;gap:10px;padding:11px 14px;border:.5px solid var(--line);border-radius:12px;background:var(--surface);cursor:pointer;transition:background .15s}
+.dlv-row:active{background:var(--surface2)}
+.dlv-row.selected{border-color:var(--blue-mid);background:var(--blue-bg)}
+.dlv-chk{width:18px;height:18px;accent-color:var(--blue-mid);cursor:pointer;flex-shrink:0}
+.dlv-status{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.dlv-store{font-size:13px;font-weight:700;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dlv-amt{font-family:var(--mono);font-size:12px;font-weight:700;flex-shrink:0;color:var(--text)}
+.dlv-chip{font-size:10px;font-weight:700;padding:2px 7px;border-radius:999px;flex-shrink:0}
+/* ── 상세 패널 (슬라이드) ── */
+.detail-panel{background:var(--surface);border:.5px solid var(--blue-mid);border-radius:12px;padding:14px;margin-top:4px;display:flex;flex-direction:column;gap:10px}
+.detail-row{display:flex;justify-content:space-between;align-items:center;font-size:12px;padding:5px 0;border-bottom:.5px solid var(--line)}
+.detail-row:last-of-type{border-bottom:none}
+.detail-lbl{color:var(--muted)}
+.detail-val{font-weight:700}
+.detail-actions{display:flex;gap:6px;flex-wrap:wrap}
+.act-sm{padding:7px 12px;border-radius:8px;font-size:11px;font-weight:700;font-family:var(--sans);cursor:pointer;border:.5px solid var(--line);background:var(--surface2);color:var(--text);display:flex;align-items:center;gap:4px}
+.act-sm.green{background:var(--green-mid);color:#fff;border-color:var(--green-mid)}
+.act-sm.blue{background:var(--blue-mid);color:#fff;border-color:var(--blue-mid)}
+.act-sm.amber{background:var(--amber);color:#fff;border-color:var(--amber)}
+.act-sm.red{background:var(--red-bg);color:var(--red);border-color:rgba(192,57,43,.3)}
+/* 등록 목록 */
+.list-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border:.5px solid var(--line);border-radius:11px;background:var(--surface)}
+.li-icon{width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0}
+.li-info{flex:1;min-width:0}.li-name{font-size:13px;font-weight:700}.li-sub{font-size:11px;color:var(--muted);margin-top:2px}
+.li-actions{display:flex;gap:4px;flex-shrink:0}
+.act-btn{padding:4px 8px;border-radius:6px;font-size:11px;font-weight:700;font-family:var(--sans);cursor:pointer;border:.5px solid var(--line);background:var(--surface2);color:var(--text)}
 .act-btn.red{background:var(--red-bg);color:var(--red);border-color:rgba(192,57,43,.3)}
 .act-btn.blue{background:var(--blue-bg);color:var(--blue);border-color:rgba(26,95,168,.3)}
-.act-btn.green{background:var(--green-bg);color:var(--green);border-color:rgba(26,122,74,.3)}
-/* 배송 배정 카드 */
-.assign-card{border:.5px solid var(--line);border-radius:14px;overflow:hidden;background:var(--surface);margin-bottom:10px}
-.ac-header{padding:13px 14px;border-bottom:.5px solid var(--line);display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
-.ac-id{font-family:var(--mono);font-size:11px;color:var(--dim)}
-.ac-store{font-size:15px;font-weight:700;margin-top:2px}
-.ac-addr{font-size:12px;color:var(--muted);margin-top:2px}
-.ac-items{font-size:11px;color:var(--dim);margin-top:2px}
-.status-chip{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;flex-shrink:0}
-.sc-assigned{background:var(--surface2);color:var(--muted)}
-.sc-shipping{background:var(--blue-bg);color:var(--blue)}
-.sc-done{background:var(--green-bg);color:var(--green)}
-.sc-issue{background:var(--red-bg);color:var(--red)}
-.ac-body{padding:12px 14px;display:flex;flex-direction:column;gap:10px}
-.driver-select-wrap{display:flex;gap:8px;align-items:center}
-.driver-select{flex:1;padding:9px 12px;border-radius:9px;border:.5px solid var(--line);background:var(--surface2);font-size:13px;font-family:var(--sans);color:var(--text);outline:none;appearance:none}
-.assign-btn{padding:9px 14px;border-radius:9px;border:none;background:var(--text);color:#fff;font-size:12px;font-weight:700;font-family:var(--sans);cursor:pointer;white-space:nowrap}
-.ac-footer{display:flex;gap:7px;padding:10px 14px;border-top:.5px solid var(--line)}
-.af-btn{flex:1;padding:9px;border-radius:9px;font-size:12px;font-weight:700;font-family:var(--sans);cursor:pointer;border:.5px solid var(--line);background:var(--surface2);color:var(--text);display:flex;align-items:center;justify-content:center;gap:5px}
-.af-btn.green{background:var(--green-mid);color:#fff;border-color:var(--green-mid)}
-.af-btn.blue{background:var(--blue-mid);color:#fff;border-color:var(--blue-mid)}
+/* 접이식 */
+.collapsible{border:.5px solid var(--line);border-radius:12px;overflow:hidden}
+.collapsible-header{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;cursor:pointer;background:var(--surface);font-size:13px;font-weight:700}
+.collapsible-header:active{background:var(--surface2)}
+.collapsible-body{display:none;padding:12px 14px;border-top:.5px solid var(--line);background:var(--surface)}
+.collapsible-body.open{display:block}
+/* 탭 필터 */
+.sub-filters{display:flex;gap:6px;flex-wrap:wrap}
+.sf{padding:5px 11px;border-radius:999px;border:.5px solid var(--line);background:var(--surface2);font-size:11px;font-weight:700;cursor:pointer;color:var(--muted)}
+.sf.active{background:var(--text);color:#fff;border-color:var(--text)}
 /* 요약 스트립 */
 .strip{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
-.strip-card{background:var(--surface2);border-radius:12px;padding:12px;text-align:center}
-.strip-val{font-family:var(--mono);font-size:18px;font-weight:700;color:var(--text)}
-.strip-lbl{font-size:11px;color:var(--dim);margin-top:3px}
+.strip-card{background:var(--surface2);border-radius:11px;padding:11px 10px;text-align:center}
+.strip-val{font-family:var(--mono);font-size:16px;font-weight:700}
+.strip-lbl{font-size:10px;color:var(--dim);margin-top:3px}
 /* 정산 */
 .settle-row{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:.5px solid var(--line)}
 .settle-row:last-child{border-bottom:none}
-.settle-lbl{font-size:13px;color:var(--text)}.settle-sub{font-size:11px;color:var(--dim);margin-top:1px}
 .settle-amt{font-family:var(--mono);font-size:14px;font-weight:700}
 .settle-amt.pos{color:var(--green)}.settle-amt.neg{color:var(--red)}
-.hist-item{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:.5px solid var(--line);cursor:pointer}
-.hist-item:last-child{border-bottom:none}
-.hist-icon{width:32px;height:32px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;background:var(--surface2);color:var(--muted)}
-.hist-info{flex:1;min-width:0}
-.hist-title{font-size:13px;font-weight:700;color:var(--text)}
-.hist-detail{font-size:11px;color:var(--muted);margin-top:2px}
-.hist-right{text-align:right;flex-shrink:0}
-.hist-amt{font-family:var(--mono);font-size:13px;font-weight:700}
-.hist-st{font-size:11px;margin-top:2px}
-.hist-st.paid{color:var(--green)}.hist-st.pending{color:var(--amber)}
-/* 내비 */
+/* 일괄 액션 바 */
+.bulk-bar{display:none;position:sticky;bottom:70px;left:0;right:0;margin:0 20px;background:var(--text);color:#fff;border-radius:12px;padding:10px 14px;align-items:center;gap:8px;z-index:20;box-shadow:0 4px 20px rgba(0,0,0,.2)}
+.bulk-bar.show{display:flex}
+.bulk-count{font-size:13px;font-weight:700;flex:1}
+.bulk-btn{padding:7px 12px;border-radius:8px;border:none;background:rgba(255,255,255,.2);color:#fff;font-size:11px;font-weight:700;font-family:var(--sans);cursor:pointer}
+/* 네비 */
 .nav-bar{display:flex;border-top:.5px solid var(--line);padding:8px 0 20px;background:var(--surface);flex-shrink:0}
-.nav-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;padding:6px 0;border:none;background:none;font-family:var(--sans)}
-.nav-item i{font-size:22px;color:var(--dim)}
+.nav-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;padding:5px 0;border:none;background:none;font-family:var(--sans)}
+.nav-item i{font-size:21px;color:var(--dim)}
 .nav-item i.active{color:var(--text)}
 .nav-lbl{font-size:10px;color:var(--dim);font-weight:500}
 .nav-lbl.active{color:var(--text);font-weight:700}
-/* 토스트 */
-.toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%) translateY(12px);background:var(--text);color:#fff;font-size:13px;font-weight:700;padding:10px 20px;border-radius:999px;opacity:0;transition:all .25s;pointer-events:none;white-space:nowrap;z-index:200}
-.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 /* 모달 */
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:50;display:none;align-items:flex-end;justify-content:center}
 .modal-overlay.show{display:flex}
-.modal-sheet{width:100%;max-width:480px;background:var(--surface);border-radius:20px 20px 0 0;padding:20px 20px 40px;display:flex;flex-direction:column;gap:14px}
-.modal-handle{width:36px;height:4px;background:var(--line);border-radius:4px;margin:0 auto 4px}
-.modal-title{font-size:17px;font-weight:700}
-.mbtn-row{display:flex;gap:8px;margin-top:4px}
-.mbtn{flex:1;padding:13px;border-radius:12px;font-size:14px;font-weight:700;font-family:var(--sans);cursor:pointer;border:.5px solid var(--line)}
-.mbtn.cancel{background:var(--surface2);color:var(--text)}
-.mbtn.ok{background:var(--text);color:#fff;border-color:var(--text)}
-/* 로딩 */
-.loading-wrap{display:flex;align-items:center;justify-content:center;padding:40px;gap:10px;color:var(--muted)}
-.spinner{width:18px;height:18px;border:2px solid var(--line);border-top-color:var(--blue);border-radius:50%;animation:spin .7s linear infinite}
+.modal-sheet{width:100%;max-width:480px;background:var(--surface);border-radius:20px 20px 0 0;padding:18px 18px 36px;display:flex;flex-direction:column;gap:12px;max-height:80vh;overflow-y:auto}
+.modal-handle{width:36px;height:4px;background:var(--line);border-radius:4px;margin:0 auto 2px}
+.modal-title{font-size:16px;font-weight:700}
+/* 토스트 */
+.toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%) translateY(12px);background:var(--text);color:#fff;font-size:13px;font-weight:700;padding:9px 18px;border-radius:999px;opacity:0;transition:all .25s;pointer-events:none;white-space:nowrap;z-index:200}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.loading-wrap{display:flex;align-items:center;justify-content:center;padding:30px;gap:8px;color:var(--muted);font-size:13px}
+.spinner{width:16px;height:16px;border:2px solid var(--line);border-top-color:var(--blue);border-radius:50%;animation:spin .7s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 .empty-state{text-align:center;padding:30px;color:var(--dim);font-size:13px}
-@media(min-width:480px){body{background:#e8e5e0;padding:20px 0 40px}.app{border-radius:28px;box-shadow:0 4px 40px rgba(0,0,0,.12);min-height:auto}}
 </style>
 </head>
 <body>
 <div class="app">
   <div class="status-bar">
     <span class="st-time" id="stTime">09:41</span>
-    <div class="st-icons"><i class="ti ti-wifi"></i><i class="ti ti-battery-2"></i></div>
+    <div style="display:flex;gap:5px;color:var(--muted);font-size:14px"><i class="ti ti-wifi"></i><i class="ti ti-battery-2"></i></div>
   </div>
   <div class="app-header">
     <div class="header-top">
-      <div class="sup-badge"><i class="ti ti-building-factory" style="font-size:12px"></i>납품업체 SCM</div>
-      <button onclick="openBizSelect()" style="display:flex;align-items:center;gap:5px;padding:6px 12px;border-radius:9px;border:.5px solid var(--line);background:var(--surface2);font-size:12px;font-weight:700;color:var(--text);cursor:pointer;font-family:var(--sans)">
-        <i class="ti ti-building-store" style="font-size:14px"></i>업체선택
-      </button>
+      <div class="sup-badge"><i class="ti ti-building-factory" style="font-size:11px"></i>납품업체 SCM</div>
+      <button class="biz-select-btn" onclick="openBizSelect()"><i class="ti ti-building-store" style="font-size:12px"></i>업체선택</button>
     </div>
-    <div class="sup-name" id="supName" style="cursor:pointer;display:flex;align-items:center;gap:6px" onclick="openBizSelect()">
+    <div class="sup-name" onclick="openBizSelect()">
       <span id="supNameText">업체를 선택하세요</span>
-      <i class="ti ti-chevron-down" style="font-size:14px;color:var(--muted)"></i>
+      <i class="ti ti-chevron-down" style="font-size:13px;color:var(--muted)"></i>
     </div>
-    <div class="sup-sub" id="supDate">로딩 중...</div>
+    <div class="sup-sub" id="supDate"></div>
   </div>
+
   <div class="tab-bar">
-    <button class="tab-btn active" onclick="switchTab('register')">등록관리</button>
-    <button class="tab-btn" onclick="switchTab('assign')">배송배정<span class="tbadge" id="assignBadge">0</span></button>
+    <button class="tab-btn active" onclick="switchTab('assign')">배송배정<span class="tbadge" id="assignBadge">0</span></button>
     <button class="tab-btn" onclick="switchTab('driver')">기사별 조회</button>
+    <button class="tab-btn" onclick="switchTab('register')">등록관리</button>
     <button class="tab-btn" onclick="switchTab('settle')">정산관리</button>
   </div>
 
-  <!-- ── 탭1: 등록관리 ── -->
-  <div class="page active" id="page-register">
+  <!-- ── 탭1: 배송배정 ── -->
+  <div class="page active" id="page-assign">
     <div class="scroll-body">
 
-      <!-- 배송기사 등록 -->
-      <div>
-        <div class="section-label" style="margin-bottom:8px">배송기사 등록</div>
-        <div class="card">
-          <div class="two-col">
-            <div class="form-field"><div class="form-label">기사 성함 *</div><input class="form-input" id="drvName" placeholder="홍길동"></div>
-            <div class="form-field"><div class="form-label">연락처 *</div><input class="form-input" id="drvPhone" placeholder="010-0000-0000" type="tel"></div>
-          </div>
-          <div class="form-field" style="margin-top:8px"><div class="form-label">차량 정보</div><input class="form-input" id="drvCar" placeholder="12가 3456 (1톤 탑차)"></div>
-          <button class="reg-btn blue" style="margin-top:10px" onclick="addDriver()"><i class="ti ti-user-plus" style="font-size:15px"></i>배송기사 등록</button>
+      <!-- 새 배송 생성 (접이식) -->
+      <div class="collapsible" id="newDeliveryCollapse">
+        <div class="collapsible-header" onclick="toggleCollapse('newDeliveryCollapse')">
+          <span><i class="ti ti-plus" style="font-size:14px;margin-right:6px"></i>새 배송 생성</span>
+          <i class="ti ti-chevron-down" id="newDeliveryArrow" style="font-size:16px;color:var(--muted);transition:transform .2s"></i>
         </div>
-        <div style="display:flex;flex-direction:column;gap:7px;margin-top:10px" id="driverList">
-          <div class="loading-wrap"><div class="spinner"></div>불러오는 중...</div>
-        </div>
-      </div>
-
-      <!-- 가맹점 등록 -->
-      <div>
-        <div class="section-label" style="margin-bottom:8px">배송지(가맹점) 등록</div>
-        <div class="card">
-          <div class="two-col">
-            <div class="form-field"><div class="form-label">상호명 *</div><input class="form-input" id="stName" placeholder="부산 1호점"></div>
-            <div class="form-field"><div class="form-label">사업자번호</div><input class="form-input" id="stBiz" placeholder="000-00-00000"></div>
-          </div>
-          <div class="form-field" style="margin-top:8px"><div class="form-label">주소 *</div><input class="form-input" id="stAddr" placeholder="부산시 부산진구 ○○동 123-4"></div>
-          <div class="form-field" style="margin-top:8px"><div class="form-label">연락처</div><input class="form-input" id="stPhone" placeholder="051-000-0000" type="tel"></div>
-          <button class="reg-btn purple" style="margin-top:10px" onclick="addStore()"><i class="ti ti-map-pin" style="font-size:15px"></i>배송지 등록</button>
-        </div>
-        <div style="display:flex;flex-direction:column;gap:7px;margin-top:10px" id="storeList">
-          <div class="loading-wrap"><div class="spinner"></div>불러오는 중...</div>
-        </div>
-      </div>
-
-    </div>
-  </div>
-
-  <!-- ── 탭2: 배송 배정 ── -->
-  <div class="page" id="page-assign">
-    <div class="scroll-body">
-
-      <!-- 새 배송 생성 -->
-      <div>
-        <div class="section-label" style="margin-bottom:8px">새 배송 생성</div>
-        <div class="card">
-          <div class="form-field"><div class="form-label">배송지(가맹점) *</div>
-            <select class="form-select" id="newStore"><option value="">배송지 선택</option></select>
-          </div>
-          <div class="form-field" style="margin-top:8px"><div class="form-label">배송기사</div>
-            <select class="form-select" id="newDriver"><option value="">기사 선택 (나중에 배정 가능)</option></select>
-          </div>
-
-          <!-- 본사 등록 품목 선택 -->
-          <div class="form-field" style="margin-top:8px">
-            <div class="form-label">품목 선택 (본사 등록 품목)</div>
-            <div style="display:flex;gap:6px">
-              <select class="form-select" id="menuSelect" style="flex:1"><option value="">품목 선택</option></select>
-              <input class="form-input" id="menuQty" type="number" placeholder="수량" min="1" style="width:80px">
-              <button onclick="addItemToList()" style="padding:0 14px;border-radius:9px;border:none;background:var(--blue-mid);color:#fff;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap">추가</button>
+        <div class="collapsible-body" id="newDeliveryBody">
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <div class="form-field"><div class="form-label">배송지(가맹점) *</div>
+              <select class="form-select" id="newStore"><option value="">배송지 선택</option></select></div>
+            <div class="form-field"><div class="form-label">배송기사</div>
+              <select class="form-select" id="newDriver"><option value="">기사 선택 (나중에 배정 가능)</option></select></div>
+            <!-- 품목 선택 -->
+            <div class="form-field"><div class="form-label">품목 선택 (본사 등록 품목)</div>
+              <div style="display:flex;gap:5px">
+                <select class="form-select" id="menuSelect" style="flex:1"><option value="">품목 선택</option></select>
+                <input class="form-input" id="menuQty" type="number" placeholder="수량" min="1" style="width:70px">
+                <button onclick="addItemToList()" style="padding:0 11px;border-radius:9px;border:none;background:var(--blue-mid);color:#fff;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">추가</button>
+              </div>
             </div>
-          </div>
-          <!-- 추가된 품목 목록 -->
-          <div id="itemListWrap" style="display:none;margin-top:8px;border:.5px solid var(--line);border-radius:10px;overflow:hidden">
-            <div style="padding:8px 12px;background:var(--surface2);font-size:11px;font-weight:700;color:var(--dim)">선택된 품목</div>
-            <div id="itemList" style="display:flex;flex-direction:column;gap:0"></div>
-            <div style="padding:8px 12px;border-top:.5px solid var(--line);display:flex;justify-content:space-between;font-size:13px;font-weight:700">
-              <span style="color:var(--muted)">합계</span>
-              <span id="itemTotal" style="font-family:var(--mono)">0원</span>
+            <div id="itemListWrap" style="display:none;border:.5px solid var(--line);border-radius:9px;overflow:hidden">
+              <div style="padding:7px 11px;background:var(--surface2);font-size:11px;font-weight:700;color:var(--dim)">선택된 품목</div>
+              <div id="itemList"></div>
+              <div style="padding:7px 11px;border-top:.5px solid var(--line);display:flex;justify-content:space-between;font-size:12px;font-weight:700">
+                <span style="color:var(--muted)">합계</span><span id="itemTotal" style="font-family:var(--mono)">0원</span>
+              </div>
             </div>
+            <div class="form-field"><div class="form-label">메모</div>
+              <input class="form-input" id="newNote" placeholder="냉장 보관 필요 등"></div>
+            <button class="rb green" onclick="createDelivery()"><i class="ti ti-truck-delivery"></i>배송 생성</button>
           </div>
-
-          <div class="form-field" style="margin-top:8px"><div class="form-label">직접 입력 (위 선택과 별개)</div>
-            <input class="form-input" id="newItems" placeholder="추가 품목 직접 입력 (선택사항)"></div>
-          <div class="form-field" style="margin-top:8px"><div class="form-label">메모</div>
-            <input class="form-input" id="newNote" placeholder="냉장 보관 필요 등"></div>
-          <button class="reg-btn green" style="margin-top:10px" onclick="createDelivery()"><i class="ti ti-truck-delivery" style="font-size:15px"></i>배송 생성</button>
         </div>
       </div>
 
-      <!-- 배송 목록 -->
+      <!-- 배송 목록 필터 탭 -->
       <div>
-        <div class="section-label" style="margin-bottom:8px">배송 목록</div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <span class="section-label">배송 목록</span>
+          <button onclick="loadDeliveries()" style="border:none;background:none;color:var(--blue);font-size:12px;cursor:pointer"><i class="ti ti-refresh" style="font-size:13px"></i></button>
+        </div>
+        <div class="sub-filters" style="margin-bottom:10px" id="dlvFilters"></div>
+        <!-- 일괄 선택 바 -->
+        <div class="bulk-bar" id="bulkBar">
+          <span class="bulk-count" id="bulkCount">0건 선택</span>
+          <button class="bulk-btn" onclick="bulkPrint()"><i class="ti ti-printer" style="font-size:13px"></i> 일괄출력</button>
+          <button class="bulk-btn" onclick="bulkAssignDriver()"><i class="ti ti-user-check" style="font-size:13px"></i> 기사배정</button>
+        </div>
         <div id="deliveryList">
           <div class="loading-wrap"><div class="spinner"></div>불러오는 중...</div>
         </div>
@@ -247,12 +204,9 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
     </div>
   </div>
 
-  <!-- ── 탭3: 기사별 조회 ── -->
+  <!-- ── 탭2: 기사별 조회 ── -->
   <div class="page" id="page-driver">
     <div class="scroll-body">
-      <div class="section-label" style="margin-bottom:8px">기사별 배송 조회</div>
-
-      <!-- 기사 선택 -->
       <div class="card">
         <div class="form-field">
           <div class="form-label">배송기사 선택</div>
@@ -260,19 +214,63 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
             <option value="">기사 선택</option>
           </select>
         </div>
-        <div style="display:flex;gap:8px;margin-top:10px" id="driverActionBtns" style="display:none">
-          <button onclick="printAllDriverSlips()" class="reg-btn outline" style="flex:1;padding:10px">
-            <i class="ti ti-printer" style="font-size:15px"></i>납품서 일괄출력
+        <div style="display:flex;gap:7px;margin-top:10px">
+          <button onclick="printAllDriverSlips()" class="rb outline" style="flex:1;padding:9px;font-size:12px">
+            <i class="ti ti-printer" style="font-size:14px"></i>납품서 일괄출력
           </button>
-          <button onclick="copyDriverLink()" class="reg-btn blue" style="flex:1;padding:10px;margin-top:0">
-            <i class="ti ti-link" style="font-size:15px"></i>기사 링크복사
+          <button onclick="copyDriverLink()" class="rb blue" style="flex:1;padding:9px;font-size:12px;margin-top:0">
+            <i class="ti ti-link" style="font-size:14px"></i>링크복사
           </button>
         </div>
       </div>
+      <div id="driverDeliveryList"><div class="empty-state">기사를 선택하세요</div></div>
+    </div>
+  </div>
 
-      <!-- 기사 배송 목록 -->
-      <div id="driverDeliveryList">
-        <div class="empty-state">기사를 선택하세요</div>
+  <!-- ── 탭3: 등록관리 ── -->
+  <div class="page" id="page-register">
+    <div class="scroll-body">
+      <!-- 배송기사 등록 -->
+      <div class="collapsible" id="drvCollapse">
+        <div class="collapsible-header" onclick="toggleCollapse('drvCollapse')">
+          <span><i class="ti ti-user-plus" style="font-size:13px;margin-right:6px"></i>배송기사 등록</span>
+          <i class="ti ti-chevron-down" id="drvCollapseArrow" style="font-size:16px;color:var(--muted)"></i>
+        </div>
+        <div class="collapsible-body" id="drvCollapseBody">
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <div class="two-col">
+              <div class="form-field"><div class="form-label">기사 성함 *</div><input class="form-input" id="drvName" placeholder="홍길동"></div>
+              <div class="form-field"><div class="form-label">연락처 *</div><input class="form-input" id="drvPhone" placeholder="010-0000-0000" type="tel"></div>
+            </div>
+            <div class="form-field"><div class="form-label">차량 정보</div><input class="form-input" id="drvCar" placeholder="12가 3456 (1톤 탑차)"></div>
+            <button class="rb blue" onclick="addDriver()"><i class="ti ti-user-plus" style="font-size:14px"></i>배송기사 등록</button>
+          </div>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:7px" id="driverList">
+        <div class="loading-wrap"><div class="spinner"></div>불러오는 중...</div>
+      </div>
+
+      <!-- 가맹점(배송지) 등록 -->
+      <div class="collapsible" id="storeCollapse" style="margin-top:4px">
+        <div class="collapsible-header" onclick="toggleCollapse('storeCollapse')">
+          <span><i class="ti ti-map-pin" style="font-size:13px;margin-right:6px"></i>배송지(가맹점) 등록</span>
+          <i class="ti ti-chevron-down" id="storeCollapseArrow" style="font-size:16px;color:var(--muted)"></i>
+        </div>
+        <div class="collapsible-body" id="storeCollapseBody">
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <div class="two-col">
+              <div class="form-field"><div class="form-label">상호명 *</div><input class="form-input" id="stName" placeholder="부산 1호점"></div>
+              <div class="form-field"><div class="form-label">사업자번호</div><input class="form-input" id="stBiz" placeholder="000-00-00000"></div>
+            </div>
+            <div class="form-field"><div class="form-label">주소 *</div><input class="form-input" id="stAddr" placeholder="부산시 수영구 광안해변로 263"></div>
+            <div class="form-field"><div class="form-label">연락처</div><input class="form-input" id="stPhone" placeholder="051-000-0000" type="tel"></div>
+            <button class="rb purple" onclick="addStore()"><i class="ti ti-map-pin" style="font-size:14px"></i>배송지 등록</button>
+          </div>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:7px" id="storeList">
+        <div class="loading-wrap"><div class="spinner"></div>불러오는 중...</div>
       </div>
     </div>
   </div>
@@ -280,63 +278,51 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
   <!-- ── 탭4: 정산관리 ── -->
   <div class="page" id="page-settle">
     <div class="scroll-body">
-      <div class="strip">
-        <div class="strip-card"><div class="strip-val" style="color:var(--green)">18건</div><div class="strip-lbl">이번달 완료</div></div>
-        <div class="strip-card"><div class="strip-val" style="color:var(--amber)">4건</div><div class="strip-lbl">청구중</div></div>
-        <div class="strip-card"><div class="strip-val" style="color:var(--blue)">2억 1,480만</div><div class="strip-lbl">이번달 합계</div></div>
+      <div class="strip" id="settleStrip">
+        <div class="strip-card"><div class="strip-val" style="color:var(--green)">-</div><div class="strip-lbl">이번달 완료</div></div>
+        <div class="strip-card"><div class="strip-val" style="color:var(--amber)">-</div><div class="strip-lbl">미수금</div></div>
+        <div class="strip-card"><div class="strip-val" style="color:var(--blue)">-</div><div class="strip-lbl">이번달 합계</div></div>
       </div>
       <div class="card">
-        <div class="card-header"><span class="card-title">이번달 정산 요약</span></div>
-        <div class="settle-row"><div><div class="settle-lbl">총 납품 금액</div><div class="settle-sub">18건</div></div><div class="settle-amt pos">+2억 1,480만</div></div>
-        <div class="settle-row"><div><div class="settle-lbl">입금 완료</div><div class="settle-sub">14건</div></div><div class="settle-amt pos">+1억 8,240만</div></div>
-        <div class="settle-row"><div><div class="settle-lbl">미수금 (청구 중)</div><div class="settle-sub">4건 · 5/20 예정</div></div><div class="settle-amt neg">-3,240만</div></div>
-        <div class="settle-row"><div><div class="settle-lbl" style="font-weight:700">최종 정산 예상</div></div><div class="settle-amt pos" style="font-size:16px">+2억 120만</div></div>
+        <div style="font-size:14px;font-weight:700;margin-bottom:12px">납품 내역</div>
+        <div id="settleList"><div class="loading-wrap"><div class="spinner"></div></div></div>
       </div>
-      <div class="card">
-        <div class="card-header"><span class="card-title">납품 내역</span></div>
-        <div class="hist-item"><div class="hist-icon"><i class="ti ti-file-invoice"></i></div><div class="hist-info"><div class="hist-title">닭가슴살 외 5종</div><div class="hist-detail">05/15</div></div><div class="hist-right"><div class="hist-amt">4,820,000원</div><div class="hist-st pending">청구중</div></div></div>
-        <div class="hist-item"><div class="hist-icon"><i class="ti ti-file-invoice"></i></div><div class="hist-info"><div class="hist-title">식용유 · 포장재</div><div class="hist-detail">05/12</div></div><div class="hist-right"><div class="hist-amt">1,240,000원</div><div class="hist-st pending">청구중</div></div></div>
-        <div class="hist-item"><div class="hist-icon"><i class="ti ti-file-invoice"></i></div><div class="hist-info"><div class="hist-title">쌀 · 소스류</div><div class="hist-detail">05/10</div></div><div class="hist-right"><div class="hist-amt">960,000원</div><div class="hist-st paid">입금완료</div></div></div>
-        <div class="hist-item"><div class="hist-icon"><i class="ti ti-file-invoice"></i></div><div class="hist-info"><div class="hist-title">닭가슴살 · 소스류</div><div class="hist-detail">05/05</div></div><div class="hist-right"><div class="hist-amt">3,200,000원</div><div class="hist-st paid">입금완료</div></div></div>
-      </div>
-      <div style="display:flex;gap:8px">
-        <button style="flex:1;padding:11px;border-radius:10px;border:.5px solid var(--line);background:var(--surface2);font-size:13px;font-weight:700;font-family:var(--sans);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px" onclick="showToast('거래명세서 PDF 생성 중...')"><i class="ti ti-file-type-pdf" style="font-size:17px"></i>거래명세서 PDF</button>
-        <button style="flex:1;padding:11px;border-radius:10px;border:.5px solid var(--line);background:var(--surface2);font-size:13px;font-weight:700;font-family:var(--sans);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px" onclick="showToast('엑셀 파일 다운로드 중...')"><i class="ti ti-table-export" style="font-size:17px"></i>엑셀 내보내기</button>
+      <div style="display:flex;gap:7px">
+        <button style="flex:1;padding:10px;border-radius:10px;border:.5px solid var(--line);background:var(--surface2);font-size:12px;font-weight:700;font-family:var(--sans);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px" onclick="printAllSettleSlips()"><i class="ti ti-file-type-pdf" style="font-size:16px"></i>거래명세서</button>
+        <button style="flex:1;padding:10px;border-radius:10px;border:.5px solid var(--line);background:var(--surface2);font-size:12px;font-weight:700;font-family:var(--sans);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px" onclick="showToast('엑셀 다운로드 준비 중')"><i class="ti ti-table-export" style="font-size:16px"></i>엑셀내보내기</button>
       </div>
     </div>
   </div>
 
   <div class="nav-bar">
-    <button class="nav-item" onclick="switchTab('register')" id="nav-register"><i class="ti ti-list-check active" id="ni-register"></i><span class="nav-lbl active" id="nl-register">등록관리</span></button>
-    <button class="nav-item" onclick="switchTab('assign')" id="nav-assign"><i class="ti ti-truck-delivery" id="ni-assign"></i><span class="nav-lbl" id="nl-assign">배송배정</span></button>
+    <button class="nav-item" onclick="switchTab('assign')" id="nav-assign"><i class="ti ti-truck-delivery active" id="ni-assign"></i><span class="nav-lbl active" id="nl-assign">배송배정</span></button>
     <button class="nav-item" onclick="switchTab('driver')" id="nav-driver"><i class="ti ti-user-check" id="ni-driver"></i><span class="nav-lbl" id="nl-driver">기사별</span></button>
+    <button class="nav-item" onclick="switchTab('register')" id="nav-register"><i class="ti ti-list-check" id="ni-register"></i><span class="nav-lbl" id="nl-register">등록관리</span></button>
     <button class="nav-item" onclick="switchTab('settle')" id="nav-settle"><i class="ti ti-coin" id="ni-settle"></i><span class="nav-lbl" id="nl-settle">정산관리</span></button>
   </div>
 </div>
 
-<!-- 배송전표 모달 -->
 <!-- 업체 선택 모달 -->
 <div class="modal-overlay" id="bizSelectModal" onclick="if(event.target===this)closeModal('bizSelectModal')">
   <div class="modal-sheet">
     <div class="modal-handle"></div>
     <div class="modal-title">납품업체 선택</div>
-    <div style="font-size:13px;color:var(--muted)">본사에서 등록한 납품업체를 선택하세요</div>
-    <div id="bizSelectList" style="display:flex;flex-direction:column;gap:8px;max-height:50vh;overflow-y:auto">
-      <div class="loading-wrap"><div class="spinner"></div>불러오는 중...</div>
-    </div>
-    <button class="reg-btn outline" onclick="closeModal('bizSelectModal')">취소</button>
+    <div id="bizSelectList"><div class="loading-wrap"><div class="spinner"></div>불러오는 중...</div></div>
+    <button class="rb outline" onclick="closeModal('bizSelectModal')">취소</button>
   </div>
 </div>
 
-<div class="modal-overlay" id="slipModal" onclick="if(event.target===this)closeModal('slipModal')">
+<!-- 일괄 기사배정 모달 -->
+<div class="modal-overlay" id="bulkDriverModal" onclick="if(event.target===this)closeModal('bulkDriverModal')">
   <div class="modal-sheet">
     <div class="modal-handle"></div>
-    <div class="modal-title">📦 배송전표</div>
-    <div id="slipContent" style="background:var(--surface2);border-radius:12px;padding:14px;font-size:13px;line-height:1.8"></div>
-    <div class="mbtn-row">
-      <button class="mbtn cancel" onclick="closeModal('slipModal')">닫기</button>
-      <button class="mbtn ok" onclick="printSlip()"><i class="ti ti-printer" style="font-size:15px;vertical-align:-2px"></i> 인쇄</button>
-      <button class="mbtn ok" style="background:var(--blue-mid);border-color:var(--blue-mid)" onclick="copyLink()"><i class="ti ti-link" style="font-size:15px;vertical-align:-2px"></i> 링크복사</button>
+    <div class="modal-title">기사 일괄 배정</div>
+    <div class="form-field"><div class="form-label">배정할 기사 선택</div>
+      <select class="form-select" id="bulkDriverSel"><option value="">기사 선택</option></select>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="rb outline" style="flex:1" onclick="closeModal('bulkDriverModal')">취소</button>
+      <button class="rb green" style="flex:1;margin-top:0" onclick="confirmBulkAssign()"><i class="ti ti-check"></i>배정</button>
     </div>
   </div>
 </div>
@@ -347,571 +333,471 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 <script src="auth.js"></script>
 <script>
 const Auth = window.SmartBaljuAuth;
-let currentTab = 'register';
-let _drivers = [], _stores = [], _deliveries = [];
-let _slipDeliveryId = '';
+let _drivers=[], _stores=[], _deliveries=[], _hqMenus=[], _selectedItems=[];
+let _dlvFilter='all', _currentBiz=null, _selectedIds=new Set();
+let _openDetailId='';
+
+const ST_COLOR={assigned:'var(--muted)',shipping:'var(--blue)',done:'var(--green)',issue:'var(--red)',waiting:'var(--amber)',confirmed:'var(--blue)'};
+const ST_LABEL={assigned:'배정됨',shipping:'배송중',done:'완료',issue:'이슈',waiting:'대기중',confirmed:'승인됨'};
 
 // 시계
 (function tick(){ const n=new Date(); document.getElementById('stTime').textContent=String(n.getHours()).padStart(2,'0')+':'+String(n.getMinutes()).padStart(2,'0'); setTimeout(tick,1000); })();
-(function(){ const days=['일','월','화','수','목','금','토'],n=new Date(); document.getElementById('supDate').textContent=n.getFullYear()+'.'+(n.getMonth()+1)+'.'+(n.getDate())+' ('+days[n.getDay()]+') · 담당자 김철수 과장'; })();
 
-// 탭 전환
-async function switchTab(tab) {
-  currentTab = tab;
-  const allTabs = ['register','assign','driver','settle'];
-  const icons = {register:'ti-list-check',assign:'ti-truck-delivery',driver:'ti-user-check',settle:'ti-coin'};
-  allTabs.forEach(t => {
-    const page = document.getElementById('page-'+t);
-    if(page) page.classList.toggle('active', t===tab);
-    const ni = document.getElementById('ni-'+t);
-    if(ni) ni.className = 'ti '+icons[t]+(t===tab?' active':'');
-    const nl = document.getElementById('nl-'+t);
-    if(nl) nl.className = 'nav-lbl'+(t===tab?' active':'');
+// ── 탭 전환 ──────────────────────────────────────────────
+const TAB_ICONS={assign:'ti-truck-delivery',driver:'ti-user-check',register:'ti-list-check',settle:'ti-coin'};
+function switchTab(tab){
+  ['assign','driver','register','settle'].forEach(t=>{
+    document.getElementById('page-'+t).classList.toggle('active',t===tab);
+    document.getElementById('ni-'+t).className='ti '+TAB_ICONS[t]+(t===tab?' active':'');
+    document.getElementById('nl-'+t).className='nav-lbl'+(t===tab?' active':'');
   });
-  document.querySelectorAll('.tab-btn').forEach((b,i) => {
-    b.classList.toggle('active', allTabs[i]===tab);
-  });
-  if(tab==='assign') { await loadDeliveries(); await refreshAssignSelects(); }
-  if(tab==='driver') { await loadDriverFilterSelect(); }
+  document.querySelectorAll('.tab-btn').forEach((b,i)=>b.classList.toggle('active',['assign','driver','register','settle'][i]===tab));
+  if(tab==='assign') loadDeliveries();
+  if(tab==='driver') loadDriverFilterSelect();
+  if(tab==='register') { loadDrivers(); loadStores(); }
+  if(tab==='settle') loadSettle();
 }
 
+// ── 접이식 ────────────────────────────────────────────────
+function toggleCollapse(id){
+  const body=document.getElementById(id+'Body');
+  const arrow=document.getElementById(id+'Arrow');
+  const isOpen=body.classList.contains('open');
+  body.classList.toggle('open',!isOpen);
+  if(arrow) arrow.style.transform=isOpen?'':'rotate(180deg)';
+}
+
+// ── 토스트 ────────────────────────────────────────────────
 let _tt;
-function showToast(msg){ const el=document.getElementById('toast'); el.textContent=msg; el.classList.add('show'); clearTimeout(_tt); _tt=setTimeout(()=>el.classList.remove('show'),2400); }
-function closeModal(id){ document.getElementById(id).classList.remove('show'); }
+function showToast(msg){const el=document.getElementById('toast');el.textContent=msg;el.classList.add('show');clearTimeout(_tt);_tt=setTimeout(()=>el.classList.remove('show'),2400);}
+function closeModal(id){document.getElementById(id).classList.remove('show');}
 
-// ── 배송기사 ──────────────────────────────────────────────
-async function addDriver() {
-  if(!drvName.value.trim()||!drvPhone.value.trim()){ showToast('성함과 연락처를 입력하세요'); return; }
-  await Auth.registerSupplierDriver({ name:drvName.value.trim(), phone:drvPhone.value.trim(), car:drvCar.value.trim() });
-  drvName.value=drvPhone.value=drvCar.value='';
-  await loadDrivers(); await refreshAssignSelects(); showToast('배송기사 등록 완료');
+// ── 업체 선택 ────────────────────────────────────────────
+async function openBizSelect(){
+  document.getElementById('bizSelectModal').classList.add('show');
+  const el=document.getElementById('bizSelectList');
+  el.innerHTML='<div class="loading-wrap"><div class="spinner"></div>불러오는 중...</div>';
+  const [partners,users]=await Promise.all([Auth.loadPartners(),Auth.loadUsers()]);
+  const supplierUsers=users.filter(u=>u.role==='supplier'&&u.status==='active');
+  const list=[];
+  partners.filter(p=>p.status==='active').forEach(p=>list.push({id:p.id,name:p.name,sub:p.businessNumber||p.phone||'',data:p}));
+  supplierUsers.forEach(u=>{if(!list.find(b=>b.name===(u.businessName||u.name)))list.push({id:u.uid,name:u.businessName||u.name||u.loginId,sub:u.phone||u.loginId,data:u});});
+  if(!list.length){el.innerHTML='<div class="empty-state">등록된 납품업체가 없습니다</div>';return;}
+  el.innerHTML=list.map(b=>`<div onclick='selectBiz(${JSON.stringify(b).replace(/"/g,"&quot;")})' style="display:flex;align-items:center;gap:11px;padding:12px 0;border-bottom:.5px solid var(--line);cursor:pointer">
+    <div style="width:36px;height:36px;border-radius:9px;background:var(--purple-bg);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0"><i class="ti ti-building-factory" style="color:var(--purple)"></i></div>
+    <div style="flex:1"><div style="font-size:13px;font-weight:700">${b.name}</div><div style="font-size:11px;color:var(--muted)">${b.sub}</div></div>
+    <i class="ti ti-chevron-right" style="color:var(--dim)"></i>
+  </div>`).join('');
 }
-async function loadDrivers() {
-  _drivers = await Auth.loadSupplierDrivers();
-  const el = document.getElementById('driverList');
-  el.innerHTML = _drivers.length
-    ? _drivers.map(d=>`<div class="list-item">
-        <div class="li-icon" style="background:var(--blue-bg);color:var(--blue)"><i class="ti ti-user"></i></div>
-        <div class="li-info"><div class="li-name">${d.name}</div><div class="li-sub">${d.phone}${d.car?' · '+d.car:''}</div></div>
-        <div class="li-actions">
-          <a href="tel:${d.phone}" class="act-btn blue"><i class="ti ti-phone" style="font-size:12px"></i></a>
-          <button class="act-btn red" onclick="delDriver('${d.id}')"><i class="ti ti-trash" style="font-size:12px"></i></button>
-        </div>
-      </div>`).join('')
-    : '<div class="empty-state">등록된 배송기사 없음</div>';
-}
-async function delDriver(id){ if(!confirm('삭제할까요?')) return; await Auth.deleteSupplierDriver(id); await loadDrivers(); showToast('삭제 완료'); }
+function selectBiz(b){_currentBiz=b;document.getElementById('supNameText').textContent=b.name;document.getElementById('supDate').textContent=b.sub||'';closeModal('bizSelectModal');showToast(b.name+' 선택됨');}
 
-// ── 가맹점(배송지) ─────────────────────────────────────────
-async function addStore() {
-  if(!stName.value.trim()||!stAddr.value.trim()){ showToast('상호명과 주소를 입력하세요'); return; }
-  await Auth.registerSupplierFranchise({ businessName:stName.value.trim(), businessNumber:stBiz.value.trim(), address:stAddr.value.trim(), phone:stPhone.value.trim() });
-  stName.value=stBiz.value=stAddr.value=stPhone.value='';
-  await loadStores(); await refreshAssignSelects(); showToast('배송지 등록 완료');
+// ── 품목 선택 ─────────────────────────────────────────────
+async function loadHqData(){
+  [_hqMenus]=await Promise.all([Auth.loadMenus()]);
+  const sel=document.getElementById('menuSelect');
+  if(sel)sel.innerHTML='<option value="">품목 선택</option>'+_hqMenus.map(m=>`<option value="${m.id}" data-price="${m.price||0}" data-unit="${m.unit||''}" data-name="${m.name}">${m.code?'['+m.code+'] ':''}${m.name}${m.price?' — '+Number(m.price).toLocaleString()+'원':''}</option>`).join('');
 }
-async function loadStores() {
-  _stores = await Auth.loadSupplierFranchises();
-  const el = document.getElementById('storeList');
-  el.innerHTML = _stores.length
-    ? _stores.map(s=>`<div class="list-item">
-        <div class="li-icon" style="background:var(--purple-bg);color:var(--purple)"><i class="ti ti-building-store"></i></div>
-        <div class="li-info"><div class="li-name">${s.businessName}</div><div class="li-sub">${s.address}${s.phone?' · '+s.phone:''}</div></div>
-        <div class="li-actions">
-          <button class="act-btn red" onclick="delStore('${s.id}')"><i class="ti ti-trash" style="font-size:12px"></i></button>
-        </div>
-      </div>`).join('')
-    : '<div class="empty-state">등록된 배송지 없음</div>';
+function addItemToList(){
+  const sel=document.getElementById('menuSelect');const qty=parseInt(document.getElementById('menuQty').value)||1;
+  const opt=sel.options[sel.selectedIndex];if(!sel.value){showToast('품목을 선택하세요');return;}
+  const exist=_selectedItems.find(x=>x.menuId===sel.value);
+  if(exist)exist.qty+=qty;
+  else _selectedItems.push({menuId:sel.value,name:opt.dataset.name||opt.text.split(' — ')[0],price:parseInt(opt.dataset.price)||0,unit:opt.dataset.unit||'',qty});
+  sel.value='';document.getElementById('menuQty').value='';renderItemList();
 }
-async function delStore(id){ if(!confirm('삭제할까요?')) return; await Auth.deleteSupplierFranchise(id); await loadStores(); showToast('삭제 완료'); }
+function renderItemList(){
+  const wrap=document.getElementById('itemListWrap');const listEl=document.getElementById('itemList');
+  if(!_selectedItems.length){wrap.style.display='none';return;}
+  wrap.style.display='';
+  listEl.innerHTML=_selectedItems.map((item,i)=>`<div style="display:flex;align-items:center;gap:7px;padding:7px 11px;border-bottom:.5px solid var(--line);font-size:12px">
+    <span style="flex:1;font-weight:700">${item.name}</span>
+    <input type="number" value="${item.qty}" min="1" style="width:52px;padding:3px 6px;border-radius:6px;border:.5px solid var(--line);font-size:12px;text-align:center" onchange="_selectedItems[${i}].qty=parseInt(this.value)||1;renderItemList()">
+    <span style="color:var(--muted)">${item.unit}</span>
+    <button onclick="_selectedItems.splice(${i},1);renderItemList()" style="padding:2px 6px;border-radius:5px;border:none;background:var(--red-bg);color:var(--red);font-size:11px;cursor:pointer">✕</button>
+  </div>`).join('');
+  const total=_selectedItems.reduce((s,x)=>s+x.price*x.qty,0);
+  document.getElementById('itemTotal').textContent=total.toLocaleString()+'원';
+}
 
 // ── 배송 배정 ─────────────────────────────────────────────
-// ── 본사 등록 품목/거래처 연동 ────────────────────────────
-let _hqMenus = [], _hqPrices = [], _selectedItems = [];
-
-async function loadHqData() {
-  [_hqMenus, _hqPrices] = await Promise.all([Auth.loadMenus(), Auth.loadPrices()]);
-  // 품목 셀렉트 채우기
-  const sel = document.getElementById('menuSelect');
-  if(sel) {
-    sel.innerHTML = '<option value="">품목 선택</option>'
-      + _hqMenus.map(m => {
-          const price = _hqPrices.find(p => p.menuId === m.id);
-          const priceStr = price ? ' — '+Number(price.price).toLocaleString()+'원/'+price.unit : '';
-          return `<option value="${m.id}" data-price="${price?.price||0}" data-unit="${price?.unit||''}">${m.code?'['+m.code+'] ':''}${m.name}${priceStr}</option>`;
-        }).join('');
-  }
-}
-
-function addItemToList() {
-  const sel = document.getElementById('menuSelect');
-  const qty = parseInt(document.getElementById('menuQty').value) || 1;
-  const opt = sel.options[sel.selectedIndex];
-  if(!sel.value) { showToast('품목을 선택하세요'); return; }
-  const menuId = sel.value;
-  const name = opt.text.split(' — ')[0];
-  const price = parseInt(opt.dataset.price) || 0;
-  const unit = opt.dataset.unit || '';
-  // 중복 시 수량 합산
-  const exist = _selectedItems.find(x => x.menuId === menuId);
-  if(exist) { exist.qty += qty; }
-  else { _selectedItems.push({ menuId, name, price, unit, qty }); }
-  sel.value = ''; document.getElementById('menuQty').value = '';
-  renderItemList();
-}
-
-function renderItemList() {
-  const wrap = document.getElementById('itemListWrap');
-  const listEl = document.getElementById('itemList');
-  if(!_selectedItems.length) { wrap.style.display='none'; return; }
-  wrap.style.display = '';
-  listEl.innerHTML = _selectedItems.map((item, i) => `
-    <div style="display:flex;align-items:center;gap:8px;padding:9px 12px;border-bottom:.5px solid var(--line);font-size:13px">
-      <span style="flex:1;font-weight:700">${item.name}</span>
-      <span style="color:var(--muted);font-size:12px">${item.price?Number(item.price).toLocaleString()+'원/'+item.unit:''}</span>
-      <input type="number" value="${item.qty}" min="1" style="width:60px;padding:4px 8px;border-radius:6px;border:.5px solid var(--line);background:var(--surface2);font-size:13px;text-align:center" onchange="_selectedItems[${i}].qty=parseInt(this.value)||1;renderItemList()">
-      <button onclick="_selectedItems.splice(${i},1);renderItemList()" style="padding:3px 7px;border-radius:6px;border:none;background:var(--red-bg);color:var(--red);font-size:11px;font-weight:700;cursor:pointer">✕</button>
-    </div>`).join('');
-  const total = _selectedItems.reduce((s,x) => s + x.price*x.qty, 0);
-  document.getElementById('itemTotal').textContent = total.toLocaleString()+'원';
-}
-
-async function refreshAssignSelects() {
-  const [drivers, stores] = await Promise.all([Auth.loadSupplierDrivers(), Auth.loadSupplierFranchises()]);
-  _drivers = drivers; _stores = stores;
-  document.getElementById('newStore').innerHTML = '<option value="">배송지 선택</option>'+stores.map(s=>`<option value="${s.id}">${s.businessName}</option>`).join('');
-  document.getElementById('newDriver').innerHTML = '<option value="">기사 선택 (나중에 배정 가능)</option>'+drivers.map(d=>`<option value="${d.id}">${d.name} (${d.phone})</option>`).join('');
+async function refreshAssignSelects(){
+  const [drivers,stores]=await Promise.all([Auth.loadSupplierDrivers(),Auth.loadSupplierFranchises()]);
+  _drivers=drivers;_stores=stores;
+  document.getElementById('newStore').innerHTML='<option value="">배송지 선택</option>'+stores.map(s=>`<option value="${s.id}">${s.businessName}</option>`).join('');
+  document.getElementById('newDriver').innerHTML='<option value="">기사 선택 (나중에 배정 가능)</option>'+drivers.map(d=>`<option value="${d.id}">${d.name} (${d.phone})</option>`).join('');
   await loadHqData();
 }
 
-async function createDelivery() {
-  const storeId = newStore.value;
-  if(!storeId){ showToast('배송지를 선택하세요'); return; }
-  const store = _stores.find(s=>s.id===storeId);
-  const driverId = newDriver.value;
-  const driver = _drivers.find(d=>d.id===driverId);
-
-  // 품목 내역 조합 (선택 품목 + 직접 입력)
-  let itemsText = _selectedItems.map(x=>`${x.name} ${x.qty}${x.unit}`).join(' · ');
-  if(newItems.value.trim()) itemsText += (itemsText ? ' · ' : '') + newItems.value.trim();
-  if(!itemsText){ showToast('품목을 선택하거나 직접 입력하세요'); return; }
-
-  // 금액 자동 계산
-  const amount = _selectedItems.reduce((s,x)=>s+x.price*x.qty, 0);
-
-  await Auth.createDelivery({
-    storeId, storeName: store?.businessName||'', address: store?.address||'',
-    driverId: driverId||'', driverName: driver?.name||'', driverPhone: driver?.phone||'',
-    items: itemsText,
-    itemDetails: _selectedItems,
-    amount,
-    note: newNote.value.trim(),
-  });
-  newStore.value=''; newDriver.value=''; newItems.value=''; newNote.value='';
-  _selectedItems=[]; renderItemList();
-  await loadDeliveries(); showToast('배송 생성 완료 · '+amount.toLocaleString()+'원');
+async function createDelivery(){
+  const storeId=newStore.value;if(!storeId){showToast('배송지를 선택하세요');return;}
+  const store=_stores.find(s=>s.id===storeId);const driverId=newDriver.value;const driver=_drivers.find(d=>d.id===driverId);
+  let itemsText=_selectedItems.map(x=>`${x.name} ${x.qty}${x.unit}`).join(' · ');
+  if(!itemsText){showToast('품목을 추가하세요');return;}
+  const amount=_selectedItems.reduce((s,x)=>s+x.price*x.qty,0);
+  await Auth.createDelivery({storeId,storeName:store?.businessName||'',address:store?.address||'',driverId:driverId||'',driverName:driver?.name||'',driverPhone:driver?.phone||'',items:itemsText,itemDetails:[..._selectedItems],amount,note:newNote.value.trim()});
+  newStore.value='';newDriver.value='';newNote.value='';_selectedItems=[];renderItemList();
+  toggleCollapse('newDeliveryCollapse');
+  await loadDeliveries();showToast('배송 생성 완료 · '+amount.toLocaleString()+'원');
 }
 
-async function loadDeliveries() {
-  _deliveries = await Auth.loadDeliveries();
+// ── 배송 목록 (한줄+클릭상세) ─────────────────────────────
+async function loadDeliveries(){
+  // franchise_orders + deliveries 합산
+  const [ordData, dlvList] = await Promise.all([
+    Auth.DB.get('franchise_orders') || {},
+    Auth.loadDeliveries()
+  ]);
+  const orders = Object.values(ordData||{});
+  _deliveries = dlvList;
 
-  const ordData = await Auth.DB.get('franchise_orders') || {};
-  const pendingOrders = Object.values(ordData)
-    .filter(o => ['waiting','confirmed'].includes(o.status))
-    .sort((a,b) => (b.createdAt||'').localeCompare(a.createdAt||''));
-
-  const badge = _deliveries.filter(d=>d.status==='assigned').length + pendingOrders.filter(o=>o.status==='confirmed').length;
+  // 배지
+  const badge = orders.filter(o=>o.status==='confirmed').length + dlvList.filter(d=>d.status==='assigned').length;
   document.getElementById('assignBadge').textContent = badge;
 
-  const el = document.getElementById('deliveryList');
-  const ST = {assigned:{l:'배정됨',cls:'sc-assigned'},shipping:{l:'배송중',cls:'sc-shipping'},done:{l:'완료',cls:'sc-done'},issue:{l:'이슈',cls:'sc-issue'}};
+  // 필터 탭
+  const filterDef=[['all','전체'],['waiting','대기중'],['confirmed','승인됨'],['assigned','배정됨'],['shipping','배송중'],['done','완료']];
+  document.getElementById('dlvFilters').innerHTML=filterDef.map(([k,l])=>`<button class="sf ${_dlvFilter===k?'active':''}" onclick="_dlvFilter='${k}';loadDeliveries()">${l}</button>`).join('');
 
-  let html = '';
+  // 합산 목록
+  const allItems = [
+    ...orders.map(o=>({...o,_type:'order'})),
+    ...dlvList.map(d=>({...d,_type:'delivery'}))
+  ].filter(item=>{
+    if(_dlvFilter==='all') return true;
+    return item.status===_dlvFilter;
+  }).sort((a,b)=>(b.createdAt||'').localeCompare(a.createdAt||''));
 
-  // 가맹점 발주 목록 (대기중 + 승인됨)
-  if(pendingOrders.length){
-    html += `<div style="font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.4px;text-transform:uppercase;padding:8px 4px;margin-bottom:8px">
-      가맹점 발주 <span style="background:var(--amber-bg);color:var(--amber);padding:1px 7px;border-radius:999px;font-size:10px">${pendingOrders.length}건</span>
-    </div>`;
-    html += pendingOrders.map(o=>`
-      <div class="assign-card" style="border-color:${o.status==='confirmed'?'var(--blue)':'var(--line)'};margin-bottom:10px">
-        <div class="ac-header">
-          <div>
-            <div class="ac-id" style="font-family:var(--mono);font-size:11px;color:var(--dim)">${o.id}</div>
-            <div class="ac-store">${o.storeName||'가맹점'}</div>
-            <div class="ac-items">${(o.items||'').slice(0,50)}</div>
-            <div style="font-family:var(--mono);font-size:13px;font-weight:700;margin-top:4px">${Number(o.amount||0).toLocaleString()}원</div>
-          </div>
-          <span class="status-chip" style="background:${o.status==='confirmed'?'var(--blue-bg)':'var(--surface2)'};color:${o.status==='confirmed'?'var(--blue)':'var(--muted)'}">
-            ${o.status==='confirmed'?'승인됨':'승인대기'}
-          </span>
-        </div>
-        <div class="ac-body">
-          <div style="font-size:12px;color:var(--muted)">${(o.createdAt||'').slice(0,16).replace('T',' ')}</div>
-          ${o.status==='confirmed'?`
-          <div class="driver-select-wrap">
-            <select class="driver-select" id="osel-${o.id}">
-              <option value="">기사 선택</option>
-              ${_drivers.map(d=>`<option value="${d.id}">${d.name} (${d.phone})</option>`).join('')}
-            </select>
-            <button class="assign-btn" onclick="createDeliveryFromOrder('${o.id}')">배송 생성</button>
-          </div>`:'<div style="font-size:12px;color:var(--amber);padding:6px;background:var(--amber-bg);border-radius:8px">⏳ 본사 승인 대기중</div>'}
-          <div style="display:flex;gap:6px;margin-top:4px">
-            <button class="af-btn" onclick="printOrderSlip(${JSON.stringify(o).replace(/"/g,'&quot;')})" style="flex:1"><i class="ti ti-printer"></i>납품서 출력</button>
-          </div>
-        </div>
-      </div>`).join('');
-  }
+  const el=document.getElementById('deliveryList');
+  if(!allItems.length){el.innerHTML='<div class="empty-state">해당 배송이 없습니다</div>';return;}
 
-  // 배송 진행 목록
-  if(_deliveries.length){
-    html += `<div style="font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.4px;text-transform:uppercase;padding:8px 4px;margin-bottom:8px;margin-top:${pendingOrders.length?'16px':'0'}">
-      배송 진행 현황
-    </div>`;
-    html += _deliveries.map(d=>{
-      const st=ST[d.status]||ST.assigned;
-      const driverSel='<select class="driver-select" id="dsel-'+d.id+'">'
-        +'<option value="">기사 미배정</option>'
-        +_drivers.map(dr=>`<option value="${dr.id}" ${dr.id===d.driverId?'selected':''}>${dr.name}</option>`).join('')
-        +'</select>';
-      return `<div class="assign-card">
-        <div class="ac-header">
-          <div>
-            <div class="ac-id" style="font-family:var(--mono);font-size:11px;color:var(--dim)">${d.id}</div>
-            <div class="ac-store">${d.storeName||'-'}</div>
-            <div class="ac-addr">${d.address||''}</div>
-            <div class="ac-items">${d.items||''}</div>
-            <div style="font-family:var(--mono);font-size:13px;font-weight:700;margin-top:4px">${Number(d.amount||0).toLocaleString()}원</div>
-          </div>
-          <span class="status-chip ${st.cls}">${st.l}</span>
-        </div>
-        <div class="ac-body">
-          <div class="driver-select-wrap">
-            ${driverSel}
-            <button class="assign-btn" onclick="assignDriver('${d.id}',document.getElementById('dsel-${d.id}').value)">배정</button>
-          </div>
-          ${d.driverName?`<div style="font-size:12px;color:var(--muted)">기사: ${d.driverName} ${d.driverPhone||''}</div>`:''}
-        </div>
-        <div class="ac-footer">
-          ${d.status==='assigned'?`<button class="af-btn green" onclick="startDelivery('${d.id}')"><i class="ti ti-truck-delivery"></i>배송 시작</button>`:''}
-          <button class="af-btn" onclick="printDeliverySlip('${d.id}')"><i class="ti ti-printer"></i>납품서</button>
-          <button class="af-btn blue" onclick="copyDeliveryLink('${d.id}')"><i class="ti ti-link"></i>링크복사</button>
-          ${d.status!=='done'?`<button class="af-btn" style="color:var(--red)" onclick="delDelivery('${d.id}')"><i class="ti ti-trash"></i></button>`:''}
-        </div>
-      </div>`;
-    }).join('');
-  }
-
-  if(!html) html = '<div class="empty-state">발주 및 배송 내역 없음</div>';
-  el.innerHTML = html;
-}
-
-
-async function assignDriver(deliveryId, driverId) {
-  if(!driverId){ showToast('기사를 선택하세요'); return; }
-  await Auth.assignDelivery(deliveryId, driverId);
-  await loadDeliveries(); showToast('기사 배정 완료');
-}
-
-async function startDelivery(id) {
-  if(!confirm('배송을 시작하시겠습니까?\n가맹점·본사에 알림이 전송됩니다.')) return;
-  await Auth.startDelivery(id);
-  await loadDeliveries(); showToast('배송 시작! 알림 전송됨 ✓');
-}
-
-async function delDelivery(id) {
-  if(!confirm('이 배송을 삭제할까요?')) return;
-  await Auth.DB.remove('deliveries/'+id);
-  await loadDeliveries(); showToast('삭제 완료');
-}
-
-// ── 배송전표 ─────────────────────────────────────────────
-async function openSlip(id) {
-  _slipDeliveryId = id;
-  const d = _deliveries.find(x=>x.id===id) || await Auth.DB.get('deliveries/'+id);
-  if(!d) return;
-  document.getElementById('slipContent').innerHTML = `
-    <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:.5px solid var(--line)"><span style="color:var(--muted)">배송ID</span><span style="font-family:var(--mono);font-size:12px">${d.id}</span></div>
-    <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:.5px solid var(--line)"><span style="color:var(--muted)">배송처</span><strong>${d.storeName||'-'}</strong></div>
-    <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:.5px solid var(--line)"><span style="color:var(--muted)">주소</span><span style="text-align:right;max-width:200px">${d.address||'-'}</span></div>
-    <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:.5px solid var(--line)"><span style="color:var(--muted)">기사</span><strong>${d.driverName||'미배정'}</strong></div>
-    <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:.5px solid var(--line)"><span style="color:var(--muted)">연락처</span>${d.driverPhone||'-'}</div>
-    <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:.5px solid var(--line)"><span style="color:var(--muted)">금액</span><strong style="font-family:var(--mono)">${Number(d.amount||0).toLocaleString()}원</strong></div>
-    <div style="padding:8px 0"><span style="color:var(--muted)">품목</span><div style="margin-top:4px;font-size:13px">${d.items||'-'}</div></div>
-    ${d.note?`<div style="padding:5px 0"><span style="color:var(--muted)">메모</span><div style="margin-top:4px;font-size:12px;color:var(--muted)">${d.note}</div></div>`:''}
-    <div style="color:var(--dim);font-size:11px;margin-top:8px;text-align:center">생성: ${(d.createdAt||'').slice(0,16).replace('T',' ')}</div>`;
-  document.getElementById('slipModal').classList.add('show');
-}
-
-function printSlip() {
-  const d = _deliveries.find(x=>x.id===_slipDeliveryId);
-  if(!d) return;
-  Auth.getDeliverySlipHtml(_slipDeliveryId).then(html=>{
-    const w = window.open('','_blank');
-    w.document.write(html);
-    w.document.close();
-    setTimeout(()=>w.print(), 300);
-  });
-}
-
-function copyDeliveryLink(id) {
-  const link = Auth.getDeliveryLink(id);
-  if(navigator.clipboard) navigator.clipboard.writeText(link).then(()=>showToast('링크 복사 완료! 기사에게 전송하세요'));
-  else { prompt('링크를 복사하세요:', link); }
-}
-function copyLink() { copyDeliveryLink(_slipDeliveryId); closeModal('slipModal'); }
-
-// ── 업체 선택 ──────────────────────────────────────────────
-let _currentBiz = null;
-
-async function openBizSelect() {
-  document.getElementById('bizSelectModal').classList.add('show');
-  const el = document.getElementById('bizSelectList');
-  el.innerHTML = '<div class="loading-wrap"><div class="spinner"></div>불러오는 중...</div>';
-
-  // 본사 등록 거래처 + master 등록 납품업체 계정 모두 로드
-  const [partners, users] = await Promise.all([
-    Auth.loadPartners(),
-    Auth.loadUsers()
-  ]);
-  const supplierUsers = users.filter(u => u.role === 'supplier' && u.status === 'active');
-
-  // 거래처 목록과 계정 목록 합치기
-  const bizList = [];
-  // 거래처 등록 목록
-  partners.filter(p => p.status === 'active').forEach(p => {
-    bizList.push({ id: p.id, name: p.name, sub: p.businessNumber || p.phone || '', type: 'partner', data: p });
-  });
-  // 납품업체 계정
-  supplierUsers.forEach(u => {
-    if(!bizList.find(b => b.name === (u.businessName || u.name))) {
-      bizList.push({ id: u.uid, name: u.businessName || u.name || u.loginId, sub: u.phone || u.loginId, type: 'user', data: u });
-    }
-  });
-
-  if(!bizList.length) {
-    el.innerHTML = '<div class="empty-state">등록된 납품업체가 없습니다.<br>본사 기준정보에서 거래처를 먼저 등록하세요.</div>';
-    return;
-  }
-
-  el.innerHTML = bizList.map(b => `
-    <div onclick="selectBiz(${JSON.stringify(b).replace(/"/g,'&quot;')})" style="display:flex;align-items:center;gap:12px;padding:12px 14px;border:.5px solid var(--line);border-radius:12px;cursor:pointer;background:var(--surface);transition:background .15s" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background='var(--surface)'">
-      <div style="width:38px;height:38px;border-radius:10px;background:var(--purple-bg);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">
-        <i class="ti ti-building-factory" style="color:var(--purple)"></i>
+  el.innerHTML=allItems.map(item=>{
+    const isOrder=item._type==='order';
+    const stColor=ST_COLOR[item.status]||'var(--muted)';
+    const stLabel=ST_LABEL[item.status]||item.status;
+    const isOpen=_openDetailId===item.id;
+    const chkd=_selectedIds.has(item.id);
+    return `<div style="display:flex;flex-direction:column;gap:4px;margin-bottom:6px">
+      <div class="dlv-row ${chkd?'selected':''}" onclick="toggleDetail('${item.id}')">
+        <input type="checkbox" class="dlv-chk" ${chkd?'checked':''} onclick="event.stopPropagation();toggleSelect('${item.id}',this.checked)">
+        <div class="dlv-status" style="background:${stColor}"></div>
+        <div class="dlv-store">${item.storeName||'-'}</div>
+        <div class="dlv-amt">${Number(item.amount||0).toLocaleString()}원</div>
+        <div class="dlv-chip" style="background:${stColor}22;color:${stColor}">${stLabel}</div>
+        <i class="ti ti-chevron-${isOpen?'up':'down'}" style="font-size:14px;color:var(--dim);flex-shrink:0"></i>
       </div>
-      <div style="flex:1;min-width:0">
-        <div style="font-size:14px;font-weight:700;color:var(--text)">${b.name}</div>
-        <div style="font-size:11px;color:var(--muted);margin-top:2px">${b.sub}</div>
+      ${isOpen?renderDetail(item):''}
+    </div>`;
+  }).join('');
+  updateBulkBar();
+}
+
+function renderDetail(item){
+  const isOrder=item._type==='order';
+  return `<div class="detail-panel">
+    <div class="detail-row"><span class="detail-lbl">일시</span><span class="detail-val">${(item.createdAt||'').slice(0,16).replace('T',' ')}</span></div>
+    <div class="detail-row"><span class="detail-lbl">품목</span><span class="detail-val" style="text-align:right;max-width:220px">${item.items||'-'}</span></div>
+    ${!isOrder&&item.driverName?`<div class="detail-row"><span class="detail-lbl">배송기사</span><span class="detail-val">${item.driverName} ${item.driverPhone||''}</span></div>`:''}
+    ${!isOrder&&!item.driverId?`<div>
+      <div style="display:flex;gap:6px;margin-top:2px">
+        <select class="form-select" id="dsel-${item.id}" style="flex:1;padding:7px 10px;font-size:12px">
+          <option value="">기사 선택</option>
+          ${_drivers.map(d=>`<option value="${d.id}">${d.name} (${d.phone})</option>`).join('')}
+        </select>
+        <button class="act-sm green" onclick="assignDriver('${item.id}',document.getElementById('dsel-${item.id}').value)"><i class="ti ti-user-check"></i>배정</button>
       </div>
-      <i class="ti ti-chevron-right" style="color:var(--dim);font-size:16px"></i>
-    </div>`).join('');
+    </div>`:''}
+    <div class="detail-actions">
+      ${isOrder&&item.status==='confirmed'?`
+        <select class="form-select" id="osel-${item.id}" style="flex:1;padding:7px 10px;font-size:12px">
+          <option value="">기사 선택</option>
+          ${_drivers.map(d=>`<option value="${d.id}">${d.name}</option>`).join('')}
+        </select>
+        <button class="act-sm green" onclick="createDeliveryFromOrder('${item.id}')"><i class="ti ti-truck-delivery"></i>배송생성</button>`:''}
+      ${!isOrder&&item.status==='assigned'?`<button class="act-sm green" onclick="startDelivery('${item.id}')"><i class="ti ti-truck-delivery"></i>배송시작</button>`:''}
+      <button class="act-sm" onclick='printOrderSlip(${JSON.stringify({id:item.id,storeName:item.storeName,items:item.items,amount:item.amount,itemDetails:item.itemDetails||[],createdAt:item.createdAt,driverName:item.driverName||"",driverPhone:item.driverPhone||""}).replace(/'/g,"&#39;")})'>
+        <i class="ti ti-printer"></i>납품서
+      </button>
+      ${!isOrder?`<button class="act-sm blue" onclick="copyDeliveryLink('${item.id}')"><i class="ti ti-link"></i>링크복사</button>`:''}
+      ${!isOrder&&item.status!=='done'?`<button class="act-sm red" onclick="delDelivery('${item.id}')"><i class="ti ti-trash"></i>삭제</button>`:''}
+    </div>
+  </div>`;
 }
 
-function selectBiz(b) {
-  _currentBiz = b;
-  document.getElementById('supNameText').textContent = b.name;
-  document.getElementById('supDate').textContent = b.sub || '';
-  closeModal('bizSelectModal');
-  showToast(b.name + ' 선택됨');
+function toggleDetail(id){
+  _openDetailId=(_openDetailId===id)?'':id;
+  loadDeliveries();
 }
 
-// 세션에서 업체 자동 복원
-(async function restoreBizSession() {
-  const session = Auth.getSession();
-  if(session && session.role === 'supplier') {
-    document.getElementById('supNameText').textContent = session.businessName || session.name || '납품업체';
-  }
-})();
-// ── 납품서 출력 ───────────────────────────────────────────
-function printOrderSlip(order){
-  const w = window.open('','_blank','width=800,height=600');
-  const now = new Date().toLocaleDateString('ko-KR');
-  w.document.write(`<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8">
-  <title>납품서</title>
-  <style>
-    body{font-family:"Noto Sans KR",sans-serif;padding:30px;color:#000;max-width:700px;margin:0 auto}
-    h2{text-align:center;font-size:22px;margin-bottom:6px}
-    .sub{text-align:center;color:#666;margin-bottom:24px}
-    table{width:100%;border-collapse:collapse;margin-bottom:20px}
-    th,td{padding:10px 12px;border:1px solid #ddd;text-align:left}
-    th{background:#f5f5f5;font-weight:700}
-    .total{text-align:right;font-size:16px;font-weight:700;margin-top:10px}
-    .sign-area{display:flex;justify-content:space-between;margin-top:40px}
-    .sign-box{text-align:center;border-top:1px solid #000;width:150px;padding-top:6px;font-size:13px}
-    @media print{button{display:none}}
-  </style></head><body>
-  <h2>납 품 서</h2>
-  <div class="sub">발행일: ${now}</div>
-  <table>
-    <tr><th>수신처</th><td>${order.storeName||'-'}</td><th>주문번호</th><td style="font-family:monospace;font-size:12px">${order.id}</td></tr>
-    <tr><th>주문일시</th><td>${(order.createdAt||'').slice(0,16).replace('T',' ')}</td><th>금액</th><td style="font-weight:700">${Number(order.amount||0).toLocaleString()}원</td></tr>
-  </table>
-  <table>
-    <thead><tr><th>품목명</th><th>수량</th><th>단가</th><th>금액</th></tr></thead>
-    <tbody>
-      ${(order.itemDetails||[]).map(i=>`<tr>
-        <td>${i.name}</td>
-        <td>${i.qty}${i.unit||''}</td>
-        <td style="font-family:monospace">${Number(i.price||0).toLocaleString()}원</td>
-        <td style="font-family:monospace">${Number((i.price||0)*(i.qty||1)).toLocaleString()}원</td>
-      </tr>`).join('') || `<tr><td colspan="4">${order.items||'-'}</td></tr>`}
-    </tbody>
-  </table>
-  <div class="total">합계: ${Number(order.amount||0).toLocaleString()}원</div>
-  <div class="sign-area">
-    <div class="sign-box">공급자<br>(인)</div>
-    <div class="sign-box">수령자<br>(인)</div>
-  </div>
-  <div style="text-align:center;margin-top:20px">
-    <button onclick="window.print()" style="padding:10px 24px;font-size:14px;cursor:pointer">인쇄</button>
-    <button onclick="window.close()" style="padding:10px 24px;font-size:14px;cursor:pointer;margin-left:10px">닫기</button>
-  </div>
-  </body></html>`);
+// ── 선택/일괄 ─────────────────────────────────────────────
+function toggleSelect(id,checked){
+  if(checked)_selectedIds.add(id);else _selectedIds.delete(id);
+  updateBulkBar();
+  // 해당 행 selected 클래스 토글
+  const rows=document.querySelectorAll('.dlv-row');
+  rows.forEach(r=>{ const chk=r.querySelector('.dlv-chk'); if(chk&&chk.onclick) return; });
+  loadDeliveries();
+}
+function updateBulkBar(){
+  const bar=document.getElementById('bulkBar');
+  const cnt=_selectedIds.size;
+  bar.classList.toggle('show',cnt>0);
+  document.getElementById('bulkCount').textContent=cnt+'건 선택';
+}
+async function bulkPrint(){
+  const items=_deliveries.filter(d=>_selectedIds.has(d.id));
+  if(!items.length){showToast('배송 항목을 선택하세요');return;}
+  const w=window.open('','_blank');
+  const slips=items.map((d,i)=>buildSlipHtml(d,i,items.length)).join('');
+  w.document.write(buildPrintPage(slips,items.length+'건 일괄 납품서'));
   w.document.close();
 }
-
-async function printDeliverySlip(id){
-  const d = _deliveries.find(x=>x.id===id);
-  if(!d) return;
-  printOrderSlip({...d, storeName:d.storeName, id:d.id, amount:d.amount, items:d.items, itemDetails:d.itemDetails||[], createdAt:d.createdAt});
+async function bulkAssignDriver(){
+  const sel=document.getElementById('bulkDriverSel');
+  sel.innerHTML='<option value="">기사 선택</option>'+_drivers.map(d=>`<option value="${d.id}">${d.name} (${d.phone})</option>`).join('');
+  document.getElementById('bulkDriverModal').classList.add('show');
+}
+async function confirmBulkAssign(){
+  const driverId=document.getElementById('bulkDriverSel').value;
+  if(!driverId){showToast('기사를 선택하세요');return;}
+  const driver=_drivers.find(d=>d.id===driverId);
+  const ids=[..._selectedIds];
+  for(const id of ids){
+    await Auth.assignDelivery(id,driverId);
+  }
+  _selectedIds.clear();closeModal('bulkDriverModal');
+  await loadDeliveries();showToast(ids.length+'건 기사 배정 완료: '+driver?.name);
 }
 
+// ── 배송 액션 ─────────────────────────────────────────────
+async function assignDriver(deliveryId,driverId){
+  if(!driverId){showToast('기사를 선택하세요');return;}
+  await Auth.assignDelivery(deliveryId,driverId);
+  await loadDeliveries();showToast('기사 배정 완료');
+}
+async function startDelivery(id){
+  if(!confirm('배송을 시작하시겠습니까?'))return;
+  await Auth.startDelivery(id);
+  await loadDeliveries();showToast('배송 시작!');
+}
+async function delDelivery(id){
+  if(!confirm('삭제할까요?'))return;
+  await Auth.DB.remove('deliveries/'+id);
+  await loadDeliveries();showToast('삭제');
+}
 async function createDeliveryFromOrder(orderId){
-  const sel = document.getElementById('osel-'+orderId);
-  const driverId = sel?.value||'';
-  const ordData = await Auth.DB.get('franchise_orders/'+orderId);
-  if(!ordData){ showToast('발주 정보를 찾을 수 없습니다'); return; }
-  const driver = _drivers.find(d=>d.id===driverId);
-  const frData = await Auth.DB.get('hq_franchises')||{};
-  const store = Object.values(frData).find(f=>f.name===ordData.storeName)||{};
-  await Auth.createDelivery({
-    storeId:store.id||'', storeName:ordData.storeName||'',
-    address:store.address||'',
-    driverId:driverId||'', driverName:driver?.name||'', driverPhone:driver?.phone||'',
-    items:ordData.items||'', amount:ordData.amount||0,
-    fromOrderId:orderId,
-  });
-  await Auth.DB.update('franchise_orders/'+orderId, {status:'shipping'});
-  await loadDeliveries();
-  showToast('배송 생성 완료!');
+  const sel=document.getElementById('osel-'+orderId);
+  const driverId=sel?.value||'';
+  const ordData=await Auth.DB.get('franchise_orders/'+orderId);
+  if(!ordData){showToast('발주 정보 없음');return;}
+  const driver=_drivers.find(d=>d.id===driverId);
+  const frData=await Auth.DB.get('hq_franchises')||{};
+  const store=Object.values(frData).find(f=>f.name===ordData.storeName)||{};
+  await Auth.createDelivery({storeId:store.id||'',storeName:ordData.storeName||'',address:store.address||'',driverId:driverId||'',driverName:driver?.name||'',driverPhone:driver?.phone||'',items:ordData.items||'',amount:ordData.amount||0,fromOrderId:orderId});
+  await Auth.DB.update('franchise_orders/'+orderId,{status:'shipping'});
+  await loadDeliveries();showToast('배송 생성 완료!');
+}
+function copyDeliveryLink(id){
+  const link=`${location.origin}/site_driver.html?delivery=${id}`;
+  if(navigator.clipboard)navigator.clipboard.writeText(link).then(()=>showToast('링크 복사 완료!'));
+  else prompt('링크를 복사하세요:',link);
 }
 
-async function init() {
-  await Promise.all([loadDrivers(), loadStores(), loadHqData()]);
+// ── 납품서 출력 ───────────────────────────────────────────
+function buildSlipHtml(d,i,total){
+  return `<div style="page-break-after:${i<total-1?'always':'auto'};padding:28px;max-width:680px;margin:0 auto">
+    <div style="display:flex;justify-content:space-between;margin-bottom:14px">
+      <h2 style="margin:0;font-size:20px">납 품 서</h2>
+      <div style="font-size:12px;color:#666">${i+1}/${total} | ${new Date().toLocaleDateString('ko-KR')}</div>
+    </div>
+    <table style="width:100%;border-collapse:collapse;margin-bottom:12px">
+      <tr><th style="border:1px solid #ddd;padding:7px;background:#f5f5f5;text-align:left;width:80px">수신처</th><td style="border:1px solid #ddd;padding:7px"><strong>${d.storeName||'-'}</strong></td><th style="border:1px solid #ddd;padding:7px;background:#f5f5f5;text-align:left;width:80px">배송기사</th><td style="border:1px solid #ddd;padding:7px">${d.driverName||'-'} ${d.driverPhone||''}</td></tr>
+    </table>
+    <table style="width:100%;border-collapse:collapse;margin-bottom:12px">
+      <thead><tr style="background:#f5f5f5"><th style="border:1px solid #ddd;padding:7px;text-align:left">품목</th><th style="border:1px solid #ddd;padding:7px;text-align:center;width:60px">수량</th><th style="border:1px solid #ddd;padding:7px;text-align:right;width:90px">단가</th><th style="border:1px solid #ddd;padding:7px;text-align:right;width:90px">금액</th></tr></thead>
+      <tbody>${(d.itemDetails||[]).map(it=>`<tr><td style="border:1px solid #ddd;padding:7px">${it.name}</td><td style="border:1px solid #ddd;padding:7px;text-align:center">${it.qty}${it.unit||''}</td><td style="border:1px solid #ddd;padding:7px;text-align:right">${Number(it.price||0).toLocaleString()}원</td><td style="border:1px solid #ddd;padding:7px;text-align:right">${Number((it.price||0)*(it.qty||1)).toLocaleString()}원</td></tr>`).join('')||`<tr><td colspan="4" style="border:1px solid #ddd;padding:7px">${d.items||'-'}</td></tr>`}</tbody>
+    </table>
+    <div style="text-align:right;font-size:15px;font-weight:700;margin-bottom:24px">합계: ${Number(d.amount||0).toLocaleString()}원</div>
+    <div style="display:flex;justify-content:space-between;margin-top:36px">
+      <div style="text-align:center;border-top:1px solid #000;width:140px;padding-top:5px;font-size:12px">공급자 (인)</div>
+      <div style="text-align:center;border-top:1px solid #000;width:140px;padding-top:5px;font-size:12px">수령자 (인)</div>
+    </div>
+  </div>`;
+}
+function buildPrintPage(slips,title){
+  return `<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><title>${title}</title>
+  <style>body{font-family:"Noto Sans KR",sans-serif;margin:0}@media print{.np{display:none}}</style></head><body>
+  <div class="np" style="padding:12px;background:#f5f5f5;display:flex;gap:8px;align-items:center">
+    <strong>${title}</strong>
+    <button onclick="window.print()" style="padding:7px 18px;font-size:13px;cursor:pointer;background:#1a1916;color:#fff;border:none;border-radius:7px">인쇄</button>
+    <button onclick="window.close()" style="padding:7px 14px;font-size:13px;cursor:pointer">닫기</button>
+  </div>${slips}</body></html>`;
+}
+function printOrderSlip(d){
+  const w=window.open('','_blank');
+  w.document.write(buildPrintPage(buildSlipHtml(d,0,1),'납품서'));
+  w.document.close();
 }
 
 // ── 기사별 조회 ───────────────────────────────────────────
 async function loadDriverFilterSelect(){
-  const drivers = await Auth.loadSupplierDrivers();
-  _drivers = drivers;
-  const sel = document.getElementById('driverFilterSel');
-  if(!sel) return;
-  sel.innerHTML = '<option value="">기사 선택</option>' +
-    drivers.map(d=>`<option value="${d.id}">${d.name} (${d.phone})</option>`).join('');
+  const sel=document.getElementById('driverFilterSel');
+  sel.innerHTML='<option value="">기사 선택</option>'+_drivers.map(d=>`<option value="${d.id}">${d.name} (${d.phone})</option>`).join('');
 }
-
 async function loadDriverDeliveries(){
-  const driverId = document.getElementById('driverFilterSel').value;
-  const el = document.getElementById('driverDeliveryList');
-  const btns = document.getElementById('driverActionBtns');
-  if(!driverId){ el.innerHTML='<div class="empty-state">기사를 선택하세요</div>'; btns.style.display='none'; return; }
-  btns.style.display='flex';
+  const driverId=document.getElementById('driverFilterSel').value;
+  const el=document.getElementById('driverDeliveryList');
+  if(!driverId){el.innerHTML='<div class="empty-state">기사를 선택하세요</div>';return;}
   el.innerHTML='<div class="loading-wrap"><div class="spinner"></div>불러오는 중...</div>';
-  const deliveries = await Auth.loadDeliveries();
-  const myDeliveries = deliveries.filter(d=>d.driverId===driverId);
-  const driver = _drivers.find(d=>d.id===driverId);
-  if(!myDeliveries.length){ el.innerHTML='<div class="empty-state">배정된 배송이 없습니다</div>'; return; }
-  const ST={assigned:{l:'배정됨',bg:'var(--surface2)',c:'var(--muted)'},shipping:{l:'배송중',bg:'var(--blue-bg)',c:'var(--blue)'},done:{l:'완료',bg:'var(--green-bg)',c:'var(--green)'},issue:{l:'이슈',bg:'var(--red-bg)',c:'var(--red)'}};
-  const total=myDeliveries.reduce((s,d)=>s+Number(d.amount||0),0);
-  const done=myDeliveries.filter(d=>d.status==='done').length;
-  el.innerHTML=`
-    <div style="background:var(--blue-bg);border:.5px solid rgba(40,116,204,.2);border-radius:12px;padding:14px 16px;margin-bottom:12px">
-      <div style="font-size:15px;font-weight:700;color:var(--blue)">${driver?.name||'기사'} 배송 현황</div>
-      <div style="display:flex;gap:16px;margin-top:8px;font-size:13px">
-        <span>전체 <strong>${myDeliveries.length}건</strong></span>
-        <span>완료 <strong style="color:var(--green)">${done}건</strong></span>
-        <span>잔여 <strong style="color:var(--amber)">${myDeliveries.length-done}건</strong></span>
-        <span>총액 <strong style="font-family:var(--mono)">${total.toLocaleString()}원</strong></span>
-      </div>
+  const deliveries=await Auth.loadDeliveries();
+  const list=deliveries.filter(d=>d.driverId===driverId);
+  const driver=_drivers.find(d=>d.id===driverId);
+  if(!list.length){el.innerHTML='<div class="empty-state">배정된 배송이 없습니다</div>';return;}
+  const total=list.reduce((s,d)=>s+Number(d.amount||0),0);
+  const done=list.filter(d=>d.status==='done').length;
+  el.innerHTML=`<div style="background:var(--blue-bg);border-radius:11px;padding:12px 14px;margin-bottom:10px">
+    <div style="font-size:14px;font-weight:700;color:var(--blue)">${driver?.name} 배송 현황</div>
+    <div style="display:flex;gap:14px;margin-top:6px;font-size:12px">
+      <span>전체 <strong>${list.length}건</strong></span><span>완료 <strong style="color:var(--green)">${done}건</strong></span>
+      <span>잔여 <strong style="color:var(--amber)">${list.length-done}건</strong></span>
+      <span>총액 <strong style="font-family:var(--mono)">${total.toLocaleString()}원</strong></span>
     </div>
-    ${myDeliveries.map((d,i)=>{
-      const st=ST[d.status]||ST.assigned;
-      return `<div class="assign-card" style="margin-bottom:10px">
-        <div class="ac-header">
-          <div>
-            <div style="font-size:11px;color:var(--muted)">${i+1}번째 배송</div>
-            <div class="ac-store">${d.storeName||'-'}</div>
-            <div class="ac-addr">${d.address||''}</div>
-            <div class="ac-items">${d.items||''}</div>
-            <div style="font-family:var(--mono);font-size:13px;font-weight:700;margin-top:4px">${Number(d.amount||0).toLocaleString()}원</div>
-          </div>
-          <span class="status-chip" style="background:${st.bg};color:${st.c}">${st.l}</span>
-        </div>
-        <div class="ac-footer">
-          <button class="af-btn" onclick='printOrderSlip(${JSON.stringify({id:d.id,storeName:d.storeName,items:d.items,amount:d.amount,itemDetails:d.itemDetails||[],createdAt:d.createdAt}).replace(/\x27/g,"&#39;")})'>
+  </div>`+
+  list.map(d=>{
+    const stColor=ST_COLOR[d.status]||'var(--muted)';
+    const isOpen=_openDetailId===('drv_'+d.id);
+    return `<div style="display:flex;flex-direction:column;gap:4px;margin-bottom:6px">
+      <div class="dlv-row" onclick="toggleDriverDetail('${d.id}')">
+        <div class="dlv-status" style="background:${stColor}"></div>
+        <div class="dlv-store">${d.storeName||'-'}</div>
+        <div class="dlv-amt">${Number(d.amount||0).toLocaleString()}원</div>
+        <div class="dlv-chip" style="background:${stColor}22;color:${stColor}">${ST_LABEL[d.status]||d.status}</div>
+        <i class="ti ti-chevron-${isOpen?'up':'down'}" style="font-size:14px;color:var(--dim);flex-shrink:0"></i>
+      </div>
+      ${isOpen?`<div class="detail-panel">
+        <div class="detail-row"><span class="detail-lbl">주소</span><span class="detail-val">${d.address||'-'}</span></div>
+        <div class="detail-row"><span class="detail-lbl">품목</span><span class="detail-val" style="text-align:right">${d.items||'-'}</span></div>
+        <div class="detail-actions">
+          <button class="act-sm" onclick='printOrderSlip(${JSON.stringify({id:d.id,storeName:d.storeName,items:d.items,amount:d.amount,itemDetails:d.itemDetails||[],createdAt:d.createdAt,driverName:driver?.name||"",driverPhone:driver?.phone||""}).replace(/'/g,"&#39;")})'>
             <i class="ti ti-printer"></i>납품서
           </button>
-          <button class="af-btn blue" onclick="copyDeliveryLink('${d.id}')">
-            <i class="ti ti-link"></i>링크복사
-          </button>
-          ${d.status==='assigned'?`<button class="af-btn green" onclick="startDelivery('${d.id}');setTimeout(loadDriverDeliveries,500)"><i class="ti ti-truck-delivery"></i>배송시작</button>`:''}
+          <button class="act-sm blue" onclick="copyDeliveryLink('${d.id}')"><i class="ti ti-link"></i>링크복사</button>
+          ${d.status==='assigned'?`<button class="act-sm green" onclick="startDelivery('${d.id}');setTimeout(loadDriverDeliveries,500)"><i class="ti ti-truck-delivery"></i>배송시작</button>`:''}
         </div>
-      </div>`;
-    }).join('')}`;
+      </div>`:''}
+    </div>`;
+  }).join('');
 }
-
+function toggleDriverDetail(id){
+  _openDetailId=(_openDetailId===('drv_'+id))?'':('drv_'+id);
+  loadDriverDeliveries();
+}
 async function printAllDriverSlips(){
   const driverId=document.getElementById('driverFilterSel').value;
   if(!driverId){showToast('기사를 선택하세요');return;}
   const driver=_drivers.find(d=>d.id===driverId);
   const deliveries=await Auth.loadDeliveries();
   const list=deliveries.filter(d=>d.driverId===driverId&&d.status!=='done');
-  if(!list.length){showToast('배송 중인 건이 없습니다');return;}
-  const w=window.open('','_blank','width=900,height=700');
-  const now=new Date().toLocaleDateString('ko-KR');
-  const slips=list.map((d,i)=>`
-    <div style="page-break-after:${i<list.length-1?'always':'auto'};padding:30px;max-width:700px;margin:0 auto">
-      <div style="display:flex;justify-content:space-between;margin-bottom:16px">
-        <h2 style="margin:0">납 품 서</h2>
-        <div style="font-size:13px;color:#666">발행일: ${now} | ${i+1}/${list.length}</div>
-      </div>
-      <table style="width:100%;border-collapse:collapse;margin-bottom:14px">
-        <tr><th style="border:1px solid #ddd;padding:8px;background:#f5f5f5;text-align:left">배송기사</th><td style="border:1px solid #ddd;padding:8px">${driver?.name||'-'} (${driver?.phone||'-'})</td>
-            <th style="border:1px solid #ddd;padding:8px;background:#f5f5f5;text-align:left">수신처</th><td style="border:1px solid #ddd;padding:8px"><strong>${d.storeName||'-'}</strong></td></tr>
-        <tr><th style="border:1px solid #ddd;padding:8px;background:#f5f5f5;text-align:left">주소</th><td colspan="3" style="border:1px solid #ddd;padding:8px">${d.address||'-'}</td></tr>
-      </table>
-      <table style="width:100%;border-collapse:collapse;margin-bottom:14px">
-        <thead><tr style="background:#f5f5f5"><th style="border:1px solid #ddd;padding:8px;text-align:left">품목</th><th style="border:1px solid #ddd;padding:8px;text-align:center">수량</th><th style="border:1px solid #ddd;padding:8px;text-align:right">단가</th><th style="border:1px solid #ddd;padding:8px;text-align:right">금액</th></tr></thead>
-        <tbody>${(d.itemDetails||[]).map(it=>`<tr><td style="border:1px solid #ddd;padding:8px">${it.name}</td><td style="border:1px solid #ddd;padding:8px;text-align:center">${it.qty}${it.unit||''}</td><td style="border:1px solid #ddd;padding:8px;text-align:right">${Number(it.price||0).toLocaleString()}원</td><td style="border:1px solid #ddd;padding:8px;text-align:right">${Number((it.price||0)*(it.qty||1)).toLocaleString()}원</td></tr>`).join('')||`<tr><td colspan="4" style="border:1px solid #ddd;padding:8px">${d.items||'-'}</td></tr>`}</tbody>
-      </table>
-      <div style="text-align:right;font-size:16px;font-weight:700;margin-bottom:30px">합계: ${Number(d.amount||0).toLocaleString()}원</div>
-      <div style="display:flex;justify-content:space-between;margin-top:40px">
-        <div style="text-align:center;border-top:1px solid #000;width:150px;padding-top:6px;font-size:13px">공급자 (인)</div>
-        <div style="text-align:center;border-top:1px solid #000;width:150px;padding-top:6px;font-size:13px">수령자 (인)</div>
-      </div>
-    </div>`).join('');
-  w.document.write(`<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><title>${driver?.name} 납품서</title>
-    <style>body{font-family:"Noto Sans KR",sans-serif;margin:0}@media print{.np{display:none}}</style></head><body>
-    <div class="np" style="padding:14px;background:#f5f5f5;display:flex;gap:10px;align-items:center">
-      <strong>${driver?.name||'기사'} 납품서 ${list.length}건</strong>
-      <button onclick="window.print()" style="padding:8px 20px;font-size:14px;cursor:pointer;background:#1a1916;color:#fff;border:none;border-radius:8px">전체 인쇄</button>
-      <button onclick="window.close()" style="padding:8px 14px;font-size:14px;cursor:pointer">닫기</button>
-    </div>${slips}</body></html>`);
+  if(!list.length){showToast('미완료 배송이 없습니다');return;}
+  const w=window.open('','_blank');
+  const slips=list.map((d,i)=>buildSlipHtml({...d,driverName:driver?.name,driverPhone:driver?.phone},i,list.length)).join('');
+  w.document.write(buildPrintPage(slips,driver?.name+' 납품서 '+list.length+'건'));
   w.document.close();
 }
-
 function copyDriverLink(){
   const driverId=document.getElementById('driverFilterSel').value;
   if(!driverId){showToast('기사를 선택하세요');return;}
   const driver=_drivers.find(d=>d.id===driverId);
   const link=`${location.origin}/site_driver.html?driver=${driverId}`;
-  if(navigator.clipboard){
-    navigator.clipboard.writeText(link).then(()=>showToast(`${driver?.name||'기사'} 링크 복사! 카카오톡으로 전송하세요`));
-  } else { prompt('링크를 복사하세요:',link); }
+  if(navigator.clipboard)navigator.clipboard.writeText(link).then(()=>showToast(driver?.name+' 링크 복사! 카카오톡으로 전송하세요'));
+  else prompt('링크:',link);
 }
 
-document.addEventListener('firebaseReady', init);
-if(Auth.isFirebaseReady) init();
-else setTimeout(init, 2000);
+// ── 배송기사 등록 ─────────────────────────────────────────
+async function addDriver(){
+  if(!drvName.value.trim()||!drvPhone.value.trim()){showToast('성함과 연락처를 입력하세요');return;}
+  await Auth.registerSupplierDriver({name:drvName.value.trim(),phone:drvPhone.value.trim(),car:drvCar.value.trim()});
+  drvName.value=drvPhone.value=drvCar.value='';
+  await loadDrivers();await refreshAssignSelects();showToast('배송기사 등록 완료');
+}
+async function loadDrivers(){
+  _drivers=await Auth.loadSupplierDrivers();
+  const el=document.getElementById('driverList');
+  el.innerHTML=_drivers.length?_drivers.map(d=>`<div class="list-item">
+    <div class="li-icon" style="background:var(--blue-bg);color:var(--blue)"><i class="ti ti-user"></i></div>
+    <div class="li-info"><div class="li-name">${d.name}</div><div class="li-sub">${d.phone}${d.car?' · '+d.car:''}</div></div>
+    <div class="li-actions">
+      <a href="tel:${d.phone}" class="act-btn blue"><i class="ti ti-phone" style="font-size:12px"></i></a>
+      <button class="act-btn red" onclick="delDriver('${d.id}')"><i class="ti ti-trash" style="font-size:12px"></i></button>
+    </div>
+  </div>`).join(''):'<div class="empty-state">등록된 배송기사 없음</div>';
+}
+async function delDriver(id){if(!confirm('삭제할까요?'))return;await Auth.deleteSupplierDriver(id);await loadDrivers();showToast('삭제');}
+
+// ── 가맹점(배송지) 등록 ───────────────────────────────────
+async function addStore(){
+  if(!stName.value.trim()||!stAddr.value.trim()){showToast('상호명과 주소를 입력하세요');return;}
+  await Auth.registerSupplierFranchise({businessName:stName.value.trim(),businessNumber:stBiz.value.trim(),address:stAddr.value.trim(),phone:stPhone.value.trim()});
+  stName.value=stBiz.value=stAddr.value=stPhone.value='';
+  await loadStores();await refreshAssignSelects();showToast('배송지 등록 완료');
+}
+async function loadStores(){
+  _stores=await Auth.loadSupplierFranchises();
+  const el=document.getElementById('storeList');
+  el.innerHTML=_stores.length?_stores.map(s=>`<div class="list-item">
+    <div class="li-icon" style="background:var(--purple-bg);color:var(--purple)"><i class="ti ti-building-store"></i></div>
+    <div class="li-info"><div class="li-name">${s.businessName}</div><div class="li-sub">${s.address}${s.phone?' · '+s.phone:''}</div></div>
+    <div class="li-actions">
+      <button class="act-btn red" onclick="delStore('${s.id}')"><i class="ti ti-trash" style="font-size:12px"></i></button>
+    </div>
+  </div>`).join(''):'<div class="empty-state">등록된 배송지 없음</div>';
+}
+async function delStore(id){if(!confirm('삭제할까요?'))return;await Auth.deleteSupplierFranchise(id);await loadStores();showToast('삭제');}
+
+// ── 정산관리 ──────────────────────────────────────────────
+async function loadSettle(){
+  const deliveries=await Auth.loadDeliveries();
+  const done=deliveries.filter(d=>d.status==='done');
+  const now=new Date();const thisMonth=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+  const monthDone=done.filter(d=>(d.createdAt||'').startsWith(thisMonth));
+  const totalAmt=deliveries.reduce((s,d)=>s+Number(d.amount||0),0);
+  const doneAmt=monthDone.reduce((s,d)=>s+Number(d.amount||0),0);
+  const strip=document.getElementById('settleStrip');
+  strip.querySelector('.strip-val').textContent=monthDone.length+'건';
+  strip.querySelectorAll('.strip-val')[1].textContent=(totalAmt-doneAmt).toLocaleString()+'원';
+  strip.querySelectorAll('.strip-val')[2].textContent=doneAmt.toLocaleString()+'원';
+  const el=document.getElementById('settleList');
+  if(!deliveries.length){el.innerHTML='<div class="empty-state">납품 내역 없음</div>';return;}
+  el.innerHTML=deliveries.slice(0,20).map(d=>`<div class="settle-row">
+    <div>
+      <div style="font-size:13px;font-weight:700">${d.storeName||'-'}</div>
+      <div style="font-size:11px;color:var(--muted)">${(d.createdAt||'').slice(0,10)} · ${d.items?.slice(0,20)||''}</div>
+    </div>
+    <div class="settle-amt ${d.status==='done'?'pos':''}">${Number(d.amount||0).toLocaleString()}원</div>
+  </div>`).join('');
+}
+async function printAllSettleSlips(){
+  const deliveries=await Auth.loadDeliveries();
+  const done=deliveries.filter(d=>d.status==='done');
+  if(!done.length){showToast('완료된 배송이 없습니다');return;}
+  const w=window.open('','_blank');
+  const slips=done.map((d,i)=>buildSlipHtml(d,i,done.length)).join('');
+  w.document.write(buildPrintPage(slips,'납품 완료 거래명세서 '+done.length+'건'));
+  w.document.close();
+}
+
+// ── 초기화 ────────────────────────────────────────────────
+async function init(){
+  await Promise.all([loadDrivers(),loadStores(),loadHqData()]);
+  await loadDeliveries();
+  // 세션 복원
+  const session=Auth.getSession();
+  if(session&&session.role==='supplier'){
+    document.getElementById('supNameText').textContent=session.businessName||session.name||'납품업체';
+  }
+}
+document.addEventListener('firebaseReady',init);
+if(Auth.isFirebaseReady)init();
+else setTimeout(init,2000);
 </script>
 </body>
 </html>
