@@ -45,14 +45,17 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 .rb.purple{background:var(--purple);color:#fff}.rb.outline{background:var(--surface2);border:.5px solid var(--line);color:var(--text)}
 .rb.amber{background:var(--amber);color:#fff}
 /* ── 한줄 배송 아이템 ── */
-.dlv-row{display:flex;align-items:center;gap:10px;padding:11px 14px;border:.5px solid var(--line);border-radius:12px;background:var(--surface);cursor:pointer;transition:background .15s}
+.dlv-row{display:flex;align-items:center;gap:8px;padding:10px 13px;border:.5px solid var(--line);border-radius:12px;background:var(--surface);cursor:pointer;transition:background .15s}
 .dlv-row:active{background:var(--surface2)}
 .dlv-row.selected{border-color:var(--blue-mid);background:var(--blue-bg)}
 .dlv-chk{width:18px;height:18px;accent-color:var(--blue-mid);cursor:pointer;flex-shrink:0}
-.dlv-status{width:6px;height:6px;border-radius:50%;flex-shrink:0}
-.dlv-store{font-size:13px;font-weight:700;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.dlv-amt{font-family:var(--mono);font-size:12px;font-weight:700;flex-shrink:0;color:var(--text)}
-.dlv-chip{font-size:10px;font-weight:700;padding:2px 7px;border-radius:999px;flex-shrink:0}
+.dlv-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;margin-top:2px}
+.dlv-left{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.dlv-store{font-size:13px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dlv-meta{font-size:11px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dlv-right{display:flex;flex-direction:column;align-items:flex-end;gap:3px;flex-shrink:0}
+.dlv-amt{font-family:var(--mono);font-size:12px;font-weight:700;color:var(--text)}
+.dlv-chip{font-size:10px;font-weight:700;padding:2px 7px;border-radius:999px;white-space:nowrap}
 /* ── 상세 패널 (슬라이드) ── */
 .detail-panel{background:var(--surface);border:.5px solid var(--blue-mid);border-radius:12px;padding:14px;margin-top:4px;display:flex;flex-direction:column;gap:10px}
 .detail-row{display:flex;justify-content:space-between;align-items:center;font-size:12px;padding:5px 0;border-bottom:.5px solid var(--line)}
@@ -189,12 +192,20 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
           <span class="section-label">배송 목록</span>
           <button onclick="loadDeliveries()" style="border:none;background:none;color:var(--blue);font-size:12px;cursor:pointer"><i class="ti ti-refresh" style="font-size:13px"></i></button>
         </div>
-        <div class="sub-filters" style="margin-bottom:10px" id="dlvFilters"></div>
-        <!-- 일괄 선택 바 -->
-        <div class="bulk-bar" id="bulkBar">
-          <span class="bulk-count" id="bulkCount">0건 선택</span>
-          <button class="bulk-btn" onclick="bulkPrint()"><i class="ti ti-printer" style="font-size:13px"></i> 일괄출력</button>
-          <button class="bulk-btn" onclick="bulkAssignDriver()"><i class="ti ti-user-check" style="font-size:13px"></i> 기사배정</button>
+        <!-- 상태 필터 -->
+        <div class="sub-filters" style="margin-bottom:6px" id="dlvFilters"></div>
+        <!-- 가맹점별 탭 -->
+        <div class="sub-filters" style="margin-bottom:8px" id="storeFilters"></div>
+        <!-- 전체선택 + 일괄 액션 -->
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px" id="selectAllRow">
+          <label style="display:flex;align-items:center;gap:5px;font-size:12px;font-weight:700;color:var(--muted);cursor:pointer">
+            <input type="checkbox" id="selectAllChk" onchange="selectAll(this.checked)" style="width:16px;height:16px;accent-color:var(--blue-mid)"> 전체선택
+          </label>
+          <div class="bulk-bar" id="bulkBar" style="position:static;margin:0;border-radius:9px;padding:6px 10px;display:none;flex:1">
+            <span class="bulk-count" id="bulkCount">0건</span>
+            <button class="bulk-btn" onclick="bulkPrint()"><i class="ti ti-printer" style="font-size:12px"></i>일괄출력</button>
+            <button class="bulk-btn" onclick="bulkAssignDriver()"><i class="ti ti-user-check" style="font-size:12px"></i>기사배정</button>
+          </div>
         </div>
         <div id="deliveryList">
           <div class="loading-wrap"><div class="spinner"></div>불러오는 중...</div>
@@ -441,48 +452,80 @@ async function createDelivery(){
 }
 
 // ── 배송 목록 (한줄+클릭상세) ─────────────────────────────
+let _storeFilter='all';
+
 async function loadDeliveries(){
-  // franchise_orders + deliveries 합산
   const [ordData, dlvList] = await Promise.all([
-    Auth.DB.get('franchise_orders') || {},
+    Auth.DB.get('franchise_orders'),
     Auth.loadDeliveries()
   ]);
   const orders = Object.values(ordData||{});
   _deliveries = dlvList;
 
-  // 배지
   const badge = orders.filter(o=>o.status==='confirmed').length + dlvList.filter(d=>d.status==='assigned').length;
   document.getElementById('assignBadge').textContent = badge;
 
-  // 필터 탭
-  const filterDef=[['all','전체'],['waiting','대기중'],['confirmed','승인됨'],['assigned','배정됨'],['shipping','배송중'],['done','완료']];
-  document.getElementById('dlvFilters').innerHTML=filterDef.map(([k,l])=>`<button class="sf ${_dlvFilter===k?'active':''}" onclick="_dlvFilter='${k}';loadDeliveries()">${l}</button>`).join('');
+  // 상태 필터
+  const filterDef=[['all','전체'],['waiting','대기'],['confirmed','승인'],['assigned','배정'],['shipping','배송중'],['done','완료']];
+  document.getElementById('dlvFilters').innerHTML=filterDef.map(([k,l])=>
+    `<button class="sf ${_dlvFilter===k?'active':''}" onclick="_dlvFilter='${k}';loadDeliveries()">${l}</button>`
+  ).join('');
 
-  // 합산 목록
   const allItems = [
     ...orders.map(o=>({...o,_type:'order'})),
     ...dlvList.map(d=>({...d,_type:'delivery'}))
-  ].filter(item=>{
-    if(_dlvFilter==='all') return true;
-    return item.status===_dlvFilter;
-  }).sort((a,b)=>(b.createdAt||'').localeCompare(a.createdAt||''));
+  ].sort((a,b)=>(b.createdAt||'').localeCompare(a.createdAt||''));
+
+  // 가맹점별 탭
+  const storeNames=[...new Set(allItems.map(x=>x.storeName).filter(Boolean))];
+  const storeFiltersEl = document.getElementById('storeFilters');
+  if(storeFiltersEl) storeFiltersEl.innerHTML=
+    [['all','전체'],...storeNames.map(n=>[n,n.length>6?n.slice(0,6)+'..':n])].map(([k,l])=>
+      `<button class="sf ${_storeFilter===k?'active':''}" onclick="_storeFilter='${k}';loadDeliveries()">${l}</button>`
+    ).join('');
+
+  const filtered = allItems.filter(item=>{
+    const statusOk = _dlvFilter==='all' || item.status===_dlvFilter;
+    const storeOk = _storeFilter==='all' || item.storeName===_storeFilter;
+    return statusOk && storeOk;
+  });
 
   const el=document.getElementById('deliveryList');
-  if(!allItems.length){el.innerHTML='<div class="empty-state">해당 배송이 없습니다</div>';return;}
+  if(!filtered.length){el.innerHTML='<div class="empty-state">해당 배송이 없습니다</div>';return;}
 
-  el.innerHTML=allItems.map(item=>{
+  el.innerHTML=filtered.map(item=>{
     const isOrder=item._type==='order';
     const stColor=ST_COLOR[item.status]||'var(--muted)';
     const stLabel=ST_LABEL[item.status]||item.status;
     const isOpen=_openDetailId===item.id;
     const chkd=_selectedIds.has(item.id);
+
+    // 날짜 포맷
+    const d=new Date(item.createdAt||'');
+    const dayNames=['일','월','화','수','목','금','토'];
+    const dateStr=item.createdAt?`${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}(${dayNames[d.getDay()]})`:'';
+
+    // 품목 요약
+    const itemArr=item.itemDetails||[];
+    const itemSummary=itemArr.length>0
+      ?`${itemArr[0].name}${itemArr.length>1?' 외 '+(itemArr.length-1)+'건':''}`
+      :(item.items||'').slice(0,20)||(isOrder?'발주':'배송');
+
+    // 기사 정보
+    const driverInfo=item.driverName?` · ${item.driverName}`:(!isOrder&&!item.driverId?' · 기사미배정':'');
+
     return `<div style="display:flex;flex-direction:column;gap:4px;margin-bottom:6px">
       <div class="dlv-row ${chkd?'selected':''}" onclick="toggleDetail('${item.id}')">
         <input type="checkbox" class="dlv-chk" ${chkd?'checked':''} onclick="event.stopPropagation();toggleSelect('${item.id}',this.checked)">
-        <div class="dlv-status" style="background:${stColor}"></div>
-        <div class="dlv-store">${item.storeName||'-'}</div>
-        <div class="dlv-amt">${Number(item.amount||0).toLocaleString()}원</div>
-        <div class="dlv-chip" style="background:${stColor}22;color:${stColor}">${stLabel}</div>
+        <div class="dlv-dot" style="background:${stColor}"></div>
+        <div class="dlv-left">
+          <div class="dlv-store">${item.storeName||'-'}</div>
+          <div class="dlv-meta">${dateStr} | ${itemSummary}</div>
+        </div>
+        <div class="dlv-right">
+          <div class="dlv-amt">${Number(item.amount||0).toLocaleString()}원</div>
+          <div class="dlv-chip" style="background:${stColor}22;color:${stColor}">${stLabel}${driverInfo}</div>
+        </div>
         <i class="ti ti-chevron-${isOpen?'up':'down'}" style="font-size:14px;color:var(--dim);flex-shrink:0"></i>
       </div>
       ${isOpen?renderDetail(item):''}
@@ -490,6 +533,7 @@ async function loadDeliveries(){
   }).join('');
   updateBulkBar();
 }
+
 
 function renderDetail(item){
   const isOrder=item._type==='order';
@@ -529,6 +573,23 @@ function toggleDetail(id){
 }
 
 // ── 선택/일괄 ─────────────────────────────────────────────
+function selectAll(checked){
+  const chks=document.querySelectorAll('.dlv-chk');
+  chks.forEach(chk=>{
+    const row=chk.closest('.dlv-row');
+    if(!row)return;
+    const onclick=row.getAttribute('onclick')||'';
+    const idMatch=onclick.match(/toggleDetail\('([^']+)'\)/);
+    if(idMatch){
+      if(checked)_selectedIds.add(idMatch[1]);
+      else _selectedIds.delete(idMatch[1]);
+    }
+    chk.checked=checked;
+  });
+  updateBulkBar();
+  loadDeliveries();
+}
+
 function toggleSelect(id,checked){
   if(checked)_selectedIds.add(id);else _selectedIds.delete(id);
   updateBulkBar();
@@ -540,8 +601,9 @@ function toggleSelect(id,checked){
 function updateBulkBar(){
   const bar=document.getElementById('bulkBar');
   const cnt=_selectedIds.size;
-  bar.classList.toggle('show',cnt>0);
-  document.getElementById('bulkCount').textContent=cnt+'건 선택';
+  if(bar){ bar.style.display=cnt>0?'flex':'none'; }
+  const countEl=document.getElementById('bulkCount');
+  if(countEl) countEl.textContent=cnt+'건 선택';
 }
 async function bulkPrint(){
   const items=_deliveries.filter(d=>_selectedIds.has(d.id));
@@ -665,12 +727,22 @@ async function loadDriverDeliveries(){
   list.map(d=>{
     const stColor=ST_COLOR[d.status]||'var(--muted)';
     const isOpen=_openDetailId===('drv_'+d.id);
+    const dd=new Date(d.createdAt||'');
+    const dayNames=['일','월','화','수','목','금','토'];
+    const dateStr=d.createdAt?`${String(dd.getMonth()+1).padStart(2,'0')}/${String(dd.getDate()).padStart(2,'0')}(${dayNames[dd.getDay()]})`:'';
+    const itemArr=d.itemDetails||[];
+    const itemSummary=itemArr.length>0?`${itemArr[0].name}${itemArr.length>1?' 외 '+(itemArr.length-1)+'건':''}`:(d.items||'').slice(0,20)||'배송';
     return `<div style="display:flex;flex-direction:column;gap:4px;margin-bottom:6px">
       <div class="dlv-row" onclick="toggleDriverDetail('${d.id}')">
-        <div class="dlv-status" style="background:${stColor}"></div>
-        <div class="dlv-store">${d.storeName||'-'}</div>
-        <div class="dlv-amt">${Number(d.amount||0).toLocaleString()}원</div>
-        <div class="dlv-chip" style="background:${stColor}22;color:${stColor}">${ST_LABEL[d.status]||d.status}</div>
+        <div class="dlv-dot" style="background:${stColor}"></div>
+        <div class="dlv-left">
+          <div class="dlv-store">${d.storeName||'-'}</div>
+          <div class="dlv-meta">${dateStr} | ${itemSummary}</div>
+        </div>
+        <div class="dlv-right">
+          <div class="dlv-amt">${Number(d.amount||0).toLocaleString()}원</div>
+          <div class="dlv-chip" style="background:${stColor}22;color:${stColor}">${ST_LABEL[d.status]||d.status}</div>
+        </div>
         <i class="ti ti-chevron-${isOpen?'up':'down'}" style="font-size:14px;color:var(--dim);flex-shrink:0"></i>
       </div>
       ${isOpen?`<div class="detail-panel">
