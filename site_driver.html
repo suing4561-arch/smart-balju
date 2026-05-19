@@ -205,6 +205,8 @@ const targetDriverId   = params.get('driver');   // 기사 전체 배송
 let deliveries = [];
 let pendingId = '';
 let checked = new Set();
+let storePool = [];
+let orderMap = {};
 
 // 시계
 (function tick(){ const n=new Date(); document.getElementById('stTime').textContent=String(n.getHours()).padStart(2,'0')+':'+String(n.getMinutes()).padStart(2,'0'); setTimeout(tick,1000); })();
@@ -221,6 +223,32 @@ function visibleDeliveries(list){
     if(targetDriverId) return d.driverId === targetDriverId;
     return true;
   });
+}
+async function ensureStorePool(){
+  const [supplierStores, hqStores, orders] = await Promise.all([
+    Auth.DB.get('supplier_franchises').catch(()=>({})),
+    Auth.DB.get('hq_franchises').catch(()=>({})),
+    Auth.DB.get('franchise_orders').catch(()=>({}))
+  ]);
+  storePool = [...Object.values(supplierStores||{}), ...Object.values(hqStores||{})];
+  orderMap = orders || {};
+}
+function enrichDelivery(d){
+  if(!d) return d;
+  const order = d.fromOrderId ? (orderMap[d.fromOrderId] || {}) : {};
+  const store = storePool.find(s =>
+    s.id === (d.storeId || order.storeId) ||
+    s.storeId === (d.storeId || order.storeId) ||
+    s.businessName === (d.storeName || order.storeName) ||
+    s.name === (d.storeName || order.storeName)
+  ) || {};
+  return {
+    ...d,
+    storeId: d.storeId || order.storeId || store.id || store.storeId || '',
+    storeName: d.storeName || order.storeName || store.businessName || store.name || '',
+    address: d.address || order.address || store.address || '',
+    phone: d.phone || order.phone || store.phone || store.ownerPhone || ''
+  };
 }
 
 function updateProgress(){
@@ -371,6 +399,7 @@ async function confirmIssue(){
 // 초기 데이터 로드
 async function init(){
   let list = [];
+  await ensureStorePool();
   if(targetDeliveryId){
     // 링크로 직접 접근 — 특정 배송 1건
     const d = await Auth.DB.get('deliveries/'+targetDeliveryId);
@@ -384,21 +413,23 @@ async function init(){
     list = await Auth.loadDeliveries();
     if(list.length){ document.getElementById('driverName').textContent=list[0].driverName||'기사님'; document.getElementById('driverPhone').textContent=list[0].driverPhone||''; }
   }
-  deliveries = list.filter(d=>d); // null 제거
+  deliveries = visibleDeliveries(list).map(enrichDelivery); // null 제거 + 주소/상호 보강
   render();
 
   // 실시간 구독 (Firebase 연결 시)
   if(Auth.isFirebaseReady && Auth.db){
     const path = targetDeliveryId ? 'deliveries/'+targetDeliveryId : 'deliveries';
-    Auth.db.ref(path).on('value', snap=>{
+    Auth.db.ref(path).on('value', async snap=>{
       if(!snap.exists()) return;
       const val = snap.val();
+      await ensureStorePool();
       if(targetDeliveryId){
         const idx = deliveries.findIndex(d=>d.id===targetDeliveryId);
-        if(idx>=0) deliveries[idx]={...deliveries[idx],...val};
-        else deliveries=[val];
+        const next = enrichDelivery(val);
+        if(idx>=0) deliveries[idx]={...deliveries[idx],...next};
+        else deliveries=[next];
       } else {
-        deliveries = visibleDeliveries(Object.values(val));
+        deliveries = visibleDeliveries(Object.values(val)).map(enrichDelivery);
       }
       render();
     });

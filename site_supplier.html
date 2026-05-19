@@ -360,7 +360,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 <script src="auth.js"></script>
 <script>
 const Auth = window.SmartBaljuAuth;
-let _drivers=[], _stores=[], _deliveries=[], _hqMenus=[], _selectedItems=[];
+let _drivers=[], _stores=[], _storePool=[], _deliveries=[], _hqMenus=[], _selectedItems=[];
 let _dlvFilter='all', _currentBiz=null, _selectedIds=new Set();
 let _openDetailId='';
 
@@ -455,6 +455,34 @@ async function refreshAssignSelects(){
   await loadHqData();
 }
 
+async function ensureStorePool(){
+  if(!_drivers.length || !_stores.length){
+    const [drivers, stores] = await Promise.all([Auth.loadSupplierDrivers(), Auth.loadSupplierFranchises()]);
+    _drivers = drivers;
+    _stores = stores;
+  }
+  const hqFrData = await Auth.DB.get('hq_franchises').catch(()=>({}));
+  _storePool = [..._stores, ...Object.values(hqFrData||{})];
+  return _storePool;
+}
+
+function enrichStoreInfo(item){
+  const store = _storePool.find(s =>
+    s.id === item.storeId ||
+    s.storeId === item.storeId ||
+    s.businessName === item.storeName ||
+    s.name === item.storeName ||
+    s.businessNumber === item.businessNumber
+  ) || {};
+  return {
+    ...item,
+    storeId: item.storeId || store.id || store.storeId || '',
+    storeName: item.storeName || store.businessName || store.name || '',
+    address: item.address || store.address || '',
+    phone: item.phone || store.phone || store.ownerPhone || ''
+  };
+}
+
 async function createDelivery(){
   const storeId=newStore.value;if(!storeId){showToast('배송지를 선택하세요');return;}
   const store=_stores.find(s=>s.id===storeId);const driverId=newDriver.value;const driver=_drivers.find(d=>d.id===driverId);
@@ -471,34 +499,13 @@ async function createDelivery(){
 let _storeFilter='all';
 
 async function loadDeliveries(){
-  if(!_drivers.length || !_stores.length){
-    const [drivers, stores] = await Promise.all([Auth.loadSupplierDrivers(), Auth.loadSupplierFranchises()]);
-    _drivers = drivers;
-    _stores = stores;
-  }
-  const [ordData, dlvList, hqFrData] = await Promise.all([
+  await ensureStorePool();
+  const [ordData, dlvList] = await Promise.all([
     Auth.DB.get('franchise_orders'),
-    Auth.loadDeliveries(),
-    Auth.DB.get('hq_franchises')
+    Auth.loadDeliveries()
   ]);
   const orders = Object.values(ordData||{});
   _deliveries = dlvList;
-  const storePool = [..._stores, ...Object.values(hqFrData||{})];
-  const withStoreInfo = item => {
-    const store = storePool.find(s =>
-      s.id === item.storeId ||
-      s.storeId === item.storeId ||
-      s.businessName === item.storeName ||
-      s.name === item.storeName
-    ) || {};
-    return {
-      ...item,
-      storeId: item.storeId || store.id || store.storeId || '',
-      storeName: item.storeName || store.businessName || store.name || '',
-      address: item.address || store.address || '',
-      phone: item.phone || store.phone || store.ownerPhone || ''
-    };
-  };
 
   const badge = orders.filter(o=>o.status==='confirmed').length + dlvList.filter(d=>d.status==='assigned').length;
   document.getElementById('assignBadge').textContent = badge;
@@ -510,8 +517,8 @@ async function loadDeliveries(){
   ).join('');
 
   const allItems = [
-    ...orders.map(o=>withStoreInfo({...o,_type:'order'})),
-    ...dlvList.map(d=>withStoreInfo({...d,_type:'delivery'}))
+    ...orders.map(o=>enrichStoreInfo({...o,_type:'order'})),
+    ...dlvList.map(d=>enrichStoreInfo({...d,_type:'delivery'}))
   ].sort((a,b)=>(b.createdAt||'').localeCompare(a.createdAt||''));
 
   // 가맹점별 탭
@@ -719,9 +726,8 @@ async function createDeliveryFromOrder(orderId){
   const ordData=await Auth.DB.get('franchise_orders/'+orderId);
   if(!ordData){showToast('발주 정보 없음');return;}
   const driver=_drivers.find(d=>d.id===driverId);
-  const frData=await Auth.DB.get('hq_franchises')||{};
-  const storePool=[..._stores,...Object.values(frData)];
-  const store=storePool.find(f=>f.id===ordData.storeId||f.businessName===ordData.storeName||f.name===ordData.storeName)||{};
+  await ensureStorePool();
+  const store=_storePool.find(f=>f.id===ordData.storeId||f.businessName===ordData.storeName||f.name===ordData.storeName)||{};
   await Auth.createDelivery({storeId:store.id||ordData.storeId||'',storeName:ordData.storeName||store.businessName||store.name||'',address:ordData.address||store.address||'',driverId:driverId||'',driverName:driver?.name||'',driverPhone:driver?.phone||'',items:ordData.items||'',itemDetails:ordData.itemDetails||[],amount:ordData.amount||0,fromOrderId:orderId});
   await Auth.DB.update('franchise_orders/'+orderId,{status:'shipping'});
   await loadDeliveries();showToast('배송 생성 완료!');
@@ -778,8 +784,9 @@ async function loadDriverDeliveries(){
   const el=document.getElementById('driverDeliveryList');
   if(!driverId){el.innerHTML='<div class="empty-state">기사를 선택하세요</div>';return;}
   el.innerHTML='<div class="loading-wrap"><div class="spinner"></div>불러오는 중...</div>';
+  await ensureStorePool();
   const deliveries=await Auth.loadDeliveries();
-  const list=deliveries.filter(d=>d.driverId===driverId);
+  const list=deliveries.filter(d=>d.driverId===driverId).map(enrichStoreInfo);
   const driver=_drivers.find(d=>d.id===driverId);
   if(!list.length){el.innerHTML='<div class="empty-state">배정된 배송이 없습니다</div>';return;}
   const total=list.reduce((s,d)=>s+Number(d.amount||0),0);
@@ -817,7 +824,7 @@ async function loadDriverDeliveries(){
         <div class="detail-row"><span class="detail-lbl">주소</span><span class="detail-val">${d.address||'-'}</span></div>
         <div class="detail-row"><span class="detail-lbl">품목</span><span class="detail-val" style="text-align:right">${d.items||'-'}</span></div>
         <div class="detail-actions">
-          <button class="act-sm" onclick='printOrderSlip(${JSON.stringify({id:d.id,storeName:d.storeName,items:d.items,amount:d.amount,itemDetails:d.itemDetails||[],createdAt:d.createdAt,driverName:driver?.name||"",driverPhone:driver?.phone||""}).replace(/'/g,"&#39;")})'>
+          <button class="act-sm" onclick='printOrderSlip(${JSON.stringify({id:d.id,storeName:d.storeName,address:d.address,items:d.items,amount:d.amount,itemDetails:d.itemDetails||[],createdAt:d.createdAt,driverName:driver?.name||"",driverPhone:driver?.phone||""}).replace(/'/g,"&#39;")})'>
             <i class="ti ti-printer"></i>납품서
           </button>
           <button class="act-sm blue" onclick="copyDeliveryLink('${d.id}')"><i class="ti ti-link"></i>링크복사</button>
@@ -835,8 +842,9 @@ async function printAllDriverSlips(){
   const driverId=document.getElementById('driverFilterSel').value;
   if(!driverId){showToast('기사를 선택하세요');return;}
   const driver=_drivers.find(d=>d.id===driverId);
+  await ensureStorePool();
   const deliveries=await Auth.loadDeliveries();
-  const list=deliveries.filter(d=>d.driverId===driverId&&d.status!=='done');
+  const list=deliveries.filter(d=>d.driverId===driverId&&d.status!=='done').map(enrichStoreInfo);
   if(!list.length){showToast('미완료 배송이 없습니다');return;}
   const w=window.open('','_blank');
   const slips=list.map((d,i)=>buildSlipHtml({...d,driverName:driver?.name,driverPhone:driver?.phone},i,list.length)).join('');
