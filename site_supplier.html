@@ -150,6 +150,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
   <div class="tab-bar">
     <button class="tab-btn active" onclick="switchTab('register')">등록관리</button>
     <button class="tab-btn" onclick="switchTab('assign')">배송배정<span class="tbadge" id="assignBadge">0</span></button>
+    <button class="tab-btn" onclick="switchTab('driver')">기사별 조회</button>
     <button class="tab-btn" onclick="switchTab('settle')">정산관리</button>
   </div>
 
@@ -246,7 +247,37 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
     </div>
   </div>
 
-  <!-- ── 탭3: 정산 관리 ── -->
+  <!-- ── 탭3: 기사별 조회 ── -->
+  <div class="page" id="page-driver">
+    <div class="scroll-body">
+      <div class="section-label" style="margin-bottom:8px">기사별 배송 조회</div>
+
+      <!-- 기사 선택 -->
+      <div class="card">
+        <div class="form-field">
+          <div class="form-label">배송기사 선택</div>
+          <select class="form-select" id="driverFilterSel" onchange="loadDriverDeliveries()">
+            <option value="">기사 선택</option>
+          </select>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:10px" id="driverActionBtns" style="display:none">
+          <button onclick="printAllDriverSlips()" class="reg-btn outline" style="flex:1;padding:10px">
+            <i class="ti ti-printer" style="font-size:15px"></i>납품서 일괄출력
+          </button>
+          <button onclick="copyDriverLink()" class="reg-btn blue" style="flex:1;padding:10px;margin-top:0">
+            <i class="ti ti-link" style="font-size:15px"></i>기사 링크복사
+          </button>
+        </div>
+      </div>
+
+      <!-- 기사 배송 목록 -->
+      <div id="driverDeliveryList">
+        <div class="empty-state">기사를 선택하세요</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 탭4: 정산관리 ── -->
   <div class="page" id="page-settle">
     <div class="scroll-body">
       <div class="strip">
@@ -278,6 +309,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
   <div class="nav-bar">
     <button class="nav-item" onclick="switchTab('register')" id="nav-register"><i class="ti ti-list-check active" id="ni-register"></i><span class="nav-lbl active" id="nl-register">등록관리</span></button>
     <button class="nav-item" onclick="switchTab('assign')" id="nav-assign"><i class="ti ti-truck-delivery" id="ni-assign"></i><span class="nav-lbl" id="nl-assign">배송배정</span></button>
+    <button class="nav-item" onclick="switchTab('driver')" id="nav-driver"><i class="ti ti-user-check" id="ni-driver"></i><span class="nav-lbl" id="nl-driver">기사별</span></button>
     <button class="nav-item" onclick="switchTab('settle')" id="nav-settle"><i class="ti ti-coin" id="ni-settle"></i><span class="nav-lbl" id="nl-settle">정산관리</span></button>
   </div>
 </div>
@@ -326,13 +358,21 @@ let _slipDeliveryId = '';
 // 탭 전환
 async function switchTab(tab) {
   currentTab = tab;
-  ['register','assign','settle'].forEach(t => {
-    document.getElementById('page-'+t).classList.toggle('active', t===tab);
-    document.querySelectorAll('.tab-btn').forEach((b,i) => { if(['register','assign','settle'][i]===tab) b.classList.add('active'); else if(['register','assign','settle'][i]!==tab) b.classList.remove('active'); });
-    document.getElementById('ni-'+t).className = 'ti ti-'+(t==='register'?'list-check':t==='assign'?'truck-delivery':'coin')+(t===tab?' active':'');
-    document.getElementById('nl-'+t).className = 'nav-lbl'+(t===tab?' active':'');
+  const allTabs = ['register','assign','driver','settle'];
+  const icons = {register:'ti-list-check',assign:'ti-truck-delivery',driver:'ti-user-check',settle:'ti-coin'};
+  allTabs.forEach(t => {
+    const page = document.getElementById('page-'+t);
+    if(page) page.classList.toggle('active', t===tab);
+    const ni = document.getElementById('ni-'+t);
+    if(ni) ni.className = 'ti '+icons[t]+(t===tab?' active':'');
+    const nl = document.getElementById('nl-'+t);
+    if(nl) nl.className = 'nav-lbl'+(t===tab?' active':'');
+  });
+  document.querySelectorAll('.tab-btn').forEach((b,i) => {
+    b.classList.toggle('active', allTabs[i]===tab);
   });
   if(tab==='assign') { await loadDeliveries(); await refreshAssignSelects(); }
+  if(tab==='driver') { await loadDriverFilterSelect(); }
 }
 
 let _tt;
@@ -758,6 +798,117 @@ async function createDeliveryFromOrder(orderId){
 async function init() {
   await Promise.all([loadDrivers(), loadStores(), loadHqData()]);
 }
+
+// ── 기사별 조회 ───────────────────────────────────────────
+async function loadDriverFilterSelect(){
+  const drivers = await Auth.loadSupplierDrivers();
+  _drivers = drivers;
+  const sel = document.getElementById('driverFilterSel');
+  if(!sel) return;
+  sel.innerHTML = '<option value="">기사 선택</option>' +
+    drivers.map(d=>`<option value="${d.id}">${d.name} (${d.phone})</option>`).join('');
+}
+
+async function loadDriverDeliveries(){
+  const driverId = document.getElementById('driverFilterSel').value;
+  const el = document.getElementById('driverDeliveryList');
+  const btns = document.getElementById('driverActionBtns');
+  if(!driverId){ el.innerHTML='<div class="empty-state">기사를 선택하세요</div>'; btns.style.display='none'; return; }
+  btns.style.display='flex';
+  el.innerHTML='<div class="loading-wrap"><div class="spinner"></div>불러오는 중...</div>';
+  const deliveries = await Auth.loadDeliveries();
+  const myDeliveries = deliveries.filter(d=>d.driverId===driverId);
+  const driver = _drivers.find(d=>d.id===driverId);
+  if(!myDeliveries.length){ el.innerHTML='<div class="empty-state">배정된 배송이 없습니다</div>'; return; }
+  const ST={assigned:{l:'배정됨',bg:'var(--surface2)',c:'var(--muted)'},shipping:{l:'배송중',bg:'var(--blue-bg)',c:'var(--blue)'},done:{l:'완료',bg:'var(--green-bg)',c:'var(--green)'},issue:{l:'이슈',bg:'var(--red-bg)',c:'var(--red)'}};
+  const total=myDeliveries.reduce((s,d)=>s+Number(d.amount||0),0);
+  const done=myDeliveries.filter(d=>d.status==='done').length;
+  el.innerHTML=`
+    <div style="background:var(--blue-bg);border:.5px solid rgba(40,116,204,.2);border-radius:12px;padding:14px 16px;margin-bottom:12px">
+      <div style="font-size:15px;font-weight:700;color:var(--blue)">${driver?.name||'기사'} 배송 현황</div>
+      <div style="display:flex;gap:16px;margin-top:8px;font-size:13px">
+        <span>전체 <strong>${myDeliveries.length}건</strong></span>
+        <span>완료 <strong style="color:var(--green)">${done}건</strong></span>
+        <span>잔여 <strong style="color:var(--amber)">${myDeliveries.length-done}건</strong></span>
+        <span>총액 <strong style="font-family:var(--mono)">${total.toLocaleString()}원</strong></span>
+      </div>
+    </div>
+    ${myDeliveries.map((d,i)=>{
+      const st=ST[d.status]||ST.assigned;
+      return `<div class="assign-card" style="margin-bottom:10px">
+        <div class="ac-header">
+          <div>
+            <div style="font-size:11px;color:var(--muted)">${i+1}번째 배송</div>
+            <div class="ac-store">${d.storeName||'-'}</div>
+            <div class="ac-addr">${d.address||''}</div>
+            <div class="ac-items">${d.items||''}</div>
+            <div style="font-family:var(--mono);font-size:13px;font-weight:700;margin-top:4px">${Number(d.amount||0).toLocaleString()}원</div>
+          </div>
+          <span class="status-chip" style="background:${st.bg};color:${st.c}">${st.l}</span>
+        </div>
+        <div class="ac-footer">
+          <button class="af-btn" onclick='printOrderSlip(${JSON.stringify({id:d.id,storeName:d.storeName,items:d.items,amount:d.amount,itemDetails:d.itemDetails||[],createdAt:d.createdAt}).replace(/\x27/g,"&#39;")})'>
+            <i class="ti ti-printer"></i>납품서
+          </button>
+          <button class="af-btn blue" onclick="copyDeliveryLink('${d.id}')">
+            <i class="ti ti-link"></i>링크복사
+          </button>
+          ${d.status==='assigned'?`<button class="af-btn green" onclick="startDelivery('${d.id}');setTimeout(loadDriverDeliveries,500)"><i class="ti ti-truck-delivery"></i>배송시작</button>`:''}
+        </div>
+      </div>`;
+    }).join('')}`;
+}
+
+async function printAllDriverSlips(){
+  const driverId=document.getElementById('driverFilterSel').value;
+  if(!driverId){showToast('기사를 선택하세요');return;}
+  const driver=_drivers.find(d=>d.id===driverId);
+  const deliveries=await Auth.loadDeliveries();
+  const list=deliveries.filter(d=>d.driverId===driverId&&d.status!=='done');
+  if(!list.length){showToast('배송 중인 건이 없습니다');return;}
+  const w=window.open('','_blank','width=900,height=700');
+  const now=new Date().toLocaleDateString('ko-KR');
+  const slips=list.map((d,i)=>`
+    <div style="page-break-after:${i<list.length-1?'always':'auto'};padding:30px;max-width:700px;margin:0 auto">
+      <div style="display:flex;justify-content:space-between;margin-bottom:16px">
+        <h2 style="margin:0">납 품 서</h2>
+        <div style="font-size:13px;color:#666">발행일: ${now} | ${i+1}/${list.length}</div>
+      </div>
+      <table style="width:100%;border-collapse:collapse;margin-bottom:14px">
+        <tr><th style="border:1px solid #ddd;padding:8px;background:#f5f5f5;text-align:left">배송기사</th><td style="border:1px solid #ddd;padding:8px">${driver?.name||'-'} (${driver?.phone||'-'})</td>
+            <th style="border:1px solid #ddd;padding:8px;background:#f5f5f5;text-align:left">수신처</th><td style="border:1px solid #ddd;padding:8px"><strong>${d.storeName||'-'}</strong></td></tr>
+        <tr><th style="border:1px solid #ddd;padding:8px;background:#f5f5f5;text-align:left">주소</th><td colspan="3" style="border:1px solid #ddd;padding:8px">${d.address||'-'}</td></tr>
+      </table>
+      <table style="width:100%;border-collapse:collapse;margin-bottom:14px">
+        <thead><tr style="background:#f5f5f5"><th style="border:1px solid #ddd;padding:8px;text-align:left">품목</th><th style="border:1px solid #ddd;padding:8px;text-align:center">수량</th><th style="border:1px solid #ddd;padding:8px;text-align:right">단가</th><th style="border:1px solid #ddd;padding:8px;text-align:right">금액</th></tr></thead>
+        <tbody>${(d.itemDetails||[]).map(it=>`<tr><td style="border:1px solid #ddd;padding:8px">${it.name}</td><td style="border:1px solid #ddd;padding:8px;text-align:center">${it.qty}${it.unit||''}</td><td style="border:1px solid #ddd;padding:8px;text-align:right">${Number(it.price||0).toLocaleString()}원</td><td style="border:1px solid #ddd;padding:8px;text-align:right">${Number((it.price||0)*(it.qty||1)).toLocaleString()}원</td></tr>`).join('')||`<tr><td colspan="4" style="border:1px solid #ddd;padding:8px">${d.items||'-'}</td></tr>`}</tbody>
+      </table>
+      <div style="text-align:right;font-size:16px;font-weight:700;margin-bottom:30px">합계: ${Number(d.amount||0).toLocaleString()}원</div>
+      <div style="display:flex;justify-content:space-between;margin-top:40px">
+        <div style="text-align:center;border-top:1px solid #000;width:150px;padding-top:6px;font-size:13px">공급자 (인)</div>
+        <div style="text-align:center;border-top:1px solid #000;width:150px;padding-top:6px;font-size:13px">수령자 (인)</div>
+      </div>
+    </div>`).join('');
+  w.document.write(`<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><title>${driver?.name} 납품서</title>
+    <style>body{font-family:"Noto Sans KR",sans-serif;margin:0}@media print{.np{display:none}}</style></head><body>
+    <div class="np" style="padding:14px;background:#f5f5f5;display:flex;gap:10px;align-items:center">
+      <strong>${driver?.name||'기사'} 납품서 ${list.length}건</strong>
+      <button onclick="window.print()" style="padding:8px 20px;font-size:14px;cursor:pointer;background:#1a1916;color:#fff;border:none;border-radius:8px">전체 인쇄</button>
+      <button onclick="window.close()" style="padding:8px 14px;font-size:14px;cursor:pointer">닫기</button>
+    </div>${slips}</body></html>`);
+  w.document.close();
+}
+
+function copyDriverLink(){
+  const driverId=document.getElementById('driverFilterSel').value;
+  if(!driverId){showToast('기사를 선택하세요');return;}
+  const driver=_drivers.find(d=>d.id===driverId);
+  const link=`${location.origin}/site_driver.html?driver=${driverId}`;
+  if(navigator.clipboard){
+    navigator.clipboard.writeText(link).then(()=>showToast(`${driver?.name||'기사'} 링크 복사! 카카오톡으로 전송하세요`));
+  } else { prompt('링크를 복사하세요:',link); }
+}
+
 document.addEventListener('firebaseReady', init);
 if(Auth.isFirebaseReady) init();
 else setTimeout(init, 2000);
