@@ -125,15 +125,14 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
     <div id="brandBadge" style="display:none;margin-top:8px;padding:4px 10px;background:rgba(40,116,204,.2);border-radius:6px;font-size:11px;font-weight:700;color:#93c5fd"></div>
   </div>
   <div class="slabel">메인</div>
-  <button class="ni active" onclick="goto('dashboard')"><i class="ti ti-layout-dashboard"></i><span>대시보드</span></button>
-  <button class="ni" onclick="goto('orders')"><i class="ti ti-circles-relation"></i><span>주문 통합 관리</span></button>
+  <button class="ni active" onclick="goto('orders')"><i class="ti ti-circles-relation"></i><span>주문 통합 관리</span></button>
   <button class="ni" onclick="goto('delivery')"><i class="ti ti-truck-delivery"></i><span>배송 관리</span></button>
   <div class="slabel">기준정보</div>
   <button class="ni" onclick="goto('register')"><i class="ti ti-database-plus"></i><span>기준정보 등록</span></button>
   <button class="ni" onclick="goto('partners')"><i class="ti ti-building-factory"></i><span>거래처·납품업체</span></button>
   <button class="ni" onclick="goto('franchises')"><i class="ti ti-building-store"></i><span>가맹점 관리</span></button>
   <div class="slabel">경영</div>
-  <button class="ni" onclick="goto('stats')"><i class="ti ti-chart-bar"></i><span>통계·분석</span></button>
+  <button class="ni" onclick="goto('stats')"><i class="ti ti-chart-bar"></i><span>매출·통계</span></button>
   <button class="ni" onclick="goto('settle')"><i class="ti ti-coin"></i><span>정산 관리</span></button>
   <button class="ni" onclick="goto('notice')"><i class="ti ti-speakerphone"></i><span>공지·레시피</span></button>
   <button class="ni" onclick="goto('settings')"><i class="ti ti-settings"></i><span>설정</span></button>
@@ -152,8 +151,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
     </div>
   </div>
 
-  <!-- ── 대시보드 ── -->
-  <div class="hqp active" id="hqp-dashboard"><div class="content">
+  <div class="hqp" id="hqp-dashboard"><div class="content">
     <div class="kpi-grid">
       <div class="kpi"><div class="kpi-top"><div class="kpi-icon" style="background:var(--blue-bg)"><i class="ti ti-receipt" style="color:var(--blue)"></i></div><span class="kpi-trend trend-up" id="kpi-sale-trend">-</span></div><div class="kpi-val" id="kpi-sale">불러오는 중...</div><div class="kpi-lbl">OKPos 이번달 실매출</div></div>
       <div class="kpi"><div class="kpi-top"><div class="kpi-icon" style="background:var(--green-bg)"><i class="ti ti-shopping-cart" style="color:var(--green)"></i></div><span class="kpi-trend trend-up" id="kpi-cnt-trend">-</span></div><div class="kpi-val" id="kpi-cnt">-</div><div class="kpi-lbl">이번달 총 주문건수</div></div>
@@ -519,13 +517,23 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 
   <!-- 기타 -->
   <!-- ── 주문 통합 관리 ── -->
-  <div class="hqp" id="hqp-orders"><div class="content">
+  <div class="hqp active" id="hqp-orders"><div class="content">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
       <div>
         <div style="font-size:18px;font-weight:700">주문 통합 관리</div>
         <div style="font-size:13px;color:var(--muted);margin-top:2px">가맹점 발주 현황 및 승인 처리</div>
       </div>
-      <button onclick="loadOrders()" style="padding:8px 14px;border-radius:9px;border:.5px solid var(--line);background:var(--surface2);font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:5px"><i class="ti ti-refresh" style="font-size:13px"></i>새로고침</button>
+      <div style="display:flex;align-items:center;gap:10px">
+        <!-- 자동승인 토글 -->
+        <div style="display:flex;align-items:center;gap:8px;padding:8px 14px;border-radius:10px;background:var(--surface2);border:.5px solid var(--line)">
+          <span style="font-size:12px;font-weight:700;color:var(--muted)">자동승인</span>
+          <div id="autoApproveToggle" onclick="toggleAutoApprove()" style="width:40px;height:22px;border-radius:11px;background:var(--line);cursor:pointer;position:relative;transition:background .2s">
+            <div id="autoApproveThumb" style="width:18px;height:18px;border-radius:50%;background:#fff;position:absolute;top:2px;left:2px;transition:left .2s;box-shadow:0 1px 3px rgba(0,0,0,.2)"></div>
+          </div>
+          <span id="autoApproveLabel" style="font-size:11px;font-weight:700;color:var(--muted)">OFF</span>
+        </div>
+        <button onclick="loadOrders()" style="padding:8px 14px;border-radius:9px;border:.5px solid var(--line);background:var(--surface2);font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:5px"><i class="ti ti-refresh" style="font-size:13px"></i>새로고침</button>
+      </div>
     </div>
     <!-- 요약 카드 -->
     <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:16px">
@@ -542,16 +550,23 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
     </div>
   </div></div>
 
-  <!-- ── 통계·분석 ── -->
+  <!-- ── 매출·통계 ── -->
   <div class="hqp" id="hqp-stats"><div class="content">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-      <div><div style="font-size:18px;font-weight:700">통계·분석</div><div style="font-size:13px;color:var(--muted);margin-top:2px">OKPos 매출 기반 분석</div></div>
+      <div><div style="font-size:18px;font-weight:700">매출·통계</div><div style="font-size:13px;color:var(--muted);margin-top:2px">OKPos 매출 기반 분석</div></div>
       <div style="display:flex;gap:8px;align-items:center">
         <select id="statsMonth" onchange="loadStats()" style="padding:7px 12px;border-radius:9px;border:.5px solid var(--line);background:var(--surface2);font-size:12px;font-family:var(--sans)"></select>
         <button onclick="loadStats()" style="padding:8px 14px;border-radius:9px;border:.5px solid var(--line);background:var(--surface2);font-size:12px;font-weight:700;cursor:pointer"><i class="ti ti-refresh" style="font-size:13px"></i></button>
       </div>
     </div>
-    <!-- KPI -->
+    <!-- 이번달 OKPos 매출 요약 -->
+    <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:16px">
+      <div class="kpi" style="padding:14px"><div class="kpi-val" id="kpi-sale" style="font-size:18px">-</div><div class="kpi-lbl">이번달 실매출</div></div>
+      <div class="kpi" style="padding:14px"><div class="kpi-val" id="kpi-cnt" style="font-size:18px">-</div><div class="kpi-lbl">이번달 주문</div></div>
+      <div class="kpi" style="padding:14px"><div class="kpi-val" id="kpi-gst" style="font-size:18px">-</div><div class="kpi-lbl">이번달 고객</div></div>
+      <div class="kpi" style="padding:14px"><div class="kpi-val" id="kpi-shop" style="font-size:18px">-</div><div class="kpi-lbl">수집 가맹점</div></div>
+    </div>
+    <!-- 월별 선택 KPI -->
     <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:16px">
       <div class="kpi" style="padding:14px"><div class="kpi-val" id="st-sale" style="font-size:20px">-</div><div class="kpi-lbl">총 매출</div></div>
       <div class="kpi" style="padding:14px"><div class="kpi-val" id="st-cnt" style="font-size:20px">-</div><div class="kpi-lbl">총 주문</div></div>
@@ -620,20 +635,21 @@ if(_myBrandId){
 // 사이드바 아바타
 const _myName = _session?.name || _session?.businessName || '관리자';
 document.querySelector('.sfooter').innerHTML = `<div style="display:flex;align-items:center;gap:10px"><div style="width:32px;height:32px;border-radius:50%;background:var(--blue-mid);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;flex-shrink:0">${_myName.slice(0,1)}</div><div><div style="font-size:12px;font-weight:500;color:#fff">${_myName}</div><div style="font-size:11px;color:rgba(255,255,255,.4)">${_myBrandName||'본사 관리자'}</div></div></div>`;
-const PAGES = {dashboard:'대시보드',register:'기준정보 등록',partners:'거래처·납품업체 관리',franchises:'가맹점 관리',orders:'주문 통합 관리',delivery:'배송 관리',stats:'통계·분석',settle:'정산 관리',notice:'공지·레시피',settings:'설정'};
+const PAGES = {orders:'주문 통합 관리',register:'기준정보 등록',partners:'거래처·납품업체 관리',franchises:'가맹점 관리',delivery:'배송 관리',stats:'매출·통계',settle:'정산 관리',notice:'공지·레시피',settings:'설정'};
 
 function goto(p){
   Object.keys(PAGES).forEach(k=>{ const el=document.getElementById('hqp-'+k); if(el) el.classList.toggle('active',k===p); });
+  // 대시보드(매출) 페이지도 처리
+  const dash=document.getElementById('hqp-dashboard'); if(dash) dash.classList.remove('active');
   document.querySelectorAll('.ni').forEach(n=>n.classList.remove('active'));
   document.getElementById('ptitle').textContent=PAGES[p]||p;
-  if(p==='dashboard'){ chartsOk=false; initCharts(); }
   if(p==='register') loadReg();
   if(p==='partners') loadPartnersFull();
   if(p==='franchises') loadFranchises();
   if(p==='delivery') loadDelivery();
   if(p==='settings') loadSettings();
   if(p==='orders') loadOrders();
-  if(p==='stats') initStatsMonth(), loadStats();
+  if(p==='stats') { document.getElementById('hqp-stats').classList.add('active'); initStatsMonth(); loadStats(); loadOkposDashboard(); }
   if(p==='settle') loadSettle();
 }
 
@@ -1101,11 +1117,81 @@ async function delPFull(id){ if(!confirm('삭제할까요?')) return; await Auth
 
 // ── 배송 관리 ─────────────────────────────────────────────
 async function loadDelivery(){
-  const list=await Auth.loadDeliveries();
-  const el=document.getElementById('deliveryBody');
-  if(!list.length){ el.innerHTML='<div style="text-align:center;padding:40px;color:var(--dim)">등록된 배송 없음</div>'; return; }
-  const ST={assigned:{l:'배정됨',c:'var(--muted)',bg:'var(--surface2)'},shipping:{l:'배송중',c:'var(--blue)',bg:'var(--blue-bg)'},done:{l:'완료',c:'var(--green)',bg:'var(--green-bg)'},issue:{l:'이슈',c:'var(--red)',bg:'var(--red-bg)'}};
-  el.innerHTML=`<table class="lt"><thead><tr><th>배송처</th><th>기사</th><th>품목</th><th>금액</th><th>상태</th><th>시작</th><th>완료</th></tr></thead><tbody>${list.map(d=>{const s=ST[d.status]||ST.assigned;return`<tr><td><strong>${d.storeName||'-'}</strong><div style="font-size:11px;color:var(--muted)">${d.address||''}</div></td><td>${d.driverName||'미배정'}</td><td style="max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;color:var(--muted)">${d.items||'-'}</td><td style="font-family:var(--mono)">${(d.amount||0).toLocaleString()}원</td><td><span style="font-size:11px;font-weight:700;padding:3px 8px;border-radius:999px;background:${s.bg};color:${s.c}">${s.l}</span></td><td style="font-size:12px;color:var(--muted)">${(d.startedAt||'').slice(11,16)||'-'}</td><td style="font-size:12px;color:var(--muted)">${(d.doneAt||'').slice(11,16)||'-'}</td></tr>`;}).join('')}</tbody></table>`;
+  const [deliveries, ordData, frData] = await Promise.all([
+    Auth.loadDeliveries(),
+    Auth.DB.get('franchise_orders'),
+    Auth.DB.get('hq_franchises'),
+  ]);
+  const orders = Object.values(ordData||{}).sort((a,b)=>(b.createdAt||'').localeCompare(a.createdAt||''));
+  const franchises = Object.values(frData||{});
+  const el = document.getElementById('deliveryBody');
+
+  const ORD_ST = {
+    waiting:   {l:'승인대기', c:'var(--amber)',  bg:'var(--amber-bg)'},
+    confirmed: {l:'승인됨',   c:'var(--blue)',   bg:'var(--blue-bg)'},
+    shipping:  {l:'배송중',   c:'var(--purple)', bg:'var(--purple-bg)'},
+    done:      {l:'배송완료', c:'var(--green)',  bg:'var(--green-bg)'},
+    rejected:  {l:'반려됨',   c:'var(--red)',    bg:'var(--red-bg)'},
+  };
+  const DLV_ST = {
+    assigned: {l:'배정됨', c:'var(--muted)',  bg:'var(--surface2)'},
+    shipping: {l:'배송중', c:'var(--blue)',   bg:'var(--blue-bg)'},
+    done:     {l:'완료',   c:'var(--green)',  bg:'var(--green-bg)'},
+    issue:    {l:'이슈',   c:'var(--red)',    bg:'var(--red-bg)'},
+  };
+
+  if(!orders.length && !deliveries.length){
+    el.innerHTML='<div style="text-align:center;padding:40px;color:var(--dim)">배송 내역 없음</div>';
+    return;
+  }
+
+  el.innerHTML=`<table class="lt"><thead><tr>
+    <th>구분</th><th>가맹점</th><th>품목</th><th>금액</th><th>상태</th><th>기사</th><th>일시</th><th>관리</th>
+  </tr></thead><tbody>`+
+  [...orders.map(o=>{
+    const st=ORD_ST[o.status]||ORD_ST.waiting;
+    return `<tr>
+      <td><span style="font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;background:var(--surface2);color:var(--muted)">발주</span></td>
+      <td><strong>${o.storeName||'-'}</strong></td>
+      <td style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;color:var(--muted)">${o.items||'-'}</td>
+      <td style="font-family:var(--mono)">${Number(o.amount||0).toLocaleString()}원</td>
+      <td><span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:${st.bg};color:${st.c}">${st.l}</span></td>
+      <td style="color:var(--muted);font-size:12px">-</td>
+      <td style="font-size:11px;color:var(--muted)">${(o.createdAt||'').slice(0,16).replace('T',' ')}</td>
+      <td><div style="display:flex;gap:4px;flex-wrap:wrap">
+        ${o.status==='waiting'?`
+          <button class="delbtn" style="background:var(--green-bg);color:var(--green);border-color:rgba(26,122,74,.3)" onclick="approveOrder('${o.id}')">승인</button>
+          <button class="delbtn" style="background:var(--red-bg);color:var(--red);border-color:rgba(192,57,43,.3)" onclick="rejectOrder('${o.id}')">반려</button>
+        `:''}
+      </div></td>
+    </tr>`;
+  }),
+  ...deliveries.map(d=>{
+    const st=DLV_ST[d.status]||DLV_ST.assigned;
+    return `<tr>
+      <td><span style="font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;background:var(--blue-bg);color:var(--blue)">배송</span></td>
+      <td><strong>${d.storeName||'-'}</strong></td>
+      <td style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;color:var(--muted)">${d.items||'-'}</td>
+      <td style="font-family:var(--mono)">${Number(d.amount||0).toLocaleString()}원</td>
+      <td><span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:${st.bg};color:${st.c}">${st.l}</span></td>
+      <td style="font-size:12px">${d.driverName||'미배정'}</td>
+      <td style="font-size:11px;color:var(--muted)">${(d.startedAt||d.createdAt||'').slice(0,16).replace('T',' ')}</td>
+      <td></td>
+    </tr>`;
+  })].join('')+'</tbody></table>';
+}
+
+async function approveOrder(id){
+  await Auth.DB.update('franchise_orders/'+id, {status:'confirmed', confirmedAt:new Date().toISOString()});
+  await loadDelivery();
+  showToast('발주 승인 완료');
+}
+async function rejectOrder(id){
+  const reason = prompt('반려 사유를 입력하세요:');
+  if(reason===null) return;
+  await Auth.DB.update('franchise_orders/'+id, {status:'rejected', rejectedAt:new Date().toISOString(), rejectReason:reason});
+  await loadDelivery();
+  showToast('반려 처리됨');
 }
 
 // ── 가맹점 관리 ───────────────────────────────────────────
@@ -1417,7 +1503,42 @@ async function seedIbaguData(){
   await Promise.all([rMenu(),loadFranchises(),loadSuppliers(),loadRecipes()]);
   showToast('이바구밀면 예시 데이터 등록 완료! 품목 '+menuItems.length+'개·가맹점 '+frData.length+'개·납품업체 '+supData.length+'개');
 }
-// ── 주문 통합 관리 ────────────────────────────────────────
+// ── 자동승인 토글 ─────────────────────────────────────────
+let _autoApprove = false;
+
+async function initAutoApprove(){
+  const cfg = await Auth.DB.get('hq_config/autoApprove') || false;
+  _autoApprove = cfg;
+  updateAutoApproveUI();
+}
+
+function updateAutoApproveUI(){
+  const toggle = document.getElementById('autoApproveToggle');
+  const thumb  = document.getElementById('autoApproveThumb');
+  const label  = document.getElementById('autoApproveLabel');
+  if(!toggle) return;
+  toggle.style.background = _autoApprove ? 'var(--green-mid)' : 'var(--line)';
+  thumb.style.left = _autoApprove ? '20px' : '2px';
+  label.textContent = _autoApprove ? 'ON' : 'OFF';
+  label.style.color = _autoApprove ? 'var(--green)' : 'var(--muted)';
+}
+
+async function toggleAutoApprove(){
+  _autoApprove = !_autoApprove;
+  await Auth.DB.set('hq_config/autoApprove', _autoApprove);
+  updateAutoApproveUI();
+  showToast('자동승인 ' + (_autoApprove ? 'ON - 발주 즉시 자동 승인됩니다' : 'OFF - 수동 승인 모드'));
+  if(_autoApprove) await autoApproveAllWaiting();
+}
+
+async function autoApproveAllWaiting(){
+  const data = await Auth.DB.get('franchise_orders') || {};
+  const waiting = Object.values(data).filter(o=>o.status==='waiting');
+  for(const o of waiting){
+    await Auth.DB.update('franchise_orders/'+o.id, {status:'confirmed', confirmedAt:new Date().toISOString(), autoApproved:true});
+  }
+  if(waiting.length) { await loadOrders(); showToast(waiting.length+'건 자동 승인 완료'); }
+}
 let _ordFilter = 'all';
 const ORD_STATUS = {
   waiting:   {l:'대기중',  c:'var(--amber)',  bg:'var(--amber-bg)'},
@@ -1428,6 +1549,9 @@ const ORD_STATUS = {
 };
 
 async function loadOrders(){
+  await initAutoApprove();
+  // 자동승인 ON이면 대기중 발주 자동 처리
+  if(_autoApprove) await autoApproveAllWaiting();
   const data = await Auth.DB.get('franchise_orders') || {};
   const list = Object.values(data).sort((a,b)=>(b.createdAt||'').localeCompare(a.createdAt||''));
 
@@ -1608,8 +1732,9 @@ async function toggleOrderEnabled(id, enabled){
   await loadSettle();
   showToast(enabled?'주문 허용됨':'주문 중지됨');
 }
-document.addEventListener('firebaseReady', initCharts);
-if(Auth.isFirebaseReady) initCharts();
+document.addEventListener('firebaseReady', loadOrders);
+if(Auth.isFirebaseReady) loadOrders();
+else setTimeout(loadOrders, 2000);
 </script>
 </body>
 </html>
