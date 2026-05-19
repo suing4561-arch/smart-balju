@@ -191,6 +191,8 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 </div>
 
 <div class="toast" id="toast"></div>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <script src="auth.js"></script>
 <script>
 const Auth = window.SmartBaljuAuth;
@@ -297,25 +299,48 @@ async function startDlv(id){
   render();
 }
 
-function openDone(id){ pendingId=id; document.getElementById('doneModal').classList.add('show'); }
+function openDone(id){
+  pendingId=id;
+  const d=deliveries.find(x=>x.id===id);
+  if(d){
+    const titleEl=document.getElementById('doneModalTitle');
+    const subEl=document.getElementById('doneModalSub');
+    if(titleEl) titleEl.textContent=d.storeName||'도착 완료';
+    if(subEl) subEl.textContent=`${d.storeName||'가맹점'} 납품 완료를 확인합니다.`;
+  }
+  document.getElementById('doneModal').classList.add('show');
+}
 function openIssue(id){ pendingId=id; document.getElementById('issueModal').classList.add('show'); }
 
 async function confirmDone(){
-  const d = deliveries.find(x=>x.id===pendingId); if(!d) return;
-  await Auth.markDeliveryDone(pendingId);
+  if(!pendingId) return;
+  const id=pendingId;
+  const d=deliveries.find(x=>x.id===id);
+  if(!d) return;
+  closeModal('doneModal');
+  await Auth.markDeliveryDone(id);
   d.status='done'; d.doneAt=new Date().toISOString();
-  checked.delete(pendingId);
-  closeModal('doneModal'); updateBulkBar();
-  showToast('납품 완료! ✓ 가맹점·본사에 알림 전송됨');
+  checked.delete(id);
+  pendingId='';
+  updateBulkBar();
+  showToast('납품 완료! ✓');
   render();
 }
 
 async function bulkDone(){
-  const ids = [...checked].filter(id=>{ const d=deliveries.find(x=>x.id===id); return d && d.status!=='done'; });
-  if(!ids.length){ showToast('완료할 항목이 없습니다'); return; }
-  await Promise.all(ids.map(id=>Auth.markDeliveryDone(id)));
-  ids.forEach(id=>{ const d=deliveries.find(x=>x.id===id); if(d){d.status='done';d.doneAt=new Date().toISOString();} });
-  checked.clear(); updateBulkBar();
+  const ids=[..._selectedIdsDriver||checked].filter(id=>{
+    const d=deliveries.find(x=>x.id===id);
+    return d&&d.status==='shipping';
+  });
+  if(!ids.length){showToast('배송중인 항목을 선택하세요');return;}
+  if(!confirm(ids.length+'건을 일괄 완료 처리할까요?'))return;
+  for(const id of ids){
+    await Auth.markDeliveryDone(id);
+    const d=deliveries.find(x=>x.id===id);
+    if(d){d.status='done';d.doneAt=new Date().toISOString();}
+    checked.delete(id);
+  }
+  updateBulkBar();
   showToast(ids.length+'건 완료 처리됨 ✓');
   render();
 }

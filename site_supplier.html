@@ -196,15 +196,31 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
         <div class="sub-filters" style="margin-bottom:6px" id="dlvFilters"></div>
         <!-- 가맹점별 탭 -->
         <div class="sub-filters" style="margin-bottom:8px" id="storeFilters"></div>
-        <!-- 전체선택 + 일괄 액션 -->
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px" id="selectAllRow">
-          <label style="display:flex;align-items:center;gap:5px;font-size:12px;font-weight:700;color:var(--muted);cursor:pointer">
+        <!-- 전체선택 + 배송기사 일괄선택 -->
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+          <label style="display:flex;align-items:center;gap:5px;font-size:12px;font-weight:700;color:var(--muted);cursor:pointer;flex-shrink:0">
             <input type="checkbox" id="selectAllChk" onchange="selectAll(this.checked)" style="width:16px;height:16px;accent-color:var(--blue-mid)"> 전체선택
           </label>
+          <button onclick="openBulkDriverPanel()" style="padding:5px 10px;border-radius:7px;border:.5px solid var(--line);background:var(--surface2);font-size:11px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:4px;flex-shrink:0">
+            <i class="ti ti-user-check" style="font-size:12px"></i>기사 일괄배정
+          </button>
           <div class="bulk-bar" id="bulkBar" style="position:static;margin:0;border-radius:9px;padding:6px 10px;display:none;flex:1">
             <span class="bulk-count" id="bulkCount">0건</span>
-            <button class="bulk-btn" onclick="bulkPrint()"><i class="ti ti-printer" style="font-size:12px"></i>일괄출력</button>
-            <button class="bulk-btn" onclick="bulkAssignDriver()"><i class="ti ti-user-check" style="font-size:12px"></i>기사배정</button>
+            <button class="bulk-btn" onclick="bulkPrint()"><i class="ti ti-printer" style="font-size:12px"></i>출력</button>
+          </div>
+        </div>
+        <!-- 기사 일괄배정 패널 (접이식) -->
+        <div id="bulkDriverPanel" style="display:none;background:var(--amber-bg);border:.5px solid rgba(184,92,0,.2);border-radius:11px;padding:12px 14px;margin-bottom:10px">
+          <div style="font-size:12px;font-weight:700;color:var(--amber);margin-bottom:8px"><i class="ti ti-user-check"></i> 배송기사 일괄배정</div>
+          <div class="form-field" style="margin-bottom:8px">
+            <select class="form-select" id="bulkDriverSel2" style="font-size:12px">
+              <option value="">기사 선택</option>
+            </select>
+          </div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:8px">아래 체크박스로 배송 선택 후 저장</div>
+          <div style="display:flex;gap:6px">
+            <button onclick="closeBulkDriverPanel()" class="rb outline" style="flex:1;padding:8px;font-size:12px">취소</button>
+            <button onclick="confirmBulkAssign2()" class="rb amber" style="flex:1;padding:8px;font-size:12px;margin-top:0;background:var(--amber)"><i class="ti ti-check"></i>저장</button>
           </div>
         </div>
         <div id="deliveryList">
@@ -537,7 +553,13 @@ async function loadDeliveries(){
 
 function renderDetail(item){
   const isOrder=item._type==='order';
+  // 주소 찾기 (stores 목록에서)
+  const storeInfo=_stores.find(s=>s.businessName===item.storeName||s.id===item.storeId)||{};
+  const address=item.address||storeInfo.address||'-';
+  const phone=item.phone||storeInfo.phone||'';
   return `<div class="detail-panel">
+    <div class="detail-row"><span class="detail-lbl">가맹점</span><span class="detail-val">${item.storeName||'-'}${phone?` · ${phone}`:''}</span></div>
+    <div class="detail-row"><span class="detail-lbl">주소</span><span class="detail-val" style="text-align:right;font-size:11px">${address}</span></div>
     <div class="detail-row"><span class="detail-lbl">일시</span><span class="detail-val">${(item.createdAt||'').slice(0,16).replace('T',' ')}</span></div>
     <div class="detail-row"><span class="detail-lbl">품목</span><span class="detail-val" style="text-align:right;max-width:220px">${item.items||'-'}</span></div>
     ${!isOrder&&item.driverName?`<div class="detail-row"><span class="detail-lbl">배송기사</span><span class="detail-val">${item.driverName} ${item.driverPhone||''}</span></div>`:''}
@@ -558,7 +580,7 @@ function renderDetail(item){
         </select>
         <button class="act-sm green" onclick="createDeliveryFromOrder('${item.id}')"><i class="ti ti-truck-delivery"></i>배송생성</button>`:''}
       ${!isOrder&&item.status==='assigned'?`<button class="act-sm green" onclick="startDelivery('${item.id}')"><i class="ti ti-truck-delivery"></i>배송시작</button>`:''}
-      <button class="act-sm" onclick='printOrderSlip(${JSON.stringify({id:item.id,storeName:item.storeName,items:item.items,amount:item.amount,itemDetails:item.itemDetails||[],createdAt:item.createdAt,driverName:item.driverName||"",driverPhone:item.driverPhone||""}).replace(/'/g,"&#39;")})'>
+      <button class="act-sm" onclick='printOrderSlip(${JSON.stringify({id:item.id,storeName:item.storeName,address:address,items:item.items,amount:item.amount,itemDetails:item.itemDetails||[],createdAt:item.createdAt,driverName:item.driverName||"",driverPhone:item.driverPhone||""}).replace(/'/g,"&#39;")})'>
         <i class="ti ti-printer"></i>납품서
       </button>
       ${!isOrder?`<button class="act-sm blue" onclick="copyDeliveryLink('${item.id}')"><i class="ti ti-link"></i>링크복사</button>`:''}
@@ -605,7 +627,30 @@ function updateBulkBar(){
   const countEl=document.getElementById('bulkCount');
   if(countEl) countEl.textContent=cnt+'건 선택';
 }
-async function bulkPrint(){
+function openBulkDriverPanel(){
+  const panel=document.getElementById('bulkDriverPanel');
+  panel.style.display='';
+  const sel=document.getElementById('bulkDriverSel2');
+  sel.innerHTML='<option value="">기사 선택</option>'+_drivers.map(d=>`<option value="${d.id}">${d.name} (${d.phone})</option>`).join('');
+}
+function closeBulkDriverPanel(){
+  document.getElementById('bulkDriverPanel').style.display='none';
+}
+async function confirmBulkAssign2(){
+  const driverId=document.getElementById('bulkDriverSel2').value;
+  if(!driverId){showToast('기사를 선택하세요');return;}
+  if(!_selectedIds.size){showToast('배송을 선택하세요 (체크박스)');return;}
+  const driver=_drivers.find(d=>d.id===driverId);
+  for(const id of _selectedIds){
+    await Auth.DB.update('deliveries/'+id,{driverId,driverName:driver?.name||'',driverPhone:driver?.phone||'',updatedAt:new Date().toISOString()});
+  }
+  showToast(`${_selectedIds.size}건 → ${driver?.name} 배정 완료`);
+  _selectedIds.clear();
+  closeBulkDriverPanel();
+  await loadDeliveries();
+}
+
+function bulkPrint(){
   const items=_deliveries.filter(d=>_selectedIds.has(d.id));
   if(!items.length){showToast('배송 항목을 선택하세요');return;}
   const w=window.open('','_blank');
