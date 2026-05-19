@@ -467,13 +467,16 @@ async function ensureStorePool(){
 }
 
 function enrichStoreInfo(item){
-  const store = _storePool.find(s =>
+  let store = _storePool.find(s =>
     s.id === item.storeId ||
     s.storeId === item.storeId ||
     s.businessName === item.storeName ||
     s.name === item.storeName ||
     s.businessNumber === item.businessNumber
   ) || {};
+  if(!item.storeId && !item.storeName && !item.address && _storePool.length === 1) {
+    store = _storePool[0];
+  }
   return {
     ...item,
     storeId: item.storeId || store.id || store.storeId || '',

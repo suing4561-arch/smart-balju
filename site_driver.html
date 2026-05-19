@@ -236,12 +236,15 @@ async function ensureStorePool(){
 function enrichDelivery(d){
   if(!d) return d;
   const order = d.fromOrderId ? (orderMap[d.fromOrderId] || {}) : {};
-  const store = storePool.find(s =>
+  let store = storePool.find(s =>
     s.id === (d.storeId || order.storeId) ||
     s.storeId === (d.storeId || order.storeId) ||
     s.businessName === (d.storeName || order.storeName) ||
     s.name === (d.storeName || order.storeName)
   ) || {};
+  if(!d.storeId && !d.storeName && !d.address && !order.storeId && !order.storeName && storePool.length === 1) {
+    store = storePool[0];
+  }
   return {
     ...d,
     storeId: d.storeId || order.storeId || store.id || store.storeId || '',
