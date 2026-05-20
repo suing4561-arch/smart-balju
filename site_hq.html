@@ -136,6 +136,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
   <button class="ni" onclick="goto('settle')"><i class="ti ti-coin"></i><span>정산 관리</span></button>
   <button class="ni" onclick="goto('notice')"><i class="ti ti-speakerphone"></i><span>공지·레시피</span></button>
   <button class="ni" onclick="goto('settings')"><i class="ti ti-settings"></i><span>설정</span></button>
+  <button class="ni" onclick="goto('migration')" style="background:rgba(184,92,0,.15);color:#fbbf24"><i class="ti ti-database-cog"></i><span>🔧 데이터 마이그레이션</span></button>
   <div class="sfooter"><div style="display:flex;align-items:center;gap:10px"><div style="width:32px;height:32px;border-radius:50%;background:var(--blue-mid);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff">홍</div><div><div style="font-size:12px;font-weight:500;color:#fff">홍길동 이사</div><div style="font-size:11px;color:rgba(255,255,255,.4)">최고 관리자</div></div></div></div>
 </aside>
 
@@ -592,6 +593,55 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
   </div></div>
 
   <div class="hqp" id="hqp-notice"><div class="content"><div style="padding:60px;text-align:center;color:var(--dim)"><i class="ti ti-speakerphone" style="font-size:48px;opacity:.4;display:block;margin-bottom:12px"></i><div style="font-size:18px;font-weight:700;color:var(--muted)">공지·레시피</div><div style="margin-top:6px">다음 업데이트 예정</div></div></div></div>
+
+  <!-- ── 데이터 마이그레이션 (1회용) ── -->
+  <div class="hqp" id="hqp-migration"><div class="content">
+
+    <div style="background:linear-gradient(135deg,#fef3e2 0%,#fff7ed 100%);border:1px solid rgba(184,92,0,.25);border-radius:14px;padding:18px 22px;margin-bottom:16px">
+      <div style="font-size:18px;font-weight:700;color:var(--amber);margin-bottom:6px">🔧 데이터 마이그레이션 (1회용 도구)</div>
+      <div style="font-size:13px;color:var(--muted);line-height:1.6">
+        패치 적용 이전에 만들어진 기존 발주·배송 데이터는 가맹점 정보(상호·사업자번호·주소·전화)가 누락되어 납품서 출력 시 빈칸으로 나옵니다.<br>
+        이 도구는 가맹점 마스터에서 정보를 찾아 기존 발주·배송에 채워넣습니다.<br>
+        <strong style="color:var(--amber)">반드시 먼저 [드라이런(미리보기)]을 실행한 후 결과 확인 → [실제 실행]을 진행하세요.</strong>
+      </div>
+    </div>
+
+    <!-- 현황 카드 -->
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px">
+      <div class="kpi" style="padding:14px"><div class="kpi-val" id="mig-orders-total" style="font-size:20px">-</div><div class="kpi-lbl">발주 총 건수</div></div>
+      <div class="kpi" style="padding:14px"><div class="kpi-val" id="mig-orders-need" style="font-size:20px;color:var(--amber)">-</div><div class="kpi-lbl">발주 스냅샷 누락</div></div>
+      <div class="kpi" style="padding:14px"><div class="kpi-val" id="mig-dlv-total" style="font-size:20px">-</div><div class="kpi-lbl">배송 총 건수</div></div>
+      <div class="kpi" style="padding:14px"><div class="kpi-val" id="mig-dlv-need" style="font-size:20px;color:var(--amber)">-</div><div class="kpi-lbl">배송 스냅샷 누락</div></div>
+    </div>
+
+    <!-- 실행 버튼 -->
+    <div class="card" style="margin-bottom:16px">
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <button onclick="loadMigrationPage()" class="rb outline" style="width:auto;padding:9px 16px;margin-top:0">
+          <i class="ti ti-refresh"></i>현황 새로고침
+        </button>
+        <button onclick="runMigration(true)" class="rb blue" style="width:auto;padding:10px 18px;margin-top:0">
+          <i class="ti ti-eye"></i>🔍 드라이런 (미리보기)
+        </button>
+        <button onclick="runMigration(false)" class="rb amber" style="width:auto;padding:10px 18px;margin-top:0">
+          <i class="ti ti-database-cog"></i>▶ 실제 실행
+        </button>
+        <div style="margin-left:auto;font-size:12px;color:var(--muted)">
+          💡 드라이런으로 먼저 확인 후 실제 실행하세요
+        </div>
+      </div>
+    </div>
+
+    <!-- 결과 로그 -->
+    <div class="card">
+      <div class="ch"><span class="ct">실행 로그</span></div>
+      <div id="mig-log" style="font-family:var(--mono);font-size:12px;line-height:1.7;background:#0f0e0c;color:#d4d4d4;padding:14px 18px;border-radius:10px;max-height:500px;overflow-y:auto;white-space:pre-wrap">
+페이지가 로드되면 현황이 표시됩니다.
+[드라이런(미리보기)] 버튼을 먼저 클릭해 어떤 데이터가 어떻게 바뀔지 확인하세요.
+      </div>
+    </div>
+
+  </div></div>
 </div>
 
 <div id="toast"></div>
@@ -616,7 +666,7 @@ if(_myBrandId){
 // 사이드바 아바타
 const _myName = _session?.name || _session?.businessName || '관리자';
 document.querySelector('.sfooter').innerHTML = `<div style="display:flex;align-items:center;gap:10px"><div style="width:32px;height:32px;border-radius:50%;background:var(--blue-mid);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;flex-shrink:0">${_myName.slice(0,1)}</div><div><div style="font-size:12px;font-weight:500;color:#fff">${_myName}</div><div style="font-size:11px;color:rgba(255,255,255,.4)">${_myBrandName||'본사 관리자'}</div></div></div>`;
-const PAGES = {orders:'주문 통합 관리',register:'기준정보 등록',partners:'거래처·납품업체 관리',franchises:'가맹점 관리',delivery:'배송 관리',stats:'매출·통계',settle:'정산 관리',notice:'공지·레시피',settings:'설정'};
+const PAGES = {orders:'주문 통합 관리',register:'기준정보 등록',partners:'거래처·납품업체 관리',franchises:'가맹점 관리',delivery:'배송 관리',stats:'매출·통계',settle:'정산 관리',notice:'공지·레시피',settings:'설정',migration:'🔧 데이터 마이그레이션'};
 
 function goto(p){
   Object.keys(PAGES).forEach(k=>{ const el=document.getElementById('hqp-'+k); if(el) el.classList.toggle('active',k===p); });
@@ -632,6 +682,7 @@ function goto(p){
   if(p==='orders') loadOrders();
   if(p==='stats') { document.getElementById('hqp-stats').classList.add('active'); initStatsMonth(); loadOkposDashboard(); loadStats(); }
   if(p==='settle') loadSettle();
+  if(p==='migration') loadMigrationPage();
 }
 
 async function switchRegTab(tab) {
@@ -1716,6 +1767,239 @@ async function toggleOrderEnabled(id, enabled){
 document.addEventListener('firebaseReady', loadOrders);
 if(Auth.isFirebaseReady) loadOrders();
 else setTimeout(loadOrders, 2000);
+
+// ────────────────────────────────────────────────────
+//  데이터 마이그레이션 (1회용 도구)
+// ────────────────────────────────────────────────────
+function migLog(msg, type='info'){
+  const el = document.getElementById('mig-log');
+  if(!el) return;
+  const colors = {info:'#d4d4d4', success:'#34d399', warn:'#fbbf24', error:'#f87171', header:'#60a5fa', dim:'#737373'};
+  const prefix = {info:'  ', success:'✅', warn:'⚠️ ', error:'❌', header:'━━', dim:'  '};
+  const time = new Date().toTimeString().slice(0,8);
+  const line = `<span style="color:${colors[type]}">[${time}] ${prefix[type]} ${msg}</span>\n`;
+  el.innerHTML += line;
+  el.scrollTop = el.scrollHeight;
+}
+function migClear(){
+  const el = document.getElementById('mig-log');
+  if(el) el.innerHTML = '';
+}
+
+function findMatchingStore(item, hqList, supList){
+  const allStores = [
+    ...hqList.map(f => ({...f, _src:'hq', businessName: f.name})),
+    ...supList.map(s => ({...s, _src:'sup', name: s.businessName})),
+  ];
+
+  const bizNum = item.storeBusinessNumber || item.businessNumber;
+  if(bizNum){
+    const m = allStores.find(s => s.businessNumber && s.businessNumber === bizNum);
+    if(m) return {store:m, matchedBy:'사업자번호'};
+  }
+
+  if(item.storeId){
+    const m = allStores.find(s => s.id === item.storeId);
+    if(m) return {store:m, matchedBy:'storeId'};
+  }
+
+  if(item.storeName){
+    const m = allStores.find(s =>
+      s.name === item.storeName ||
+      s.businessName === item.storeName
+    );
+    if(m) return {store:m, matchedBy:'이름'};
+  }
+
+  return null;
+}
+
+function needsMigration(item){
+  return !item.storeAddress || item.storeAddress === '';
+}
+
+async function loadMigrationPage(){
+  migClear();
+  migLog('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'header');
+  migLog('데이터 마이그레이션 도구 v1.0', 'header');
+  migLog('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'header');
+  migLog('', 'info');
+  migLog('데이터 로드 중...', 'info');
+
+  try {
+    const [hqData, supData, ordData, dlvData] = await Promise.all([
+      Auth.DB.get('hq_franchises'),
+      Auth.DB.get('supplier_franchises'),
+      Auth.DB.get('franchise_orders'),
+      Auth.DB.get('deliveries'),
+    ]);
+
+    const hqList = Object.values(hqData || {});
+    const supList = Object.values(supData || {});
+    const orders = Object.values(ordData || {});
+    const deliveries = Object.values(dlvData || {});
+
+    migLog(`hq_franchises: ${hqList.length}개`, 'success');
+    migLog(`supplier_franchises: ${supList.length}개`, 'success');
+    migLog(`franchise_orders: ${orders.length}개`, 'success');
+    migLog(`deliveries: ${deliveries.length}개`, 'success');
+    migLog('', 'info');
+
+    const ordersNeed = orders.filter(needsMigration);
+    const dlvsNeed = deliveries.filter(needsMigration);
+
+    document.getElementById('mig-orders-total').textContent = orders.length + '건';
+    document.getElementById('mig-orders-need').textContent = ordersNeed.length + '건';
+    document.getElementById('mig-dlv-total').textContent = deliveries.length + '건';
+    document.getElementById('mig-dlv-need').textContent = dlvsNeed.length + '건';
+
+    migLog(`✨ 발주 ${ordersNeed.length}건, 배송 ${dlvsNeed.length}건이 스냅샷 누락 상태입니다.`, 'warn');
+    if(ordersNeed.length + dlvsNeed.length === 0){
+      migLog('모든 데이터가 이미 스냅샷을 가지고 있습니다. 마이그레이션 불필요.', 'success');
+    } else {
+      migLog('', 'info');
+      migLog('[🔍 드라이런 (미리보기)] 버튼을 클릭해 처리 가능 여부를 먼저 확인하세요.', 'info');
+    }
+  } catch(e) {
+    migLog(`오류: ${e.message}`, 'error');
+    console.error(e);
+  }
+}
+
+async function runMigration(dryRun){
+  if(!dryRun){
+    if(!confirm('⚠️ 실제 데이터를 변경합니다.\n\n반드시 먼저 드라이런으로 결과를 확인하셨나요?\n계속 진행할까요?')){
+      return;
+    }
+  }
+
+  migClear();
+  migLog('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'header');
+  migLog(dryRun ? '🔍 드라이런 모드 (실제 저장 안 함)' : '▶ 실제 실행 모드', 'header');
+  migLog('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'header');
+  migLog('', 'info');
+
+  try {
+    migLog('📥 데이터 로드 중...', 'info');
+    const [hqData, supData, ordData, dlvData] = await Promise.all([
+      Auth.DB.get('hq_franchises'),
+      Auth.DB.get('supplier_franchises'),
+      Auth.DB.get('franchise_orders'),
+      Auth.DB.get('deliveries'),
+    ]);
+    const hqList = Object.values(hqData || {});
+    const supList = Object.values(supData || {});
+    const orders = Object.entries(ordData || {});
+    const deliveries = Object.entries(dlvData || {});
+    migLog(`로드 완료: 가맹점 ${hqList.length+supList.length}개, 발주 ${orders.length}건, 배송 ${deliveries.length}건`, 'success');
+    migLog('', 'info');
+
+    migLog('🔍 발주 데이터 분석 중...', 'header');
+    let ordSkip=0, ordOk=0, ordFail=0;
+    const ordUpdates = {};
+    for(const [orderId, order] of orders){
+      if(!needsMigration(order)){
+        ordSkip++;
+        continue;
+      }
+      const matched = findMatchingStore(order, hqList, supList);
+      if(matched){
+        const store = matched.store;
+        ordUpdates[orderId] = {
+          storeBusinessNumber: store.businessNumber || '',
+          storeAddress: store.address || '',
+          storePhone: store.phone || '',
+          storeOwner: store.owner || '',
+          brandId: store.brandId || order.brandId || '',
+          brandName: store.brandName || order.brandName || '',
+        };
+        ordOk++;
+        migLog(`  ${orderId}: ${order.storeName||'(이름없음)'} → 매칭 (${matched.matchedBy})`, 'dim');
+      } else {
+        ordFail++;
+        migLog(`  ${orderId}: ${order.storeName||'(이름없음)'} → ❌ 매칭 실패`, 'warn');
+      }
+    }
+    migLog(`발주 분석 완료: 스킵 ${ordSkip} / 매칭성공 ${ordOk} / 매칭실패 ${ordFail}`, ordFail?'warn':'success');
+    migLog('', 'info');
+
+    migLog('🔍 배송 데이터 분석 중...', 'header');
+    let dlvSkip=0, dlvOk=0, dlvFail=0;
+    const dlvUpdates = {};
+    for(const [dlvId, dlv] of deliveries){
+      if(!needsMigration(dlv)){
+        dlvSkip++;
+        continue;
+      }
+      const matched = findMatchingStore(dlv, hqList, supList);
+      if(matched){
+        const store = matched.store;
+        dlvUpdates[dlvId] = {
+          storeBusinessNumber: store.businessNumber || '',
+          storeAddress: store.address || '',
+          storePhone: store.phone || '',
+          storeOwner: store.owner || '',
+          brandId: store.brandId || dlv.brandId || '',
+          brandName: store.brandName || dlv.brandName || '',
+          address: store.address || '',
+          phone: store.phone || '',
+        };
+        dlvOk++;
+        migLog(`  ${dlvId}: ${dlv.storeName||'(이름없음)'} → 매칭 (${matched.matchedBy})`, 'dim');
+      } else {
+        dlvFail++;
+        migLog(`  ${dlvId}: ${dlv.storeName||'(이름없음)'} → ❌ 매칭 실패`, 'warn');
+      }
+    }
+    migLog(`배송 분석 완료: 스킵 ${dlvSkip} / 매칭성공 ${dlvOk} / 매칭실패 ${dlvFail}`, dlvFail?'warn':'success');
+    migLog('', 'info');
+
+    if(dryRun){
+      migLog('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'header');
+      migLog('🔍 드라이런 완료. 실제 저장 안 됨.', 'success');
+      migLog(`처리 가능: 발주 ${ordOk}건 + 배송 ${dlvOk}건 = 총 ${ordOk+dlvOk}건`, 'info');
+      if(ordFail+dlvFail > 0){
+        migLog(`⚠️ 매칭 실패 ${ordFail+dlvFail}건은 사업자번호/이름으로 가맹점 마스터에서 찾을 수 없습니다.`, 'warn');
+        migLog('   해당 가맹점이 삭제되었거나 사업자번호가 다른 경우입니다.', 'warn');
+      }
+      migLog('', 'info');
+      migLog('▶ 실제 실행하려면 [실제 실행] 버튼을 클릭하세요.', 'info');
+      return;
+    }
+
+    migLog('💾 Firebase에 저장 중...', 'header');
+    let saved = 0;
+    const totalToSave = Object.keys(ordUpdates).length + Object.keys(dlvUpdates).length;
+
+    for(const [orderId, fields] of Object.entries(ordUpdates)){
+      await Auth.DB.update('franchise_orders/'+orderId, fields);
+      saved++;
+      if(saved % 5 === 0) migLog(`  진행: ${saved}/${totalToSave}`, 'dim');
+    }
+    for(const [dlvId, fields] of Object.entries(dlvUpdates)){
+      await Auth.DB.update('deliveries/'+dlvId, fields);
+      saved++;
+      if(saved % 5 === 0) migLog(`  진행: ${saved}/${totalToSave}`, 'dim');
+    }
+
+    migLog('', 'info');
+    migLog('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'header');
+    migLog(`✅ 마이그레이션 완료!`, 'success');
+    migLog(`발주 ${ordOk}건 + 배송 ${dlvOk}건 = 총 ${saved}건 업데이트`, 'success');
+    if(ordFail+dlvFail > 0){
+      migLog(`⚠️ ${ordFail+dlvFail}건은 매칭 실패로 처리되지 않았습니다.`, 'warn');
+    }
+    migLog('', 'info');
+    migLog('이제 납품업체 화면에서 가맹점/주소가 정상 표시되는지 확인하세요.', 'info');
+    migLog('확인 후 본사 화면의 마이그레이션 메뉴는 제거해도 됩니다.', 'info');
+
+    setTimeout(loadMigrationPage, 1000);
+
+  } catch(e) {
+    migLog(`치명적 오류: ${e.message}`, 'error');
+    console.error(e);
+  }
+}
 </script>
 </body>
 </html>
