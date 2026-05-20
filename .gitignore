@@ -1,9 +1,22 @@
 # 비밀정보 - 절대 커밋하지 말것
 .env
-*.json
-!package.json
+.env.*
+*.env
 
-# 파이썬
+# Firebase / 서비스 계정 키
+firebase-credentials.json
+*-firebase-adminsdk-*.json
+serviceAccountKey*.json
+
+# OKPos 수집 결과
+okpos_sales_*.json
+
+# Node
+node_modules/
+
+# Python
 __pycache__/
 *.pyc
 *.pyo
+.venv/
+venv/
