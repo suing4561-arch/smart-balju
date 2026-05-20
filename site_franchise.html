@@ -879,10 +879,14 @@ async function selectStore(s) {
   const data = await Auth.DB.get('hq_franchises') || {};
   const list = Object.values(data);
 
-  // 매칭 우선순위: id > 사업자번호 > 정확한 이름
-  let fr = list.find(f => f.id === s.id)
+  // 매칭 우선순위: storeId(연결고리) > id > 사업자번호 > 정확한 이름 > 정규화된 이름(공백 제거)
+  const normalize = (s) => (s||'').replace(/\s+/g, '');
+  const targetNormName = normalize(s.name);
+  let fr = (s.data?.storeId && list.find(f => f.id === s.data.storeId))
+        || list.find(f => f.id === s.id)
         || list.find(f => f.businessNumber && s.data?.businessNumber && f.businessNumber === s.data.businessNumber)
-        || list.find(f => f.name === s.name);
+        || list.find(f => f.name === s.name)
+        || list.find(f => normalize(f.name) === targetNormName);
 
   // 가맹점 정보 전체를 최상위에 펼쳐서 _currentStore 구성
   _currentStore = fr ? {
