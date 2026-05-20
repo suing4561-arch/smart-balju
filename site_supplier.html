@@ -519,8 +519,15 @@ async function loadDeliveries(){
     `<button class="sf ${_dlvFilter===k?'active':''}" onclick="_dlvFilter='${k}';loadDeliveries()">${l}</button>`
   ).join('');
 
+  // 이미 배송으로 전환된 발주의 id 수집 (중복 표시 방지)
+  const convertedOrderIds = new Set(
+    dlvList.map(d => d.fromOrderId).filter(Boolean)
+  );
+
   const allItems = [
-    ...orders.map(o=>enrichStoreInfo({...o,_type:'order'})),
+    ...orders
+      .filter(o => !convertedOrderIds.has(o.id))
+      .map(o=>enrichStoreInfo({...o,_type:'order'})),
     ...dlvList.map(d=>enrichStoreInfo({...d,_type:'delivery'}))
   ].sort((a,b)=>(b.createdAt||'').localeCompare(a.createdAt||''));
 
@@ -585,12 +592,15 @@ async function loadDeliveries(){
 
 function renderDetail(item){
   const isOrder=item._type==='order';
-  // 주소 찾기 (stores 목록에서)
   const storeInfo=_stores.find(s=>s.businessName===item.storeName||s.id===item.storeId)||{};
-  const address=item.address||storeInfo.address||'-';
-  const phone=item.phone||storeInfo.phone||'';
+  const address=item.storeAddress||item.address||storeInfo.address||'-';
+  const phone=item.storePhone||item.phone||storeInfo.phone||'';
+  const bizNum=item.storeBusinessNumber||storeInfo.businessNumber||'';
+  const orderNo = isOrder ? item.id : (item.fromOrderId || '-');
   return `<div class="detail-panel">
+    <div class="detail-row"><span class="detail-lbl">주문번호</span><span class="detail-val" style="font-family:var(--mono);font-size:12px;color:var(--blue-mid)">${orderNo}</span></div>
     <div class="detail-row"><span class="detail-lbl">가맹점</span><span class="detail-val">${item.storeName||'-'}${phone?` · ${phone}`:''}</span></div>
+    ${bizNum?`<div class="detail-row"><span class="detail-lbl">사업자번호</span><span class="detail-val" style="font-family:var(--mono);font-size:12px">${bizNum}</span></div>`:''}
     <div class="detail-row"><span class="detail-lbl">주소</span><span class="detail-val" style="text-align:right;font-size:11px">${address}</span></div>
     <div class="detail-row"><span class="detail-lbl">일시</span><span class="detail-val">${(item.createdAt||'').slice(0,16).replace('T',' ')}</span></div>
     <div class="detail-row"><span class="detail-lbl">품목</span><span class="detail-val" style="text-align:right;max-width:220px">${item.items||'-'}</span></div>
@@ -824,7 +834,10 @@ async function loadDriverDeliveries(){
         <i class="ti ti-chevron-${isOpen?'up':'down'}" style="font-size:14px;color:var(--dim);flex-shrink:0"></i>
       </div>
       ${isOpen?`<div class="detail-panel">
-        <div class="detail-row"><span class="detail-lbl">주소</span><span class="detail-val">${d.address||'-'}</span></div>
+        <div class="detail-row"><span class="detail-lbl">주문번호</span><span class="detail-val" style="font-family:var(--mono);font-size:12px;color:var(--blue-mid)">${d.fromOrderId||d.id||'-'}</span></div>
+        <div class="detail-row"><span class="detail-lbl">가맹점</span><span class="detail-val">${d.storeName||'-'}${d.storePhone?' · '+d.storePhone:''}</span></div>
+        ${d.storeBusinessNumber?`<div class="detail-row"><span class="detail-lbl">사업자번호</span><span class="detail-val" style="font-family:var(--mono);font-size:12px">${d.storeBusinessNumber}</span></div>`:''}
+        <div class="detail-row"><span class="detail-lbl">주소</span><span class="detail-val" style="text-align:right;font-size:11px">${d.storeAddress||d.address||'-'}</span></div>
         <div class="detail-row"><span class="detail-lbl">품목</span><span class="detail-val" style="text-align:right">${d.items||'-'}</span></div>
         <div class="detail-actions">
           <button class="act-sm" onclick='printOrderSlip(${JSON.stringify({id:d.id,storeName:d.storeName,address:d.address,items:d.items,amount:d.amount,itemDetails:d.itemDetails||[],createdAt:d.createdAt,driverName:driver?.name||"",driverPhone:driver?.phone||""}).replace(/'/g,"&#39;")})'>

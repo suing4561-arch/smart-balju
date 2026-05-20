@@ -1260,14 +1260,16 @@ async function loadFranchises(){
   const list=Object.values(data).filter(f=>!_myBrandId||f.brandId===_myBrandId);
   const el=document.getElementById('franchiseList');
   if(!list.length){ el.innerHTML='<div style="text-align:center;padding:40px;color:var(--dim)">등록된 가맹점이 없습니다</div>'; return; }
-  el.innerHTML=`<table class="lt"><thead><tr><th>상호명</th><th>점주/연락처</th><th>로그인ID</th><th>한도</th><th>미수금</th><th>주문</th><th>관리</th></tr></thead><tbody>`+
+  el.innerHTML=`<table class="lt"><thead><tr><th>상호명</th><th>사업자번호</th><th>주소</th><th>점주/연락처</th><th>로그인ID</th><th>한도</th><th>미수금</th><th>주문</th><th>관리</th></tr></thead><tbody>`+
     list.map(f=>{
       const limit = Number(f.orderLimit)||2000000;
       const unpaid = Number(f.unpaidAmt)||0;
       const remain = limit - unpaid;
       const enabled = f.orderEnabled !== false && unpaid < limit;
       return `<tr>
-        <td><strong>${f.name}</strong>${f.businessNumber?`<div style="font-size:11px;color:var(--muted)">${f.businessNumber}</div>`:''}</td>
+        <td><strong>${f.name}</strong></td>
+        <td style="font-family:var(--mono);font-size:12px">${f.businessNumber||'-'}</td>
+        <td style="font-size:12px;color:var(--muted);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${f.address||''}">${f.address||'-'}</td>
         <td>${f.owner||'-'}<div style="font-size:11px;color:var(--muted)">${f.phone||''}</div></td>
         <td style="font-family:var(--mono);font-size:12px">${f.loginId||'-'}</td>
         <td style="font-family:var(--mono);font-size:12px">${limit.toLocaleString()}원</td>
@@ -1792,6 +1794,8 @@ function findMatchingStore(item, hqList, supList){
     ...supList.map(s => ({...s, _src:'sup', name: s.businessName})),
   ];
 
+  const normalize = (s) => (s||'').replace(/\s+/g, '').toLowerCase();
+
   const bizNum = item.storeBusinessNumber || item.businessNumber;
   if(bizNum){
     const m = allStores.find(s => s.businessNumber && s.businessNumber === bizNum);
@@ -1809,6 +1813,16 @@ function findMatchingStore(item, hqList, supList){
       s.businessName === item.storeName
     );
     if(m) return {store:m, matchedBy:'이름'};
+  }
+
+  // 이름 정규화 매칭 (공백·대소문자 차이 무시)
+  if(item.storeName){
+    const targetNorm = normalize(item.storeName);
+    const m = allStores.find(s =>
+      normalize(s.name) === targetNorm ||
+      normalize(s.businessName) === targetNorm
+    );
+    if(m) return {store:m, matchedBy:'이름정규화'};
   }
 
   return null;
