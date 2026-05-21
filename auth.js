@@ -208,6 +208,12 @@ async function _ensureMaster() {
 
 async function upsertUser(fields) {
   const uid = fields.uid || genId();
+  if (!fields.uid && fields.loginId) {
+    const allUsers = await loadUsers();
+    if (allUsers.some(u => u.loginId === fields.loginId)) {
+      throw new Error('이미 사용 중인 아이디입니다: ' + fields.loginId);
+    }
+  }
   const existing = await DB.get('users/' + uid) || {};
   const pw = fields.password ? hashPw(fields.password) : existing.passwordHash;
   const user = {
@@ -268,8 +274,10 @@ async function getPermissions(uid) {
 // ── 로그인 ──────────────────────────────────────────────────
 async function login(loginId, password) {
   const users = await loadUsers();
-  const user = users.find(u => u.loginId === loginId);
-  if (!user) return { ok: false, error: '존재하지 않는 아이디입니다.' };
+  const matches = users.filter(u => u.loginId === loginId);
+  if (!matches.length) return { ok: false, error: '존재하지 않는 아이디입니다.' };
+  if (matches.length > 1) console.warn('[auth] loginId 중복 감지:', loginId, matches.length + '개');
+  const user = matches.find(u => u.passwordHash === hashPw(password)) || matches[0];
   if (user.passwordHash !== hashPw(password)) return { ok: false, error: '비밀번호가 틀렸습니다.' };
   if (BLOCKED_LOGIN_STATUSES.includes(user.status)) {
     return { ok: false, error: STATUS_LABELS[user.status] + ' 상태입니다. 관리자에게 문의하세요.' };
