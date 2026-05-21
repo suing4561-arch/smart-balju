@@ -512,7 +512,7 @@ async function loadHqProducts(filterBrandId = ''){
       // prices/ 별도 조회 없이 menus에 저장된 price 직접 사용
       const price = Number(m.price) || 0;
       const unit = m.unit || '개';
-      return { id:m.id, cat, emoji:emojiMap[m.category]||'📦', name:m.name, spec:m.spec||'-', code:m.code||'', supplier:m.partnerName||'-', price, unit, stock:70, minOrder:Number(m.minQty)||1, maxOrder:Number(m.maxQty)||999 };
+      return { id:m.id, cat, emoji:emojiMap[m.category]||'📦', name:m.name, spec:m.spec||'-', code:m.code||'', supplier:m.partnerName||'-', partnerId:m.partnerId||'', partnerName:m.partnerName||'', price, unit, stock:70, minOrder:Number(m.minQty)||1, maxOrder:Number(m.maxQty)||999 };
     });
 
     // 카테고리 탭 구성
@@ -709,6 +709,7 @@ async function submitOrder(){
       id: no,
       items: items.map(i=>i.name+' '+i.qty+i.unit).join(' · '),
       itemDetails: items,
+      supplierIds: [...new Set(items.map(i=>i.partnerId).filter(Boolean))],
       amount: total,
       status: 'waiting',
       storeId:             _currentStore.id,
