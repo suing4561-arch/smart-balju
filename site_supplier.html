@@ -492,7 +492,7 @@ async function createDelivery(){
   let itemsText=_selectedItems.map(x=>`${x.name} ${x.qty}${x.unit}`).join(' · ');
   if(!itemsText){showToast('품목을 추가하세요');return;}
   const amount=_selectedItems.reduce((s,x)=>s+x.price*x.qty,0);
-  await Auth.createDelivery({storeId,storeName:store?.businessName||'',address:store?.address||'',driverId:driverId||'',driverName:driver?.name||'',driverPhone:driver?.phone||'',items:itemsText,itemDetails:[..._selectedItems],amount,note:newNote.value.trim()});
+  await Auth.createDelivery({storeId,storeName:store?.businessName||'',storeBusinessNumber:store?.businessNumber||'',storeAddress:store?.address||'',storePhone:store?.phone||'',storeOwner:store?.owner||'',brandId:store?.brandId||'',brandName:store?.brandName||'',address:store?.address||'',driverId:driverId||'',driverName:driver?.name||'',driverPhone:driver?.phone||'',items:itemsText,itemDetails:[..._selectedItems],amount,note:newNote.value.trim()});
   newStore.value='';newDriver.value='';newNote.value='';_selectedItems=[];renderItemList();
   toggleCollapse('newDeliveryCollapse');
   await loadDeliveries();showToast('배송 생성 완료 · '+amount.toLocaleString()+'원');
@@ -789,7 +789,7 @@ async function createDeliveryFromOrder(orderId){
   const driver=_drivers.find(d=>d.id===driverId);
   await ensureStorePool();
   const store=_storePool.find(f=>f.id===ordData.storeId||f.businessName===ordData.storeName||f.name===ordData.storeName)||{};
-  await Auth.createDelivery({storeId:store.id||ordData.storeId||'',storeName:ordData.storeName||store.businessName||store.name||'',address:ordData.address||store.address||'',driverId:driverId||'',driverName:driver?.name||'',driverPhone:driver?.phone||'',items:ordData.items||'',itemDetails:ordData.itemDetails||[],amount:ordData.amount||0,fromOrderId:orderId});
+  await Auth.createDelivery({storeId:store.id||ordData.storeId||'',storeName:ordData.storeName||store.businessName||store.name||'',storeBusinessNumber:ordData.storeBusinessNumber||store.businessNumber||'',storeAddress:ordData.storeAddress||store.address||'',storePhone:ordData.storePhone||store.phone||'',storeOwner:ordData.storeOwner||store.owner||'',brandId:ordData.brandId||'',brandName:ordData.brandName||'',address:ordData.storeAddress||ordData.address||store.address||'',driverId:driverId||'',driverName:driver?.name||'',driverPhone:driver?.phone||'',items:ordData.items||'',itemDetails:ordData.itemDetails||[],amount:ordData.amount||0,fromOrderId:orderId});
   await Auth.DB.update('franchise_orders/'+orderId,{status:'shipping'});
   await loadDeliveries();showToast('배송 생성 완료!');
 }
