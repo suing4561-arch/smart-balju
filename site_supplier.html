@@ -683,10 +683,58 @@ async function confirmBulkAssign2(){
   if(!driverId){showToast('기사를 선택하세요');return;}
   if(!_selectedIds.size){showToast('배송을 선택하세요 (체크박스)');return;}
   const driver=_drivers.find(d=>d.id===driverId);
+
+  // 현재 화면 데이터에서 선택된 항목들의 실제 데이터 찾기
+  await ensureStorePool();
+  const [ordData, dlvData] = await Promise.all([
+    Auth.DB.get('franchise_orders'),
+    Auth.DB.get('deliveries')
+  ]);
+  const orders = ordData || {};
+  const deliveries = dlvData || {};
+
+  let createdCount = 0, assignedCount = 0;
+
   for(const id of _selectedIds){
-    await Auth.DB.update('deliveries/'+id,{driverId,driverName:driver?.name||'',driverPhone:driver?.phone||'',updatedAt:new Date().toISOString()});
+    if(deliveries[id]){
+      // 이미 배송 데이터 → 기사만 배정
+      await Auth.DB.update('deliveries/'+id, {
+        driverId, driverName:driver?.name||'', driverPhone:driver?.phone||'',
+        updatedAt:new Date().toISOString()
+      });
+      assignedCount++;
+    } else if(orders[id]){
+      // 발주 데이터 → 배송 생성 (발주 정보 전체 복사)
+      const ord = orders[id];
+      const store = _storePool.find(f =>
+        (ord.storeBusinessNumber && f.businessNumber === ord.storeBusinessNumber) ||
+        f.id === ord.storeId ||
+        f.businessName === ord.storeName ||
+        f.name === ord.storeName
+      ) || {};
+      await Auth.createDelivery({
+        storeId:             ord.storeId || store.id || '',
+        storeName:           ord.storeName || store.businessName || store.name || '',
+        storeBusinessNumber: ord.storeBusinessNumber || store.businessNumber || '',
+        storeAddress:        ord.storeAddress || store.address || '',
+        storePhone:          ord.storePhone || store.phone || '',
+        storeOwner:          ord.storeOwner || store.owner || '',
+        brandId:             ord.brandId || '',
+        brandName:           ord.brandName || '',
+        address:             ord.storeAddress || store.address || '',
+        driverId, driverName:driver?.name||'', driverPhone:driver?.phone||'',
+        items:               ord.items || '',
+        itemDetails:         ord.itemDetails || [],
+        amount:              ord.amount || 0,
+        fromOrderId:         id,
+      });
+      await Auth.DB.update('franchise_orders/'+id, {status:'shipping'});
+      createdCount++;
+    }
+    // 둘 다 아니면 무시 (빈 배송 생성 방지)
   }
-  showToast(`${_selectedIds.size}건 → ${driver?.name} 배정 완료`);
+
+  showToast(`배송생성 ${createdCount}건 / 기사배정 ${assignedCount}건 완료`);
   _selectedIds.clear();
   closeBulkDriverPanel();
   await loadDeliveries();
