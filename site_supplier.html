@@ -622,7 +622,7 @@ function renderDetail(item){
         </select>
         <button class="act-sm green" onclick="createDeliveryFromOrder('${item.id}')"><i class="ti ti-truck-delivery"></i>배송생성</button>`:''}
       ${!isOrder&&item.status==='assigned'?`<button class="act-sm green" onclick="startDelivery('${item.id}')"><i class="ti ti-truck-delivery"></i>배송시작</button>`:''}
-      <button class="act-sm" onclick='printOrderSlip(${JSON.stringify({id:item.id,storeName:item.storeName,address:address,items:item.items,amount:item.amount,itemDetails:item.itemDetails||[],createdAt:item.createdAt,driverName:item.driverName||"",driverPhone:item.driverPhone||""}).replace(/'/g,"&#39;")})'>
+      <button class="act-sm" onclick='printOrderSlip(${JSON.stringify({id:item.id,storeName:item.storeName,storeAddress:item.storeAddress||item.address||address||"",storeBusinessNumber:item.storeBusinessNumber||bizNum||"",storePhone:item.storePhone||item.phone||phone||"",storeOwner:item.storeOwner||"",items:item.items,amount:item.amount,itemDetails:item.itemDetails||[],createdAt:item.createdAt,driverName:item.driverName||"",driverPhone:item.driverPhone||""}).replace(/'/g,"&#39;")})'>
         <i class="ti ti-printer"></i>납품서
       </button>
       ${!isOrder?`<button class="act-sm blue" onclick="copyDeliveryLink('${item.id}')"><i class="ti ti-link"></i>링크복사</button>`:''}
@@ -753,19 +753,55 @@ function copyDeliveryLink(id){
 
 // ── 납품서 출력 ───────────────────────────────────────────
 function buildSlipHtml(d,i,total){
-  return `<div style="page-break-after:${i<total-1?'always':'auto'};padding:28px;max-width:680px;margin:0 auto">
-    <div style="display:flex;justify-content:space-between;margin-bottom:14px">
-      <h2 style="margin:0;font-size:20px">납 품 서</h2>
-      <div style="font-size:12px;color:#666">${i+1}/${total} | ${new Date().toLocaleDateString('ko-KR')}</div>
+  const storeName = d.storeName || '-';
+  const storeBiz  = d.storeBusinessNumber || d.businessNumber || '';
+  const storeAddr = d.storeAddress || d.address || '';
+  const storePhone= d.storePhone || d.phone || '';
+  const storeOwner= d.storeOwner || d.owner || '';
+  const driverNm  = d.driverName || '-';
+  const driverPh  = d.driverPhone || '';
+  const supplierNm = (typeof _currentBiz!=='undefined' && _currentBiz?.name) || '';
+  return `<div style="page-break-after:${i<total-1?'always':'auto'};padding:28px;max-width:680px;margin:0 auto;font-family:'Noto Sans KR',sans-serif">
+    <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:14px;border-bottom:2px solid #1a1916;padding-bottom:10px">
+      <h2 style="margin:0;font-size:22px;letter-spacing:8px">납 품 서</h2>
+      <div style="font-size:12px;color:#666;text-align:right">
+        ${i+1}/${total} | ${new Date().toLocaleDateString('ko-KR')}<br>
+        ${supplierNm?`<strong style="color:#1a1916">${supplierNm}</strong>`:''}
+      </div>
     </div>
-    <table style="width:100%;border-collapse:collapse;margin-bottom:12px">
-      <tr><th style="border:1px solid #ddd;padding:7px;background:#f5f5f5;text-align:left;width:80px">수신처</th><td style="border:1px solid #ddd;padding:7px"><strong>${d.storeName||'-'}</strong></td><th style="border:1px solid #ddd;padding:7px;background:#f5f5f5;text-align:left;width:80px">배송기사</th><td style="border:1px solid #ddd;padding:7px">${d.driverName||'-'} ${d.driverPhone||''}</td></tr>
+    <table style="width:100%;border-collapse:collapse;margin-bottom:12px;font-size:12px">
+      <tr>
+        <th style="border:1px solid #ddd;padding:7px;background:#f5f5f5;text-align:left;width:80px">수신처</th>
+        <td style="border:1px solid #ddd;padding:7px"><strong>${storeName}</strong>${storeOwner?` (${storeOwner})`:''}</td>
+        <th style="border:1px solid #ddd;padding:7px;background:#f5f5f5;text-align:left;width:80px">사업자번호</th>
+        <td style="border:1px solid #ddd;padding:7px">${storeBiz||'-'}</td>
+      </tr>
+      <tr>
+        <th style="border:1px solid #ddd;padding:7px;background:#f5f5f5;text-align:left">주소</th>
+        <td style="border:1px solid #ddd;padding:7px" colspan="3">${storeAddr||'-'}</td>
+      </tr>
+      <tr>
+        <th style="border:1px solid #ddd;padding:7px;background:#f5f5f5;text-align:left">연락처</th>
+        <td style="border:1px solid #ddd;padding:7px">${storePhone||'-'}</td>
+        <th style="border:1px solid #ddd;padding:7px;background:#f5f5f5;text-align:left">배송기사</th>
+        <td style="border:1px solid #ddd;padding:7px">${driverNm} ${driverPh}</td>
+      </tr>
     </table>
-    <table style="width:100%;border-collapse:collapse;margin-bottom:12px">
-      <thead><tr style="background:#f5f5f5"><th style="border:1px solid #ddd;padding:7px;text-align:left">품목</th><th style="border:1px solid #ddd;padding:7px;text-align:center;width:60px">수량</th><th style="border:1px solid #ddd;padding:7px;text-align:right;width:90px">단가</th><th style="border:1px solid #ddd;padding:7px;text-align:right;width:90px">금액</th></tr></thead>
-      <tbody>${(d.itemDetails||[]).map(it=>`<tr><td style="border:1px solid #ddd;padding:7px">${it.name}</td><td style="border:1px solid #ddd;padding:7px;text-align:center">${it.qty}${it.unit||''}</td><td style="border:1px solid #ddd;padding:7px;text-align:right">${Number(it.price||0).toLocaleString()}원</td><td style="border:1px solid #ddd;padding:7px;text-align:right">${Number((it.price||0)*(it.qty||1)).toLocaleString()}원</td></tr>`).join('')||`<tr><td colspan="4" style="border:1px solid #ddd;padding:7px">${d.items||'-'}</td></tr>`}</tbody>
+    <table style="width:100%;border-collapse:collapse;margin-bottom:12px;font-size:12px">
+      <thead><tr style="background:#f5f5f5">
+        <th style="border:1px solid #ddd;padding:7px;text-align:left">품목</th>
+        <th style="border:1px solid #ddd;padding:7px;text-align:center;width:60px">수량</th>
+        <th style="border:1px solid #ddd;padding:7px;text-align:right;width:90px">단가</th>
+        <th style="border:1px solid #ddd;padding:7px;text-align:right;width:90px">금액</th>
+      </tr></thead>
+      <tbody>${(d.itemDetails||[]).map(it=>`<tr>
+        <td style="border:1px solid #ddd;padding:7px">${it.name}</td>
+        <td style="border:1px solid #ddd;padding:7px;text-align:center">${it.qty}${it.unit||''}</td>
+        <td style="border:1px solid #ddd;padding:7px;text-align:right">${Number(it.price||0).toLocaleString()}원</td>
+        <td style="border:1px solid #ddd;padding:7px;text-align:right">${Number((it.price||0)*(it.qty||1)).toLocaleString()}원</td>
+      </tr>`).join('')||`<tr><td colspan="4" style="border:1px solid #ddd;padding:7px">${d.items||'-'}</td></tr>`}</tbody>
     </table>
-    <div style="text-align:right;font-size:15px;font-weight:700;margin-bottom:24px">합계: ${Number(d.amount||0).toLocaleString()}원</div>
+    <div style="text-align:right;font-size:16px;font-weight:700;margin-bottom:24px;padding:8px 12px;background:#f5f5f5;border-radius:6px">합계: ${Number(d.amount||0).toLocaleString()}원</div>
     <div style="display:flex;justify-content:space-between;margin-top:36px">
       <div style="text-align:center;border-top:1px solid #000;width:140px;padding-top:5px;font-size:12px">공급자 (인)</div>
       <div style="text-align:center;border-top:1px solid #000;width:140px;padding-top:5px;font-size:12px">수령자 (인)</div>
@@ -840,7 +876,7 @@ async function loadDriverDeliveries(){
         <div class="detail-row"><span class="detail-lbl">주소</span><span class="detail-val" style="text-align:right;font-size:11px">${d.storeAddress||d.address||'-'}</span></div>
         <div class="detail-row"><span class="detail-lbl">품목</span><span class="detail-val" style="text-align:right">${d.items||'-'}</span></div>
         <div class="detail-actions">
-          <button class="act-sm" onclick='printOrderSlip(${JSON.stringify({id:d.id,storeName:d.storeName,address:d.address,items:d.items,amount:d.amount,itemDetails:d.itemDetails||[],createdAt:d.createdAt,driverName:driver?.name||"",driverPhone:driver?.phone||""}).replace(/'/g,"&#39;")})'>
+          <button class="act-sm" onclick='printOrderSlip(${JSON.stringify({id:d.id,storeName:d.storeName,storeAddress:d.storeAddress||d.address||"",storeBusinessNumber:d.storeBusinessNumber||"",storePhone:d.storePhone||"",storeOwner:d.storeOwner||"",items:d.items,amount:d.amount,itemDetails:d.itemDetails||[],createdAt:d.createdAt,driverName:driver?.name||"",driverPhone:driver?.phone||""}).replace(/'/g,"&#39;")})'>
             <i class="ti ti-printer"></i>납품서
           </button>
           <button class="act-sm blue" onclick="copyDeliveryLink('${d.id}')"><i class="ti ti-link"></i>링크복사</button>
