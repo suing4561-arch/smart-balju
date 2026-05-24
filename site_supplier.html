@@ -531,15 +531,42 @@ async function loadDeliveries(){
     ...dlvList.map(d=>enrichStoreInfo({...d,_type:'delivery'}))
   ].sort((a,b)=>(b.createdAt||'').localeCompare(a.createdAt||''));
 
+  // ── 납품업체별 필터링 ──
+  const myPartnerId = _currentBiz?.data?.partnerId || _currentBiz?.id || '';
+
+  let viewItems = allItems;
+  if(myPartnerId){
+    viewItems = allItems
+      .filter(item => {
+        const ids = item.supplierIds && item.supplierIds.length
+          ? item.supplierIds
+          : (item.itemDetails||[]).map(it=>it.partnerId).filter(Boolean);
+        return ids.includes(myPartnerId);
+      })
+      .map(item => {
+        const myItems = (item.itemDetails||[]).filter(it => it.partnerId === myPartnerId);
+        if(myItems.length === 0) return item;
+        const myAmount = myItems.reduce((s,it)=>s + (Number(it.price)||0)*(Number(it.qty)||1), 0);
+        const myItemsText = myItems.map(it=>`${it.name} ${it.qty}${it.unit||''}`).join(' · ');
+        return {
+          ...item,
+          itemDetails: myItems,
+          items: myItemsText,
+          amount: myAmount,
+          _fullAmount: item.amount,
+        };
+      });
+  }
+
   // 가맹점별 탭
-  const storeNames=[...new Set(allItems.map(x=>x.storeName).filter(Boolean))];
+  const storeNames=[...new Set(viewItems.map(x=>x.storeName).filter(Boolean))];
   const storeFiltersEl = document.getElementById('storeFilters');
   if(storeFiltersEl) storeFiltersEl.innerHTML=
     [['all','전체'],...storeNames.map(n=>[n,n.length>6?n.slice(0,6)+'..':n])].map(([k,l])=>
       `<button class="sf ${_storeFilter===k?'active':''}" onclick="_storeFilter='${k}';loadDeliveries()">${l}</button>`
     ).join('');
 
-  const filtered = allItems.filter(item=>{
+  const filtered = viewItems.filter(item=>{
     const statusOk = _dlvFilter==='all' || item.status===_dlvFilter;
     const storeOk = _storeFilter==='all' || item.storeName===_storeFilter;
     return statusOk && storeOk;
@@ -569,12 +596,16 @@ async function loadDeliveries(){
     // 기사 정보
     const driverInfo=item.driverName?` · ${item.driverName}`:(!isOrder&&!item.driverId?' · 기사미배정':'');
 
+    // 주문번호
+    const orderNo=isOrder?item.id:(item.fromOrderId||'-');
+
     return `<div style="display:flex;flex-direction:column;gap:4px;margin-bottom:6px">
       <div class="dlv-row ${chkd?'selected':''}" onclick="toggleDetail('${item.id}')">
         <input type="checkbox" class="dlv-chk" ${chkd?'checked':''} onclick="event.stopPropagation();toggleSelect('${item.id}',this.checked)">
         <div class="dlv-dot" style="background:${stColor}"></div>
         <div class="dlv-left">
           <div class="dlv-store">${item.storeName||'-'}</div>
+          ${orderNo!=='-'?`<div class="dlv-orderno" style="font-size:11px;color:var(--dim);font-weight:600;letter-spacing:0.3px">주문번호 ${orderNo}</div>`:''}
           <div class="dlv-meta">${dateStr} | ${itemSummary}</div>
         </div>
         <div class="dlv-right">
