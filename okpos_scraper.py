@@ -344,15 +344,24 @@ def fetch_menu_sales(session: requests.Session, date_from: str,
         "ss_PAGE_SIZE":  "100",
         "ss_PAGE_NO1":   "1",
         # 나머지 ss_* 필드 — 빈 값으로 전송
-        "ss_LCLS_CD":    "",
-        "ss_MCLS_CD":    "",
-        "ss_SCLS_CD":    "",
-        "ss_PROD_CD":    "",
-        "ss_PROD_NM":    "",
-        "ss_BAR_CD":     "",
+        "ss_LCLS_CD":     "",
+        "ss_MCLS_CD":     "",
+        "ss_SCLS_CD":     "",
+        "ss_SIZE_CLS_CD": "",
+        "ss_PROD_CD":     "",
+        "ss_PROD_NM":     "",
+        "ss_BAR_CD":      "",
+        "ss_SHOP_CD":     "",
+        "ss_VENDOR_CD":   "",
     }
     if token_key:
         payload[token_key] = token_val
+
+    debug_payload = {
+        k: (v[:8] + "..." if k == token_key and len(v) > 8 else v)
+        for k, v in payload.items()
+    }
+    print(f"[디버그] payload 전송:\n{json.dumps(debug_payload, ensure_ascii=False, indent=2)}")
 
     resp = session.post(
         f"{base}/sale/day/ddd.htmlSheetAction",
@@ -365,6 +374,7 @@ def fetch_menu_sales(session: requests.Session, date_from: str,
         timeout=30
     )
     print(f"[상품별 매출 조회] {resp.status_code}, {len(resp.content):,} bytes")
+    print(f"[응답 미리보기] {resp.text[:300]}")
 
     if resp.status_code != 200:
         return None
