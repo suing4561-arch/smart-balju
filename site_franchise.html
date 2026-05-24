@@ -529,24 +529,87 @@ async function loadHqProducts(filterBrandId = ''){
   }
 }
 
-// ── 재고 현황 (소요량 기반) ────────────────────────────────
+// ── 우리 매장 재료 소진 계산 (shop_cd 기반, 이번달 합산) ──
+async function calcMyStockUsage(){
+  const shopCd = _currentStore?.okposShopCd;
+  if(!shopCd) return [];
+
+  const now = new Date();
+  const monthKey = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}`;
+
+  const [allMenuSalesRaw, recipesRaw, menusRaw] = await Promise.all([
+    Auth.DB.get('okpos_menu_sales'),
+    Auth.DB.get('recipes'),
+    Auth.DB.get('menus'),
+  ]);
+
+  // 이번달 + 우리 매장(shopCd) 판매만 합산
+  const saleByMenu = {};
+  for(const [dateKey, dayData] of Object.entries(allMenuSalesRaw || {})){
+    if(!dateKey.startsWith(monthKey)) continue;
+    for(const row of Object.values(dayData || {})){
+      if(row.shop_cd !== shopCd) continue;
+      const nm = (row.prod_nm || '').trim();
+      if(!nm) continue;
+      saleByMenu[nm] = (saleByMenu[nm] || 0) + Number(row.sale_qty || 0);
+    }
+  }
+  if(!Object.keys(saleByMenu).length) return [];
+
+  // 레시피 맵: menuName → {ingredients, threshold}
+  const recipeMap = {};
+  for(const r of Object.values(recipesRaw || {})){
+    if(r.menuName) recipeMap[r.menuName] = { ingredients: r.ingredients || [], threshold: Number(r.threshold) || 80 };
+  }
+
+  // 품목 기준재고 맵
+  const baseStockMap = {};
+  for(const m of Object.values(menusRaw || {})){
+    if(m.name && m.baseStock > 0) baseStockMap[m.name] = { baseStock: m.baseStock, unit: m.unit || '' };
+  }
+  if(!Object.keys(baseStockMap).length) return [];
+
+  // 재료별 소진량 집계
+  const ingUsage = {}, ingThreshold = {}, ingMenuNames = {};
+  for(const [menuNm, saleQty] of Object.entries(saleByMenu)){
+    const recipe = recipeMap[menuNm];
+    if(!recipe) continue;
+    for(const ing of recipe.ingredients){
+      const nm = (ing.name || '').trim();
+      if(!nm) continue;
+      ingUsage[nm] = (ingUsage[nm] || 0) + saleQty * Number(ing.qty || 0);
+      ingThreshold[nm] = recipe.threshold;
+      if(!ingMenuNames[nm]) ingMenuNames[nm] = [];
+      if(!ingMenuNames[nm].includes(menuNm)) ingMenuNames[nm].push(menuNm);
+    }
+  }
+
+  const result = [];
+  for(const ingNm of Object.keys(baseStockMap)){
+    const { baseStock, unit } = baseStockMap[ingNm];
+    const used = ingUsage[ingNm] || 0;
+    const pct  = baseStock > 0 ? used / baseStock * 100 : 0;
+    result.push({ name: ingNm, baseStock, unit, used, pct, threshold: ingThreshold[ingNm] || 80, menus: ingMenuNames[ingNm] || [] });
+  }
+  result.sort((a, b) => b.pct - a.pct);
+  return result;
+}
+
+// ── 재고 현황 로드 ────────────────────────────────────────
 async function loadStockStatus(){
-  const recipes = await Auth.DB.get('recipes') || {};
-  const recipeList = Object.values(recipes);
-  if(!recipeList.length){
-    // 소요량 미등록 시 품목별 기본 재고 표시
-    renderDefaultStock();
+  if(!_currentStore?.okposShopCd){
+    // OKPos 미연결 매장 — 배너 숨기고 기본 화면 유지
+    document.getElementById('stockAlertBanner').style.display = 'none';
+    document.getElementById('stockList').innerHTML = '<div class="empty-state" style="padding:20px;text-align:center;color:var(--dim)">OKPos 매장코드 미연결</div>';
     return;
   }
-  // 소요량 등록된 재료 위주로 재고 표시
-  const stockItems = [];
-  recipeList.forEach(r=>{
-    (r.ingredients||[]).forEach(ing=>{
-      const exist = stockItems.find(x=>x.menuId===ing.menuId);
-      if(!exist) stockItems.push({menuId:ing.menuId, name:ing.name, pct:Math.floor(Math.random()*80+10), threshold:r.threshold||90});
-    });
-  });
-  renderStockItems(stockItems);
+  const items = await calcMyStockUsage();
+  if(!items.length){
+    document.getElementById('stockAlertBanner').style.display = 'none';
+    document.getElementById('stockList').innerHTML = '<div class="empty-state" style="padding:20px;text-align:center;color:var(--dim)">이번달 판매 데이터 없음</div>';
+    return;
+  }
+  renderStockItems(items);
 }
 
 function renderDefaultStock(){
@@ -555,25 +618,30 @@ function renderDefaultStock(){
 }
 
 function renderStockItems(items){
-  const alerts = items.filter(x=>x.pct>=x.threshold);
+  const alerts = items.filter(x => x.pct >= x.threshold);
   const alertEl = document.getElementById('stockAlertBanner');
   const alertText = document.getElementById('stockAlertText');
   if(alerts.length){
-    alertEl.style.display='';
-    alertText.textContent=alerts.map(a=>a.name).join(', ')+' — 재고 '+alerts[0].threshold+'% 이상 소진. 발주를 권고합니다.';
-  } else { alertEl.style.display='none'; }
+    alertEl.style.display = '';
+    const top = alerts[0];
+    const extra = alerts.length > 1 ? ', 외 '+(alerts.length-1)+'건' : '';
+    alertText.textContent = top.name+' '+Number(top.pct).toFixed(1)+'% 소진'+extra+' — 발주가 필요합니다';
+  } else {
+    alertEl.style.display = 'none';
+  }
 
-  const el=document.getElementById('stockList');
+  const el = document.getElementById('stockList');
   if(!items.length){ el.innerHTML='<div class="empty-state">재고 데이터 없음</div>'; return; }
-  el.innerHTML=items.map(item=>{
-    const cls=item.pct>=80?'danger':item.pct>=50?'warn':'ok';
-    const icon=item.pct>=80?'ti-alert-circle':item.pct>=50?'ti-alert-triangle':'ti-circle-check';
-    const color=item.pct>=80?'var(--red)':item.pct>=50?'var(--amber)':'var(--green)';
-    const label=item.pct>=80?'위험':item.pct>=50?'주의':'정상';
+  el.innerHTML = items.map(item => {
+    const pct   = Number(item.pct);
+    const cls   = pct>=80 ? 'danger' : pct>=50 ? 'warn' : 'ok';
+    const icon  = pct>=80 ? 'ti-alert-circle' : pct>=50 ? 'ti-alert-triangle' : 'ti-circle-check';
+    const color = pct>=80 ? 'var(--red)' : pct>=50 ? 'var(--amber)' : 'var(--green)';
+    const label = pct>=80 ? '위험' : pct>=50 ? '주의' : '정상';
     return `<div class="stock-item">
       <div class="stock-icon ${cls}"><i class="ti ${icon}" style="color:${color}"></i></div>
-      <div class="stock-info"><div class="stock-name">${item.name}</div><div class="stock-status ${cls}">${label} — ${item.pct}% 소진</div></div>
-      <div class="stock-bar-wrap"><div class="stock-bar-track"><div class="stock-bar-fill" style="width:${item.pct}%;background:${color}"></div></div><div class="stock-pct">${item.pct}%</div></div>
+      <div class="stock-info"><div class="stock-name">${item.name}</div><div class="stock-status ${cls}">${label} — ${pct.toFixed(1)}% 소진</div></div>
+      <div class="stock-bar-wrap"><div class="stock-bar-track"><div class="stock-bar-fill" style="width:${Math.min(pct,100).toFixed(1)}%;background:${color}"></div></div><div class="stock-pct">${pct.toFixed(1)}%</div></div>
     </div>`;
   }).join('');
   document.getElementById('goto-order-btn-wrap')?.appendChild(
@@ -900,6 +968,7 @@ async function selectStore(s) {
     owner: fr.owner || '',
     brandId: fr.brandId || s.data?.brandId || '',
     brandName: fr.brandName || s.data?.brandName || '',
+    okposShopCd: fr.okposShopCd || '',
     frData: fr,
   } : {
     id: s.id,
@@ -911,6 +980,7 @@ async function selectStore(s) {
     owner: s.data?.owner || '',
     brandId: s.data?.brandId || '',
     brandName: s.data?.brandName || '',
+    okposShopCd: s.data?.okposShopCd || '',
   };
 
   document.getElementById('storeNameText').textContent = _currentStore.name;
@@ -923,9 +993,10 @@ async function selectStore(s) {
   } else {
     loadHqProducts();
   }
+  loadStockStatus();
 }
 
-// 세션 자동 복원
+// 세션 자동 복원 (UI 즉시 반영 — Firebase 불필요 항목만)
 (function() {
   const session = Auth.getSession();
   if(session && session.role === 'franchise') {
@@ -933,9 +1004,39 @@ async function selectStore(s) {
     if(session.brandId) loadHqProducts(session.brandId);
   }
 })();
+
 async function init(){
   await loadHqProducts();
   await loadOsiList();
+
+  // 세션 로그인 후 _currentStore 미설정 → hq_franchises에서 okposShopCd 포함해 복원
+  if(!_currentStore){
+    const session = Auth.getSession();
+    if(session && session.role === 'franchise'){
+      const frData = await Auth.DB.get('hq_franchises') || {};
+      const list = Object.values(frData);
+      const normalize = v => (v||'').replace(/\s+/g,'');
+      const sessName = session.businessName || session.name || '';
+      const sessBiz  = session.businessNumber || '';
+      const fr = (sessBiz && list.find(f => f.businessNumber === sessBiz))
+              || list.find(f => f.name === sessName)
+              || list.find(f => normalize(f.name) === normalize(sessName));
+      if(fr){
+        _currentStore = {
+          id: fr.id, name: fr.name, businessName: fr.name,
+          businessNumber: fr.businessNumber || '',
+          address: fr.address || '', phone: fr.phone || '', owner: fr.owner || '',
+          brandId: fr.brandId || session.brandId || '',
+          brandName: fr.brandName || session.brandName || '',
+          okposShopCd: fr.okposShopCd || '',
+          frData: fr,
+        };
+        document.getElementById('storeNameText').textContent = fr.name;
+      }
+    }
+  }
+
+  await loadStockStatus();
 }
 document.addEventListener('firebaseReady', init);
 if(Auth.isFirebaseReady) init();

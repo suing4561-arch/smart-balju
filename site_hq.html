@@ -132,6 +132,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
   <button class="ni" onclick="goto('partners')"><i class="ti ti-building-factory"></i><span>거래처·납품업체</span></button>
   <button class="ni" onclick="goto('franchises')"><i class="ti ti-building-store"></i><span>가맹점 관리</span></button>
   <div class="slabel">경영</div>
+  <button class="ni" onclick="goto('stock')"><i class="ti ti-chart-pie"></i><span>재고 소진 현황</span></button>
   <button class="ni" onclick="goto('stats')"><i class="ti ti-chart-bar"></i><span>매출·통계</span></button>
   <button class="ni" onclick="goto('settle')"><i class="ti ti-coin"></i><span>정산 관리</span></button>
   <button class="ni" onclick="goto('notice')"><i class="ti ti-speakerphone"></i><span>공지·레시피</span></button>
@@ -259,6 +260,10 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
               <div class="fl"><div class="flb">공급단가 (원) *</div><input class="fi" id="mPrice" type="number" placeholder="0" min="0"></div>
               <div class="fl"><div class="flb">최소주문수량</div><input class="fi" id="mMinQty" type="number" placeholder="1" min="1"></div>
               <div class="fl"><div class="flb">최대주문수량</div><input class="fi" id="mMaxQty" type="number" placeholder="999" min="1"></div>
+            </div>
+            <div class="fl" style="margin-top:2px">
+              <div class="flb">기준재고 (발주 1회 입고량)</div>
+              <input class="fi" id="mBaseStock" type="number" placeholder="0 (예: 50000)" min="0">
             </div>
 
             <button class="rb green" id="menuSaveBtn" onclick="saveMenu()"><i class="ti ti-plus"></i>품목·가격 등록</button>
@@ -425,7 +430,10 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
           <div class="fl"><div class="flb">상호명 *</div><input class="fi" id="frName" placeholder="부산 수영구 광안점"></div>
           <div class="fl"><div class="flb">사업자번호</div><input class="fi" id="frBiz" placeholder="000-00-00000"></div>
         </div>
-        <div class="fl"><div class="flb">주소 *</div><input class="fi" id="frAddr" placeholder="부산 수영구 광안해변로 263"></div>
+        <div class="two-col">
+          <div class="fl"><div class="flb">주소 *</div><input class="fi" id="frAddr" placeholder="부산 수영구 광안해변로 263"></div>
+          <div class="fl"><div class="flb">OKPos 매장코드</div><input class="fi" id="frShopCd" placeholder="예: N46778"></div>
+        </div>
         <div class="two-col">
           <div class="fl"><div class="flb">점주명</div><input class="fi" id="frOwner" placeholder="홍길동"></div>
           <div class="fl"><div class="flb">연락처</div><input class="fi" id="frPhone" placeholder="051-000-0000"></div>
@@ -642,6 +650,43 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
     </div>
 
   </div></div>
+
+  <!-- ── 재고 소진 현황 ─────────────────────────────── -->
+  <div class="hqp" id="hqp-stock"><div class="content">
+    <div class="card">
+      <div class="ch" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <span class="ct">재고 소진 현황</span>
+        <div style="display:flex;align-items:center;gap:8px;margin-left:auto;flex-wrap:wrap">
+          <input type="date" id="stockDate" class="fi" style="width:140px;padding:5px 10px;font-size:12px">
+          <button class="rb" onclick="loadStockView()" style="font-size:12px;padding:6px 14px"><i class="ti ti-refresh"></i> 조회</button>
+          <button class="rb" onclick="injectTestData()" style="font-size:12px;padding:6px 14px;background:var(--surface2);color:var(--dim)"><i class="ti ti-test-pipe"></i> 테스트</button>
+        </div>
+      </div>
+      <div id="stock-summary" style="display:flex;gap:12px;flex-wrap:wrap;padding:0 16px 12px"></div>
+    </div>
+
+    <div class="card" style="padding-bottom:16px">
+      <div style="padding:0 16px 8px;font-size:11px;font-weight:700;color:var(--dim)">재료별 소진 현황</div>
+      <div id="stock-table-wrap" style="overflow-x:auto">
+        <table class="lt" id="stock-table">
+          <thead>
+            <tr>
+              <th>재료명</th>
+              <th style="text-align:right">기준재고</th>
+              <th style="text-align:right">소진량</th>
+              <th style="text-align:right">소진율</th>
+              <th>상태</th>
+              <th>관련 메뉴</th>
+            </tr>
+          </thead>
+          <tbody id="stock-tbody">
+            <tr><td colspan="6" class="empty">날짜를 선택하고 조회하세요</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div></div>
+
 </div>
 
 <div id="toast"></div>
@@ -666,7 +711,7 @@ if(_myBrandId){
 // 사이드바 아바타
 const _myName = _session?.name || _session?.businessName || '관리자';
 document.querySelector('.sfooter').innerHTML = `<div style="display:flex;align-items:center;gap:10px"><div style="width:32px;height:32px;border-radius:50%;background:var(--blue-mid);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;flex-shrink:0">${_myName.slice(0,1)}</div><div><div style="font-size:12px;font-weight:500;color:#fff">${_myName}</div><div style="font-size:11px;color:rgba(255,255,255,.4)">${_myBrandName||'본사 관리자'}</div></div></div>`;
-const PAGES = {orders:'주문 통합 관리',register:'기준정보 등록',partners:'거래처·납품업체 관리',franchises:'가맹점 관리',delivery:'배송 관리',stats:'매출·통계',settle:'정산 관리',notice:'공지·레시피',settings:'설정',migration:'🔧 데이터 마이그레이션'};
+const PAGES = {orders:'주문 통합 관리',register:'기준정보 등록',partners:'거래처·납품업체 관리',franchises:'가맹점 관리',delivery:'배송 관리',stock:'재고 소진 현황',stats:'매출·통계',settle:'정산 관리',notice:'공지·레시피',settings:'설정',migration:'🔧 데이터 마이그레이션'};
 
 function goto(p){
   Object.keys(PAGES).forEach(k=>{ const el=document.getElementById('hqp-'+k); if(el) el.classList.toggle('active',k===p); });
@@ -680,6 +725,7 @@ function goto(p){
   if(p==='delivery') loadDelivery();
   if(p==='settings') loadSettings();
   if(p==='orders') loadOrders();
+  if(p==='stock') loadStockView();
   if(p==='stats') { document.getElementById('hqp-stats').classList.add('active'); initStatsMonth(); loadOkposDashboard(); loadStats(); }
   if(p==='settle') loadSettle();
   if(p==='migration') loadMigrationPage();
@@ -962,6 +1008,7 @@ async function resetMenuForm(){
   _editMenuId='';
   mName.value=mSpec.value=mUnit.value=mPrice.value=mMinQty.value=mMaxQty.value='';
   mCat.value=''; mPartner.value='';
+  document.getElementById('mBaseStock').value='';
   document.getElementById('menuSaveBtn').innerHTML='<i class="ti ti-plus"></i>품목·가격 등록';
   await autoNextSeq();
   mName.focus();
@@ -989,17 +1036,18 @@ async function saveMenu(){
   const finalBrandName = _myBrandName || (bOpt.text.split('] ')[1]||'');
 
   if(_editMenuId){
-    await Auth.updateMenu(_editMenuId,{name:mName.value,category:mCat.value,spec:mSpec.value,unit:mUnit.value,partnerId:pSel.value,partnerName:pOpt.text.split('] ')[1]||'',brandId:bSel.value,brandName:bOpt.text.split('] ')[1]||'',price:Number(mPrice.value),minQty:Number(mMinQty.value)||1,maxQty:Number(mMaxQty.value)||999,code});
+    await Auth.updateMenu(_editMenuId,{name:mName.value,category:mCat.value,spec:mSpec.value,unit:mUnit.value,partnerId:pSel.value,partnerName:pOpt.text.split('] ')[1]||'',brandId:bSel.value,brandName:bOpt.text.split('] ')[1]||'',price:Number(mPrice.value),minQty:Number(mMinQty.value)||1,maxQty:Number(mMaxQty.value)||999,code,baseStock:Number(document.getElementById('mBaseStock').value)||0});
     _editMenuId=''; document.getElementById('menuSaveBtn').innerHTML='<i class="ti ti-plus"></i>품목·가격 등록';
     showToast('수정 완료 ('+code+')');
   } else {
     const existing = await Auth.loadMenus();
     if(existing.find(m=>m.code===code)){ showToast('코드 '+code+' 는 이미 사용 중입니다. 일련번호를 변경하세요'); return; }
-    await Auth.registerMenu({code,name:mName.value,category:mCat.value,spec:mSpec.value,unit:mUnit.value,partnerId:pSel.value,partnerName:pOpt.text.split('] ')[1]||'',brandId:finalBrandId,brandName:finalBrandName,price:Number(mPrice.value),minQty:Number(mMinQty.value)||1,maxQty:Number(mMaxQty.value)||999});
+    await Auth.registerMenu({code,name:mName.value,category:mCat.value,spec:mSpec.value,unit:mUnit.value,partnerId:pSel.value,partnerName:pOpt.text.split('] ')[1]||'',brandId:finalBrandId,brandName:finalBrandName,price:Number(mPrice.value),minQty:Number(mMinQty.value)||1,maxQty:Number(mMaxQty.value)||999,baseStock:Number(document.getElementById('mBaseStock').value)||0});
     showToast('등록 완료 ('+code+')');
   }
   mName.value=mSpec.value=mUnit.value=mPrice.value=mMinQty.value=mMaxQty.value='';
   mCat.value=''; mPartner.value=''; mSeq.value='000001';
+  document.getElementById('mBaseStock').value='';
   updateCodePreview(); await rMenu(); await autoNextSeq();
 }
 
@@ -1028,6 +1076,7 @@ async function editMenu(id){
   mName.value=m.name||''; mCat.value=m.category||''; mSpec.value=m.spec||'';
   mUnit.value=m.unit||''; mPrice.value=m.price||'';
   mMinQty.value=m.minQty||1; mMaxQty.value=m.maxQty||999;
+  document.getElementById('mBaseStock').value=m.baseStock||0;
   if(m.code){ mSeq.value=m.code.slice(4)||'01'; }
   // 거래처/브랜드 선택
   if(m.partnerId){ mPartner.value=m.partnerId; }
@@ -1233,7 +1282,7 @@ function openFranchiseForm(reset=true){
   document.getElementById('franchiseForm').style.display='';
 }
 function closeFranchiseForm(){ document.getElementById('franchiseForm').style.display='none'; _editFrId=''; }
-function clearFrForm(){ ['frName','frBiz','frAddr','frPhone','frOwner','frLoginId','frLoginPw'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';}); }
+function clearFrForm(){ ['frName','frBiz','frAddr','frPhone','frOwner','frLoginId','frLoginPw','frShopCd'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';}); }
 
 async function saveFranchise(){
   if(!frName.value.trim()||!frAddr.value.trim()){ showToast('상호명과 주소를 입력하세요'); return; }
@@ -1242,12 +1291,14 @@ async function saveFranchise(){
   const loginPw=document.getElementById('frLoginPw').value.trim();
   const orderLimit=Number(document.getElementById('frLimit').value)||2000000;
   const unpaidAmt=Number(document.getElementById('frUnpaid').value)||0;
+  const shopCd = document.getElementById('frShopCd').value.trim();
   await Auth.DB.set('hq_franchises/'+id,{
     id, name:frName.value, businessNumber:frBiz.value,
     address:frAddr.value, phone:frPhone.value, owner:frOwner.value,
     ...(loginId&&{loginId}), ...(loginPw&&{loginPw}),
+    okposShopCd: shopCd,
     orderLimit, unpaidAmt,
-    orderEnabled: unpaidAmt < orderLimit, // 한도 미초과 시 주문 가능
+    orderEnabled: unpaidAmt < orderLimit,
     brandId:_myBrandId, brandName:_myBrandName,
     status:'active', createdAt:new Date().toISOString()
   });
@@ -1260,7 +1311,7 @@ async function loadFranchises(){
   const list=Object.values(data).filter(f=>!_myBrandId||f.brandId===_myBrandId);
   const el=document.getElementById('franchiseList');
   if(!list.length){ el.innerHTML='<div style="text-align:center;padding:40px;color:var(--dim)">등록된 가맹점이 없습니다</div>'; return; }
-  el.innerHTML=`<table class="lt"><thead><tr><th>상호명</th><th>사업자번호</th><th>주소</th><th>점주/연락처</th><th>로그인ID</th><th>한도</th><th>미수금</th><th>주문</th><th>관리</th></tr></thead><tbody>`+
+  el.innerHTML=`<table class="lt"><thead><tr><th>상호명</th><th>사업자번호</th><th>주소</th><th>점주/연락처</th><th>로그인ID</th><th>OKPos코드</th><th>한도</th><th>미수금</th><th>주문</th><th>관리</th></tr></thead><tbody>`+
     list.map(f=>{
       const limit = Number(f.orderLimit)||2000000;
       const unpaid = Number(f.unpaidAmt)||0;
@@ -1272,6 +1323,7 @@ async function loadFranchises(){
         <td style="font-size:12px;color:var(--muted);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${f.address||''}">${f.address||'-'}</td>
         <td>${f.owner||'-'}<div style="font-size:11px;color:var(--muted)">${f.phone||''}</div></td>
         <td style="font-family:var(--mono);font-size:12px">${f.loginId||'-'}</td>
+        <td style="font-family:var(--mono);font-size:12px">${f.okposShopCd?`<span style="color:var(--blue);font-weight:700">${f.okposShopCd}</span>`:`<span style="color:var(--dim)">미연결</span>`}</td>
         <td style="font-family:var(--mono);font-size:12px">${limit.toLocaleString()}원</td>
         <td>
           <div style="font-family:var(--mono);font-size:12px;color:${unpaid>0?'var(--red)':'var(--green)'};font-weight:700">${unpaid.toLocaleString()}원</div>
@@ -1301,6 +1353,7 @@ async function editFranchise(id){
   frPhone.value=f.phone||''; frOwner.value=f.owner||'';
   document.getElementById('frLoginId').value=f.loginId||'';
   document.getElementById('frLoginPw').value='';
+  document.getElementById('frShopCd').value=f.okposShopCd||'';
   document.getElementById('frLimit').value=f.orderLimit||2000000;
   document.getElementById('frUnpaid').value=f.unpaidAmt||0;
   document.getElementById('frSaveBtn').innerHTML='<i class="ti ti-pencil"></i>가맹점 수정 저장';
@@ -2013,6 +2066,193 @@ async function runMigration(dryRun){
     migLog(`치명적 오류: ${e.message}`, 'error');
     console.error(e);
   }
+}
+
+// ── 재고 소진 현황 ────────────────────────────────────────
+async function calcStockUsage(dateStr){
+  const [salesRaw, recipesRaw, menusRaw] = await Promise.all([
+    Auth.DB.get('okpos_menu_sales/' + dateStr.replace(/-/g, '')),
+    Auth.DB.get('recipes'),
+    Auth.DB.get('menus'),
+  ]);
+
+  const sales   = Object.values(salesRaw   || {});   // [{prod_nm, sale_qty, shop_cd, ...}]
+  const recipes = Object.values(recipesRaw || {});   // [{menuName, ingredients:[{name, qty}]}]
+  const menus   = Object.values(menusRaw   || {});   // [{name, unit, baseStock, ...}]
+
+  // 품목명 → baseStock 맵
+  const baseStockMap = {};
+  for(const m of menus){
+    if(m.name && m.baseStock > 0) baseStockMap[m.name] = { baseStock: m.baseStock, unit: m.unit || '' };
+  }
+
+  // 레시피명 → 재료 배열 맵
+  const recipeMap = {};
+  for(const r of recipes){
+    if(r.menuName) recipeMap[r.menuName] = r.ingredients || [];
+  }
+
+  // OKPos 메뉴명 → 판매수량 합산 (복수 매장 합계)
+  const saleByMenu = {};
+  for(const s of sales){
+    const nm = (s.prod_nm || '').trim();
+    if(!nm) continue;
+    saleByMenu[nm] = (saleByMenu[nm] || 0) + Number(s.sale_qty || 0);
+  }
+
+  // 재료별 소진량 집계
+  const ingUsage = {};
+  for(const [menuNm, saleQty] of Object.entries(saleByMenu)){
+    const ings = recipeMap[menuNm];
+    if(!ings) continue;
+    for(const ing of ings){
+      const ingNm = (ing.name || '').trim();
+      if(!ingNm) continue;
+      ingUsage[ingNm] = (ingUsage[ingNm] || 0) + saleQty * Number(ing.qty || 0);
+      if(!ingUsage[ingNm + '__menus']) ingUsage[ingNm + '__menus'] = new Set();
+      ingUsage[ingNm + '__menus'].add(menuNm);
+    }
+  }
+
+  // 결과 배열 조합
+  const result = [];
+  for(const ingNm of Object.keys(baseStockMap)){
+    const { baseStock, unit } = baseStockMap[ingNm];
+    const used   = ingUsage[ingNm] || 0;
+    const rate   = baseStock > 0 ? (used / baseStock * 100) : 0;
+    const menus  = ingUsage[ingNm + '__menus'] ? [...ingUsage[ingNm + '__menus']] : [];
+    result.push({ name: ingNm, baseStock, unit, used, rate, menus });
+  }
+  // 소진율 내림차순
+  result.sort((a, b) => b.rate - a.rate);
+  return {
+    rows: result,
+    salesEmpty: sales.length === 0,
+    hasConfig: Object.keys(baseStockMap).length > 0,
+  };
+}
+
+async function loadStockView(){
+  const dateInput = document.getElementById('stockDate');
+  if(!dateInput.value){
+    // 기본값: 오늘
+    const today = new Date();
+    dateInput.value = today.toISOString().slice(0,10);
+  }
+  const dateStr = dateInput.value;
+
+  document.getElementById('stock-tbody').innerHTML = '<tr><td colspan="6" class="empty">불러오는 중…</td></tr>';
+  document.getElementById('stock-summary').innerHTML = '';
+
+  const { rows, salesEmpty, hasConfig } = await calcStockUsage(dateStr);
+
+  if(!rows.length){
+    const msg = salesEmpty
+      ? '해당 날짜 OKPos 판매 데이터가 없습니다'
+      : '레시피(소요량) 또는 품목 기준재고가 등록되지 않았습니다';
+    document.getElementById('stock-tbody').innerHTML = `<tr><td colspan="6" class="empty">${msg}</td></tr>`;
+    return;
+  }
+
+  const warn  = rows.filter(r => r.rate >= 80 && r.rate < 100);
+  const crit  = rows.filter(r => r.rate >= 100);
+  const ok    = rows.filter(r => r.rate < 80);
+
+  document.getElementById('stock-summary').innerHTML = `
+    <div style="flex:1;min-width:100px;padding:10px 14px;border-radius:10px;background:var(--red-bg);text-align:center">
+      <div style="font-size:22px;font-weight:800;color:var(--red)">${crit.length}</div>
+      <div style="font-size:11px;color:var(--red);font-weight:600;margin-top:2px">소진 초과 (100%↑)</div>
+    </div>
+    <div style="flex:1;min-width:100px;padding:10px 14px;border-radius:10px;background:var(--amber-bg);text-align:center">
+      <div style="font-size:22px;font-weight:800;color:var(--amber)">${warn.length}</div>
+      <div style="font-size:11px;color:var(--amber);font-weight:600;margin-top:2px">발주 권고 (80%↑)</div>
+    </div>
+    <div style="flex:1;min-width:100px;padding:10px 14px;border-radius:10px;background:var(--green-bg);text-align:center">
+      <div style="font-size:22px;font-weight:800;color:var(--green)">${ok.length}</div>
+      <div style="font-size:11px;color:var(--green);font-weight:600;margin-top:2px">정상</div>
+    </div>`;
+
+  document.getElementById('stock-tbody').innerHTML = rows.map(r => {
+    const pct = r.rate.toFixed(1);
+    let badge, barColor;
+    if(r.rate >= 100){
+      badge = `<span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:999px;background:var(--red-bg);color:var(--red)">소진초과</span>`;
+      barColor = 'var(--red)';
+    } else if(r.rate >= 80){
+      badge = `<span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:999px;background:var(--amber-bg);color:var(--amber)">발주권고</span>`;
+      barColor = 'var(--amber)';
+    } else {
+      badge = `<span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:999px;background:var(--green-bg);color:var(--green)">정상</span>`;
+      barColor = 'var(--green)';
+    }
+    const barW = Math.min(r.rate, 100).toFixed(1);
+    return `<tr>
+      <td><strong>${r.name}</strong></td>
+      <td style="font-family:var(--mono);text-align:right">${r.baseStock.toLocaleString()} ${r.unit}</td>
+      <td style="font-family:var(--mono);text-align:right">${r.used.toLocaleString(undefined,{maximumFractionDigits:2})} ${r.unit}</td>
+      <td style="text-align:right">
+        <div style="display:flex;align-items:center;gap:6px;justify-content:flex-end">
+          <div style="width:60px;height:6px;border-radius:3px;background:var(--surface2);overflow:hidden">
+            <div style="width:${barW}%;height:100%;background:${barColor};border-radius:3px"></div>
+          </div>
+          <span style="font-family:var(--mono);font-weight:700;color:${barColor}">${pct}%</span>
+        </div>
+      </td>
+      <td>${badge}</td>
+      <td style="font-size:11px;color:var(--dim)">${r.menus.join(', ') || '-'}</td>
+    </tr>`;
+  }).join('');
+}
+
+async function injectTestData(){
+  if(!confirm(
+    '테스트용 데이터(판매·메뉴·레시피) 3종을 주입합니다.\n' +
+    'TEST_ 접두사 항목은 나중에 Firebase 콘솔에서 삭제하세요.\n\n' +
+    '예상 결과: 밀면면 소진율 90% (발주권고)\n계속할까요?'
+  )) return;
+
+  const today = new Date().toISOString().slice(0,10).replace(/-/g,'');
+
+  // 1. okpos_menu_sales/{오늘날짜}/ — 한 매장 N46778, 2개 메뉴
+  const salesUpdate = {
+    'N46778_밀면_0':    {prod_nm:'밀면',    sale_qty:120, shop_cd:'N46778', shop_nm:'1984 이바구밀면 서면점', sale_amt:960000, date:today},
+    'N46778_비빔밀면_1': {prod_nm:'비빔밀면', sale_qty:80,  shop_cd:'N46778', shop_nm:'1984 이바구밀면 서면점', sale_amt:720000, date:today},
+  };
+  await Auth.DB.update('okpos_menu_sales/' + today, salesUpdate);
+
+  // 2. menus/TEST_밀면면 — baseStock:40000g → (120+80)×180=36,000 / 40,000 = 90%
+  const existMenu = await Auth.DB.get('menus/TEST_밀면면');
+  if(!existMenu){
+    await Auth.DB.set('menus/TEST_밀면면', {
+      id:'TEST_밀면면', name:'밀면면', category:'면류', unit:'g',
+      baseStock:40000, price:0, minQty:1, maxQty:999,
+      spec:'냉장 면', partnerName:'테스트납품업체', partnerId:'',
+      brandId:_myBrandId||'', brandName:_myBrandName||'',
+      code:'TEST000001', createdAt:new Date().toISOString(),
+    });
+  }
+
+  // 3. recipes/ — 밀면, 비빔밀면 각 180g/인분
+  const existR1 = await Auth.DB.get('recipes/TEST_밀면');
+  if(!existR1){
+    await Auth.DB.set('recipes/TEST_밀면', {
+      id:'TEST_밀면', menuName:'밀면',
+      ingredients:[{name:'밀면면', qty:180, unit:'g'}],
+      threshold:80, brandId:_myBrandId||'', createdAt:new Date().toISOString(),
+    });
+  }
+  const existR2 = await Auth.DB.get('recipes/TEST_비빔밀면');
+  if(!existR2){
+    await Auth.DB.set('recipes/TEST_비빔밀면', {
+      id:'TEST_비빔밀면', menuName:'비빔밀면',
+      ingredients:[{name:'밀면면', qty:180, unit:'g'}],
+      threshold:80, brandId:_myBrandId||'', createdAt:new Date().toISOString(),
+    });
+  }
+
+  showToast('테스트 데이터 주입 완료 (판매+메뉴+레시피)');
+  document.getElementById('stockDate').value = new Date().toISOString().slice(0,10);
+  await loadStockView();
 }
 </script>
 </body>

@@ -285,7 +285,188 @@ def save_to_firebase(sales_data: list, date: str) -> bool:
         return False
 
 
-def main(date_from=None, date_to=None) -> int:
+def fetch_menu_sales(session: requests.Session, date_from: str,
+                     date_to: str) -> Optional[list]:
+    base = CONFIG["base_url"]
+
+    # 상품별 매출 페이지 GET → CSRF 토큰 수집
+    # 후보 경로를 순서대로 시도; 500 bytes 이상 응답이 오면 사용
+    token_page_candidates = [
+        f"{base}/sale/sale/prod_jump011.jsp",   # 상품별 매출 화면 (추정)
+        f"{base}/sale/prod/prod_jump011.jsp",   # 대안 경로
+        f"{base}/sale/day/day_jump010.jsp",     # fallback — 일별 화면 재사용
+    ]
+    r_page = None
+    page_url = token_page_candidates[-1]
+    for url in token_page_candidates:
+        try:
+            r = session.get(url, timeout=15)
+            if r.status_code == 200 and len(r.content) > 500:
+                r_page = r
+                page_url = url
+                print(f"[상품매출 토큰 페이지] {r.status_code} ← {url}")
+                break
+        except Exception:
+            continue
+    if not r_page:
+        print("[상품매출 토큰 페이지] 모든 후보 실패 — 토큰 없이 진행")
+
+    hidden = get_hidden_fields(r_page.text) if r_page else {}
+    token_key, token_val = "", ""
+    for k, v in hidden.items():
+        if re.match(r'^[0-9a-f]{8}-[0-9a-f]{4}-', v, re.IGNORECASE):
+            token_key, token_val = k, v
+            print(f"[토큰] {k[:16]}... = {v[:16]}...")
+            break
+
+    time.sleep(0.5)
+
+    payload = {
+        "S_CONTROLLER": "sale.sale.prod011",
+        "S_METHOD":     "search",
+        "SHEETSEQ":     "1",
+        "S_SAVENAME": (
+            "sSeq|LCLS_NM|MCLS_NM|SCLS_NM|SALE_DATE|PROD_CD|BAR_CD|MAP_PROD_CD|"
+            "PROD_NM|VENDORS_NM|COLOR_CD|SIZE_STR_CD|SALE_QTY|PROD_WEIGHT|"
+            "TOT_SALE_AMT|TOT_DC_AMT|DCM_SALE_AMT|DC_AMT_GEN|DC_AMT_SVC|"
+            "DC_AMT_JCD|DC_AMT_CPN|DC_AMT_CST|DC_AMT_FOD|DC_AMT_PACK|DC_AMT_YAP|SHOP_CD"
+        ),
+        "S_ORDERBY":     "",
+        "ss_PROD_FG":    "N",
+        "date1_1":       date_from,
+        "date1_2":       date_to,
+        "date_period1":  "366",
+        "ss_CLS_TEXT":   "전체",
+        "ss_SHOP_NM":    "전체",
+        "ss_SHOP_INFO":  "[]",
+        "ss_VENDOR_NM":  "전체",
+        "ss_VENDOR_INFO":"[]",
+        "ss_PAGE_SIZE":  "100",
+        "ss_PAGE_NO1":   "1",
+        # 나머지 ss_* 필드 — 빈 값으로 전송
+        "ss_LCLS_CD":    "",
+        "ss_MCLS_CD":    "",
+        "ss_SCLS_CD":    "",
+        "ss_PROD_CD":    "",
+        "ss_PROD_NM":    "",
+        "ss_BAR_CD":     "",
+    }
+    if token_key:
+        payload[token_key] = token_val
+
+    resp = session.post(
+        f"{base}/sale/day/ddd.htmlSheetAction",
+        data=payload,
+        headers={
+            "Referer":      page_url,
+            "Origin":       base,
+            "Content-Type": "application/x-www-form-urlencoded",
+        },
+        timeout=30
+    )
+    print(f"[상품별 매출 조회] {resp.status_code}, {len(resp.content):,} bytes")
+
+    if resp.status_code != 200:
+        return None
+
+    # 구조 확인용 raw 저장
+    raw_filename = f"menu_sales_raw_{date_from.replace('-','')}.json"
+    with open(raw_filename, "w", encoding="utf-8") as f:
+        f.write(resp.text)
+    print(f"[디버그] 원본 응답 저장: {raw_filename}")
+
+    return parse_menu_json(resp.text, date_from)
+
+
+def parse_menu_json(raw: str, date: str) -> list:
+    """상품별 매출 JSON 파싱 — 1차 실행은 구조 확인용"""
+    try:
+        data = json.loads(raw)
+    except Exception as e:
+        print(f"[상품 파싱 오류] JSON 파싱 실패: {e}")
+        print(f"[원문] {raw[:300]}")
+        return []
+
+    print(f"[상품 파싱] 최상위 키: {list(data.keys())}")
+    # OKPos 응답은 보통 "Data" 키 사용; 실제 응답 후 키 이름 확인 필요
+    rows = data.get("Data", data.get("data", data.get("rows", [])))
+    if not rows:
+        print(f"[상품 파싱] 데이터 없음. 전체 구조 미리보기:\n{json.dumps(data, ensure_ascii=False)[:500]}")
+        return []
+
+    print(f"[상품 파싱] {len(rows)}행 수신, 첫 행 키: {list(rows[0].keys())}")
+
+    def to_num(v, cast=int):
+        try:
+            return cast(float(str(v).replace(",", "")))
+        except Exception:
+            return cast(0)
+
+    results = []
+    for row in rows:
+        prod_cd = str(row.get("PROD_CD", row.get("prod_cd", ""))).strip()
+        if not prod_cd:
+            continue
+        results.append({
+            "SHOP_CD":      str(row.get("SHOP_CD", row.get("shop_cd", ""))).strip(),
+            "SHOP_NM":      str(row.get("SHOP_NM", row.get("shop_nm", ""))).strip(),
+            "PROD_CD":      prod_cd,
+            "PROD_NM":      str(row.get("PROD_NM", row.get("prod_nm", ""))).strip(),
+            "SALE_QTY":     to_num(row.get("SALE_QTY", 0), float),
+            "SALE_DATE":    str(row.get("SALE_DATE", date)).strip(),
+            "TOT_SALE_AMT": to_num(row.get("TOT_SALE_AMT", 0)),
+            "DCM_SALE_AMT": to_num(row.get("DCM_SALE_AMT", 0)),
+        })
+
+    print(f"[상품 파싱 완료] {len(results)}개 행")
+    return results
+
+
+def save_menu_sales_to_firebase(menu_data: list, date: str) -> bool:
+    """okpos_menu_sales/{date_key}/{SHOP_CD}/{PROD_CD} 에 저장.
+    기존 okpos_sales/ 경로는 절대 건드리지 않는다."""
+    try:
+        import firebase_admin
+        from firebase_admin import credentials, db
+
+        if not firebase_admin._apps:
+            cred = credentials.Certificate(FIREBASE_CREDENTIAL_PATH)
+            firebase_admin.initialize_app(cred, {"databaseURL": FIREBASE_DB_URL})
+
+        date_key = date.replace("-", "")
+        now_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
+
+        # {shop_cd: {prod_cd: {...}}} 구조로 모으기
+        shop_map: dict = {}
+        for row in menu_data:
+            shop_cd = row.get("SHOP_CD", "")
+            prod_cd = row.get("PROD_CD", "")
+            if not shop_cd or not prod_cd:
+                continue
+            shop_map.setdefault(shop_cd, {})[prod_cd] = {
+                "prod_nm":   row.get("PROD_NM", ""),
+                "sale_qty":  row.get("SALE_QTY", 0),
+                "sale_amt":  row.get("DCM_SALE_AMT", 0),
+                "shop_nm":   row.get("SHOP_NM", ""),
+                "date":      date,
+                "updated_at": now_str,
+            }
+
+        total_prods = 0
+        for shop_cd, prods in shop_map.items():
+            ref = db.reference(f"okpos_menu_sales/{date_key}/{shop_cd}")
+            ref.update(prods)
+            total_prods += len(prods)
+
+        print(f"✅ Firebase 저장: okpos_menu_sales/{date_key} "
+              f"({len(shop_map)}개 가맹점, {total_prods}개 상품)")
+        return True
+    except Exception as e:
+        print(f"❌ Firebase 오류 (menu): {e}")
+        return False
+
+
+def main(date_from=None, date_to=None, run_menu=False) -> int:
     if not date_from:
         yesterday = datetime.date.today() - datetime.timedelta(days=1)
         date_from = date_to = yesterday.strftime("%Y-%m-%d")
@@ -343,15 +524,53 @@ def main(date_from=None, date_to=None) -> int:
         save_to_json(sales, date_from)
 
     print(f"\n✅ 완료! {len(sales)}개 가맹점 수집")
+
+    # ── 상품별(메뉴별) 판매수량 수집 (--menu 옵션 시에만) ──────
+    if run_menu:
+        print(f"\n{'='*50}")
+        print(f"  📦 상품별 매출 수집 시작")
+        print(f"{'='*50}\n")
+        time.sleep(1)
+        menu_sales = fetch_menu_sales(session, date_from, date_to)
+        if not menu_sales:
+            print("\n⚠️  상품별 매출 데이터 없음 (raw 파일 확인 필요)")
+            return 4
+        if FIREBASE_ENABLED:
+            ok2 = save_menu_sales_to_firebase(menu_sales, date_from)
+            if not ok2:
+                return 5
+        else:
+            out_file = f"menu_sales_{date_from.replace('-','')}.json"
+            import collections
+            shop_map: dict = collections.defaultdict(dict)
+            for row in menu_sales:
+                shop_map[row["SHOP_CD"]][row["PROD_CD"]] = {
+                    "prod_nm":  row["PROD_NM"],
+                    "sale_qty": row["SALE_QTY"],
+                    "sale_amt": row["DCM_SALE_AMT"],
+                    "shop_nm":  row["SHOP_NM"],
+                    "date":     date_from,
+                }
+            with open(out_file, "w", encoding="utf-8") as f:
+                json.dump(dict(shop_map), f, ensure_ascii=False, indent=2)
+            print(f"✅ JSON 저장: {out_file}")
+        print(f"\n✅ 상품별 수집 완료! {len(menu_sales)}개 행")
+
     return 0
 
 
 if __name__ == "__main__":
-    # python okpos_scraper.py                        → 어제 데이터
-    # python okpos_scraper.py 2026-05-19 2026-05-19  → 특정 날짜
-    # python okpos_scraper.py schedule               → 로컬 스케줄러
+    # python okpos_scraper.py                             → 어제 일별 집계
+    # python okpos_scraper.py 2026-05-19 2026-05-19       → 특정 날짜 일별 집계
+    # python okpos_scraper.py --menu                      → 어제 + 상품별 수집
+    # python okpos_scraper.py 2026-05-19 2026-05-19 --menu→ 특정 날짜 + 상품별 수집
+    # python okpos_scraper.py schedule                    → 로컬 스케줄러 (일별만)
 
-    if len(sys.argv) > 1 and sys.argv[1] == "schedule":
+    args = sys.argv[1:]
+    run_menu = "--menu" in args
+    args = [a for a in args if a != "--menu"]
+
+    if args and args[0] == "schedule":
         try:
             import schedule
         except ImportError:
@@ -365,7 +584,7 @@ if __name__ == "__main__":
         while True:
             schedule.run_pending()
             time.sleep(60)
-    elif len(sys.argv) == 3:
-        sys.exit(main(sys.argv[1], sys.argv[2]))
+    elif len(args) == 2:
+        sys.exit(main(args[0], args[1], run_menu=run_menu))
     else:
-        sys.exit(main())
+        sys.exit(main(run_menu=run_menu))
