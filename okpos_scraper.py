@@ -28,6 +28,16 @@ FIREBASE_DB_URL          = os.environ.get("FIREBASE_DB_URL", "")
 FIREBASE_CREDENTIAL_PATH = os.environ.get("FIREBASE_CREDENTIAL_PATH", "firebase-credentials.json")
 FIREBASE_ENABLED         = bool(FIREBASE_DB_URL) and os.path.exists(FIREBASE_CREDENTIAL_PATH)
 
+# 메뉴별 수집 대상 매장 목록 — 매장 추가 시 여기에만 추가.
+# 환경변수 MENU_SHOPS (JSON 배열) 로 덮어쓸 수 있음. 없으면 아래 기본값 사용.
+_menu_shops_env = os.environ.get("MENU_SHOPS", "")
+MENU_SHOPS: list = (
+    json.loads(_menu_shops_env) if _menu_shops_env
+    else [
+        {"shop_cd": "N46778", "shop_nm": "1984 이바구밀면 서면점"},
+    ]
+)
+
 
 def get_hidden_fields(html: str) -> dict:
     fields = {}
@@ -286,7 +296,7 @@ def save_to_firebase(sales_data: list, date: str) -> bool:
 
 
 def fetch_menu_sales(session: requests.Session, date_from: str,
-                     date_to: str) -> Optional[list]:
+                     date_to: str, shop_cd: str = "", shop_nm: str = "") -> Optional[list]:
     base = CONFIG["base_url"]
 
     # 상품별 매출 페이지 GET → CSRF 토큰 수집
@@ -351,7 +361,7 @@ def fetch_menu_sales(session: requests.Session, date_from: str,
         "ss_PROD_CD":     "",
         "ss_PROD_NM":     "",
         "ss_BAR_CD":      "",
-        "ss_SHOP_CD":     "",
+        "ss_SHOP_CD":     shop_cd,
         "ss_VENDOR_CD":   "",
     }
     if token_key:
@@ -385,10 +395,10 @@ def fetch_menu_sales(session: requests.Session, date_from: str,
         f.write(resp.text)
     print(f"[디버그] 원본 응답 저장: {raw_filename}")
 
-    return parse_menu_json(resp.text, date_from)
+    return parse_menu_json(resp.text, date_from, shop_cd=shop_cd, shop_nm=shop_nm)
 
 
-def parse_menu_json(raw: str, date: str) -> list:
+def parse_menu_json(raw: str, date: str, shop_cd: str = "", shop_nm: str = "") -> list:
     """상품별 매출 JSON 파싱 — 1차 실행은 구조 확인용"""
     try:
         data = json.loads(raw)
@@ -418,8 +428,8 @@ def parse_menu_json(raw: str, date: str) -> list:
         if not prod_cd:
             continue
         results.append({
-            "SHOP_CD":      str(row.get("SHOP_CD", row.get("shop_cd", ""))).strip(),
-            "SHOP_NM":      str(row.get("SHOP_NM", row.get("shop_nm", ""))).strip(),
+            "SHOP_CD":      (str(row.get("SHOP_CD", row.get("shop_cd", ""))).strip() or shop_cd),
+            "SHOP_NM":      (str(row.get("SHOP_NM", row.get("shop_nm", ""))).strip() or shop_nm),
             "PROD_CD":      prod_cd,
             "PROD_NM":      str(row.get("PROD_NM", row.get("prod_nm", ""))).strip(),
             "SALE_QTY":     to_num(row.get("SALE_QTY", 0), float),
@@ -448,25 +458,36 @@ def save_menu_sales_to_firebase(menu_data: list, date: str) -> bool:
 
         # {shop_cd: {prod_cd: {...}}} 구조로 모으기
         shop_map: dict = {}
+        skipped = 0
         for row in menu_data:
-            shop_cd = row.get("SHOP_CD", "")
+            s_cd = row.get("SHOP_CD", "")
             prod_cd = row.get("PROD_CD", "")
-            if not shop_cd or not prod_cd:
+            if not s_cd:
+                skipped += 1
                 continue
-            shop_map.setdefault(shop_cd, {})[prod_cd] = {
-                "prod_nm":   row.get("PROD_NM", ""),
-                "sale_qty":  row.get("SALE_QTY", 0),
-                "sale_amt":  row.get("DCM_SALE_AMT", 0),
-                "shop_nm":   row.get("SHOP_NM", ""),
-                "date":      date,
+            if not prod_cd:
+                skipped += 1
+                continue
+            shop_map.setdefault(s_cd, {})[prod_cd] = {
+                "prod_nm":    row.get("PROD_NM", ""),
+                "sale_qty":   row.get("SALE_QTY", 0),
+                "sale_amt":   row.get("DCM_SALE_AMT", 0),
+                "shop_nm":    row.get("SHOP_NM", ""),
+                "date":       date,
                 "updated_at": now_str,
             }
 
+        if skipped:
+            print(f"⚠️  저장 제외 행: {skipped}건 (SHOP_CD 또는 PROD_CD 없음)")
+
         total_prods = 0
-        for shop_cd, prods in shop_map.items():
-            ref = db.reference(f"okpos_menu_sales/{date_key}/{shop_cd}")
+        for s_cd, prods in shop_map.items():
+            shop_label = f"{prods[next(iter(prods))].get('shop_nm', '')}({s_cd})" if prods else s_cd
+            print(f"  저장 대상: {shop_label} — {len(prods)}개 상품")
+            ref = db.reference(f"okpos_menu_sales/{date_key}/{s_cd}")
             ref.update(prods)
             total_prods += len(prods)
+            print(f"  ✅ 저장 완료: {len(prods)}건")
 
         print(f"✅ Firebase 저장: okpos_menu_sales/{date_key} "
               f"({len(shop_map)}개 가맹점, {total_prods}개 상품)")
@@ -538,33 +559,46 @@ def main(date_from=None, date_to=None, run_menu=False) -> int:
     # ── 상품별(메뉴별) 판매수량 수집 (--menu 옵션 시에만) ──────
     if run_menu:
         print(f"\n{'='*50}")
-        print(f"  📦 상품별 매출 수집 시작")
+        print(f"  상품별 매출 수집 시작 (대상: {len(MENU_SHOPS)}개 매장)")
         print(f"{'='*50}\n")
-        time.sleep(1)
-        menu_sales = fetch_menu_sales(session, date_from, date_to)
-        if not menu_sales:
-            print("\n⚠️  상품별 매출 데이터 없음 (raw 파일 확인 필요)")
-            return 4
-        if FIREBASE_ENABLED:
-            ok2 = save_menu_sales_to_firebase(menu_sales, date_from)
-            if not ok2:
-                return 5
-        else:
-            out_file = f"menu_sales_{date_from.replace('-','')}.json"
-            import collections
-            shop_map: dict = collections.defaultdict(dict)
-            for row in menu_sales:
-                shop_map[row["SHOP_CD"]][row["PROD_CD"]] = {
-                    "prod_nm":  row["PROD_NM"],
-                    "sale_qty": row["SALE_QTY"],
-                    "sale_amt": row["DCM_SALE_AMT"],
-                    "shop_nm":  row["SHOP_NM"],
-                    "date":     date_from,
-                }
-            with open(out_file, "w", encoding="utf-8") as f:
-                json.dump(dict(shop_map), f, ensure_ascii=False, indent=2)
-            print(f"✅ JSON 저장: {out_file}")
-        print(f"\n✅ 상품별 수집 완료! {len(menu_sales)}개 행")
+
+        total_menu_rows = 0
+        for shop in MENU_SHOPS:
+            s_cd = shop["shop_cd"]
+            s_nm = shop["shop_nm"]
+            print(f"\n--- {s_nm}({s_cd}) 수집 중 ---")
+            time.sleep(1)
+            menu_sales = fetch_menu_sales(
+                session, date_from, date_to,
+                shop_cd=s_cd, shop_nm=s_nm,
+            )
+            if not menu_sales:
+                print(f"⚠️  {s_nm}: 상품별 매출 데이터 없음 (raw 파일 확인 필요)")
+                continue
+            print(f"  파싱 결과: {len(menu_sales)}개 행")
+            total_menu_rows += len(menu_sales)
+
+            if FIREBASE_ENABLED:
+                ok2 = save_menu_sales_to_firebase(menu_sales, date_from)
+                if not ok2:
+                    return 5
+            else:
+                import collections
+                out_file = f"menu_sales_{s_cd}_{date_from.replace('-','')}.json"
+                shop_map_out: dict = collections.defaultdict(dict)
+                for row in menu_sales:
+                    shop_map_out[row["SHOP_CD"]][row["PROD_CD"]] = {
+                        "prod_nm":  row["PROD_NM"],
+                        "sale_qty": row["SALE_QTY"],
+                        "sale_amt": row["DCM_SALE_AMT"],
+                        "shop_nm":  row["SHOP_NM"],
+                        "date":     date_from,
+                    }
+                with open(out_file, "w", encoding="utf-8") as f:
+                    json.dump(dict(shop_map_out), f, ensure_ascii=False, indent=2)
+                print(f"  JSON 저장: {out_file}")
+
+        print(f"\n✅ 상품별 수집 완료! 총 {total_menu_rows}개 행 ({len(MENU_SHOPS)}개 매장)")
 
     return 0
 
