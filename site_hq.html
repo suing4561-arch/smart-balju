@@ -307,11 +307,14 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
         <!-- 소요량 등록 폼 -->
         <div class="rc">
           <div class="rch"><div class="rci" style="background:var(--amber-bg)"><i class="ti ti-clipboard-list" style="color:var(--amber)"></i></div>
-            <div><div class="rct">소요량 등록</div><div style="font-size:11px;color:var(--muted);margin-top:2px">OKPos 메뉴명과 동일하게 입력</div></div>
+            <div><div class="rct">소요량 등록</div><div style="font-size:11px;color:var(--muted);margin-top:2px">OKPos 수집 메뉴명 목록에서 선택</div></div>
           </div>
           <div class="rcb">
-            <div class="fl"><div class="flb">판매 메뉴명 * (OKPos 메뉴명과 동일)</div>
-              <input class="fi" id="recipeMenu" placeholder="예) 밀면, 비빔밀면, 물냉면">
+            <div class="fl">
+              <div class="flb">판매 메뉴명 * <span style="font-size:11px;color:var(--muted);font-weight:400">(OKPos 수집 메뉴 선택 또는 직접 입력)</span></div>
+              <input class="fi" id="recipeMenu" list="okposMenuList" placeholder="메뉴 선택 또는 직접 입력" autocomplete="off">
+              <datalist id="okposMenuList"></datalist>
+              <div id="okposMenuHint" style="font-size:11px;color:var(--muted);margin-top:4px;line-height:1.6"></div>
             </div>
 
             <!-- 재료 추가 -->
@@ -737,7 +740,7 @@ async function switchRegTab(tab) {
   });
   document.querySelectorAll('.reg-tab').forEach((b,i)=>b.classList.toggle('active',['code','menu','recipe'][i]===tab));
   if(tab==='menu') { await refreshMenuSelects(); await rMenu(); }
-  if(tab==='recipe') { refreshIngSelect(); loadRecipes(); }
+  if(tab==='recipe') { refreshIngSelect(); loadRecipes(); loadOkposMenuNames(); }
 }
 
 let _tt;
@@ -1132,7 +1135,7 @@ async function saveRecipe(){
   document.getElementById('recipeMenu').value='';
   document.getElementById('recipeThreshold').value='90';
   _ingredients=[]; renderIngredients();
-  await loadRecipes(); showToast('['+menuName+'] 소요량 저장 완료');
+  await loadRecipes(); await loadOkposMenuNames(); showToast('['+menuName+'] 소요량 저장 완료');
 }
 
 async function loadRecipes(){
@@ -1157,7 +1160,55 @@ async function loadRecipes(){
       </div>
     </div>`).join('');
 }
-async function delRecipe(id){ if(!confirm('삭제할까요?')) return; await Auth.DB.remove('recipes/'+id); await loadRecipes(); showToast('삭제'); }
+async function delRecipe(id){ if(!confirm('삭제할까요?')) return; await Auth.DB.remove('recipes/'+id); await loadRecipes(); await loadOkposMenuNames(); showToast('삭제'); }
+
+async function loadOkposMenuNames(){
+  // 1. okpos_menu_sales 전체에서 prod_nm 수집 (날짜·매장 무관, 중복 제거)
+  const raw = await Auth.DB.get('okpos_menu_sales') || {};
+  const names = new Set();
+  for(const dateNode of Object.values(raw)){
+    if(!dateNode || typeof dateNode !== 'object') continue;
+    for(const shopOrItem of Object.values(dateNode)){
+      if(!shopOrItem || typeof shopOrItem !== 'object') continue;
+      if('prod_nm' in shopOrItem){
+        // 평탄 구조 (테스트 시드)
+        const nm = (shopOrItem.prod_nm||'').trim();
+        if(nm) names.add(nm);
+      } else {
+        // 중첩 구조 (스크래퍼 실제 저장: shop_cd/prod_cd/{...})
+        for(const item of Object.values(shopOrItem)){
+          if(item && typeof item === 'object' && 'prod_nm' in item){
+            const nm = (item.prod_nm||'').trim();
+            if(nm) names.add(nm);
+          }
+        }
+      }
+    }
+  }
+  const sorted = [...names].sort((a,b)=>a.localeCompare(b,'ko'));
+
+  // 2. 이미 레시피가 등록된 메뉴명 로드
+  const recipesRaw = await Auth.DB.get('recipes') || {};
+  const registered = new Set(Object.values(recipesRaw).map(r=>r.menuName).filter(Boolean));
+
+  // 3. datalist 채우기 — value 는 순수 메뉴명, label 로 등록 여부 표시(Chrome 지원)
+  document.getElementById('okposMenuList').innerHTML = sorted.map(nm=>
+    `<option value="${nm}"${registered.has(nm)?' label="'+nm+' ✓등록됨"':''}>`
+  ).join('');
+
+  // 4. 힌트 텍스트 갱신
+  const hint = document.getElementById('okposMenuHint');
+  if(!sorted.length){
+    hint.innerHTML = '<span style="color:var(--dim)">OKPos 수집 데이터 없음 — 직접 입력 가능</span>';
+    return;
+  }
+  const reg   = sorted.filter(n=> registered.has(n));
+  const unreg = sorted.filter(n=>!registered.has(n));
+  const parts = [];
+  if(reg.length)   parts.push('<span style="color:var(--green,#22c55e)">✓ 등록됨: '+reg.join(', ')+'</span>');
+  if(unreg.length) parts.push('<span style="color:var(--amber)">미등록: '+unreg.join(', ')+'</span>');
+  hint.innerHTML = parts.join('&nbsp;&nbsp;|&nbsp;&nbsp;');
+}
 
 // ── 거래처·납품업체 탭 전환 ──────────────────────────────
 function switchPartnerTab(tab){
