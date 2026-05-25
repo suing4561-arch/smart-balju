@@ -28,15 +28,45 @@ FIREBASE_DB_URL          = os.environ.get("FIREBASE_DB_URL", "")
 FIREBASE_CREDENTIAL_PATH = os.environ.get("FIREBASE_CREDENTIAL_PATH", "firebase-credentials.json")
 FIREBASE_ENABLED         = bool(FIREBASE_DB_URL) and os.path.exists(FIREBASE_CREDENTIAL_PATH)
 
-# 메뉴별 수집 대상 매장 목록 — 매장 추가 시 여기에만 추가.
-# 환경변수 MENU_SHOPS (JSON 배열) 로 덮어쓸 수 있음. 없으면 아래 기본값 사용.
-_menu_shops_env = os.environ.get("MENU_SHOPS", "")
-MENU_SHOPS: list = (
-    json.loads(_menu_shops_env) if _menu_shops_env
-    else [
-        {"shop_cd": "N46778", "shop_nm": "1984 이바구밀면 서면점"},
-    ]
-)
+
+
+def load_menu_shops_from_firebase() -> list:
+    """hq_franchises 에서 okposShopCd 가 있는 가맹점만 추려 반환.
+    Firebase 연동이 꺼져있거나 읽기 실패 시 빈 리스트."""
+    try:
+        import firebase_admin
+        from firebase_admin import credentials, db
+
+        if not firebase_admin._apps:
+            cred = credentials.Certificate(FIREBASE_CREDENTIAL_PATH)
+            firebase_admin.initialize_app(cred, {"databaseURL": FIREBASE_DB_URL})
+
+        snapshot = db.reference("hq_franchises").get()
+        if not snapshot:
+            print("[메뉴 매장 로드] hq_franchises 데이터 없음")
+            return []
+
+        shops = []
+        for fid, fdata in snapshot.items():
+            if not isinstance(fdata, dict):
+                continue
+            shop_cd = str(fdata.get("okposShopCd", "")).strip()
+            if not shop_cd:
+                continue
+            shops.append({
+                "shop_cd": shop_cd,
+                "shop_nm": str(fdata.get("name", fid)).strip(),
+            })
+
+        if not shops:
+            print("[메뉴 매장 로드] okposShopCd 가 있는 가맹점 없음 — 수집 건너뜀")
+        else:
+            names = ", ".join(f"{s['shop_nm']}({s['shop_cd']})" for s in shops)
+            print(f"[메뉴 매장 로드] {len(shops)}개: {names}")
+        return shops
+    except Exception as e:
+        print(f"❌ hq_franchises 로드 실패: {e}")
+        return []
 
 
 def get_hidden_fields(html: str) -> dict:
@@ -558,12 +588,25 @@ def main(date_from=None, date_to=None, run_menu=False) -> int:
 
     # ── 상품별(메뉴별) 판매수량 수집 (--menu 옵션 시에만) ──────
     if run_menu:
+        # 매장 목록: Firebase hq_franchises 자동 로드, 꺼져있으면 MENU_SHOPS 환경변수 fallback
+        if FIREBASE_ENABLED:
+            menu_shops = load_menu_shops_from_firebase()
+        else:
+            _env = os.environ.get("MENU_SHOPS", "")
+            menu_shops = json.loads(_env) if _env else []
+            if not menu_shops:
+                print("⚠️  Firebase 꺼짐: MENU_SHOPS 환경변수(JSON)를 지정하면 수동 수집 가능")
+
+        if not menu_shops:
+            print("⚠️  수집 대상 매장 없음 — --menu 수집 건너뜀")
+            return 4
+
         print(f"\n{'='*50}")
-        print(f"  상품별 매출 수집 시작 (대상: {len(MENU_SHOPS)}개 매장)")
+        print(f"  상품별 매출 수집 시작 (대상: {len(menu_shops)}개 매장)")
         print(f"{'='*50}\n")
 
         total_menu_rows = 0
-        for shop in MENU_SHOPS:
+        for shop in menu_shops:
             s_cd = shop["shop_cd"]
             s_nm = shop["shop_nm"]
             print(f"\n--- {s_nm}({s_cd}) 수집 중 ---")
@@ -598,7 +641,7 @@ def main(date_from=None, date_to=None, run_menu=False) -> int:
                     json.dump(dict(shop_map_out), f, ensure_ascii=False, indent=2)
                 print(f"  JSON 저장: {out_file}")
 
-        print(f"\n✅ 상품별 수집 완료! 총 {total_menu_rows}개 행 ({len(MENU_SHOPS)}개 매장)")
+        print(f"\n✅ 상품별 수집 완료! 총 {total_menu_rows}개 행 ({len(menu_shops)}개 매장)")
 
     return 0
 
