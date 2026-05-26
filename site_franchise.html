@@ -413,12 +413,14 @@ function switchHomeTab(tab){
 
 async function loadFranchiseSales(){
   const storeName = _currentStore?.name || document.getElementById('storeNameText').textContent;
+  const shopCd = _currentStore?.okposShopCd || '';
   const now = new Date();
   const year = now.getFullYear();
   const month = String(now.getMonth()+1).padStart(2,'0');
   const monthKey = `${year}${month}`;
 
-  // OKPos 매출 로드
+  // OKPos 매출 로드 — okpos_sales/{날짜}/{shopCd} 키로 직접 접근
+  // (okpos_scraper.py save_to_firebase 가 SHOP_CD 를 키로 저장하므로 shopCd 직접 사용)
   const allSales = await Auth.DB.get('okpos_sales') || {};
   const monthDays = Object.entries(allSales).filter(([k])=>k.startsWith(monthKey)).sort(([a],[b])=>a.localeCompare(b));
 
@@ -426,17 +428,11 @@ async function loadFranchiseSales(){
   const dayList=[];
 
   monthDays.forEach(([dateKey,dayData])=>{
-    const firstVal=Object.values(dayData)[0];
-    const isNested=firstVal&&typeof firstVal==='object'&&!firstVal.shop_nm;
-    const shops=isNested?Object.values(dayData).flatMap(bd=>Object.entries(bd||{})):Object.entries(dayData);
-    let daySale=0,dayCnt=0;
-    shops.forEach(([,d])=>{
-      if(!d||!d.shop_nm) return;
-      // 내 가맹점 필터 (가맹점명으로 매칭)
-      if(storeName&&storeName!=='가맹점을 선택하세요'&&!d.shop_nm.includes(storeName.replace('1984 ','').replace('이바구밀면 ',''))) return;
-      daySale+=d.tot_sale_amt||0; dayCnt+=d.tot_sale_cnt||0; totalGst+=d.gst_cnt||0;
-    });
-    totalSale+=daySale; totalCnt+=dayCnt;
+    if(!shopCd) return;
+    const d = dayData[shopCd] || null;
+    if(!d) return;
+    const daySale=d.tot_sale_amt||0, dayCnt=d.tot_sale_cnt||0;
+    totalSale+=daySale; totalCnt+=dayCnt; totalGst+=d.gst_cnt||0;
     if(daySale>0) dayList.push({date:dateKey,sale:daySale,cnt:dayCnt});
   });
 
@@ -544,11 +540,12 @@ async function calcMyStockUsage(){
   ]);
 
   // 이번달 + 우리 매장(shopCd) 판매만 합산
+  // 구조: okpos_menu_sales/{dateKey}/{shopCd}/{prod_cd} → {prod_nm, sale_qty, ...}
   const saleByMenu = {};
   for(const [dateKey, dayData] of Object.entries(allMenuSalesRaw || {})){
     if(!dateKey.startsWith(monthKey)) continue;
-    for(const row of Object.values(dayData || {})){
-      if(row.shop_cd !== shopCd) continue;
+    const shopData = (dayData || {})[shopCd] || {};
+    for(const row of Object.values(shopData)){
       const nm = (row.prod_nm || '').trim();
       if(!nm) continue;
       saleByMenu[nm] = (saleByMenu[nm] || 0) + Number(row.sale_qty || 0);
