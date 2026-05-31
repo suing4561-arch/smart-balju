@@ -464,6 +464,23 @@ function renderItemList(){
   document.getElementById('itemTotal').textContent=total.toLocaleString()+'원';
 }
 
+// ── 전속기사 조회 헬퍼 ────────────────────────────────────
+async function getPreassignedDriver(franchiseId, storeName){
+  const map = await Auth.DB.get('driver_store_map').catch(()=>({})) || {};
+  let entry = franchiseId ? map[franchiseId] : null;
+  if(!entry && storeName){
+    entry = Object.values(map).find(m => m && m.franchiseName === storeName);
+  }
+  if(!entry || !entry.driverId) return null;
+  if(!_drivers || !_drivers.length){ _drivers = await Auth.loadSupplierDrivers(); }
+  const drv = (_drivers||[]).find(d => d.id === entry.driverId);
+  return {
+    driverId:    entry.driverId,
+    driverName:  drv?.name  || entry.driverName || '',
+    driverPhone: drv?.phone || ''
+  };
+}
+
 // ── 배송 배정 ─────────────────────────────────────────────
 async function refreshAssignSelects(){
   const [drivers,stores]=await Promise.all([Auth.loadSupplierDrivers(),Auth.loadSupplierFranchises()]);
@@ -506,14 +523,20 @@ function enrichStoreInfo(item){
 
 async function createDelivery(){
   const storeId=newStore.value;if(!storeId){showToast('배송지를 선택하세요');return;}
-  const store=_stores.find(s=>s.id===storeId);const driverId=newDriver.value;const driver=_drivers.find(d=>d.id===driverId);
+  const store=_stores.find(s=>s.id===storeId);
+  let driverId=newDriver.value;let driver=_drivers.find(d=>d.id===driverId);
+  if(!driverId){
+    const pre=await getPreassignedDriver(storeId,store?.businessName);
+    if(pre){driverId=pre.driverId;driver={name:pre.driverName,phone:pre.driverPhone};}
+  }
   let itemsText=_selectedItems.map(x=>`${x.name} ${x.qty}${x.unit}`).join(' · ');
   if(!itemsText){showToast('품목을 추가하세요');return;}
   const amount=_selectedItems.reduce((s,x)=>s+x.price*x.qty,0);
+  const autoMsg=driverId&&!newDriver.value?` (전속기사 자동배정: ${driver?.name||''})` :'';
   await Auth.createDelivery({storeId,storeName:store?.businessName||'',storeBusinessNumber:store?.businessNumber||'',storeAddress:store?.address||'',storePhone:store?.phone||'',storeOwner:store?.owner||'',brandId:store?.brandId||'',brandName:store?.brandName||'',address:store?.address||'',driverId:driverId||'',driverName:driver?.name||'',driverPhone:driver?.phone||'',items:itemsText,itemDetails:[..._selectedItems],amount,note:newNote.value.trim()});
   newStore.value='';newDriver.value='';newNote.value='';_selectedItems=[];renderItemList();
   toggleCollapse('newDeliveryCollapse');
-  await loadDeliveries();showToast('배송 생성 완료 · '+amount.toLocaleString()+'원');
+  await loadDeliveries();showToast('배송 생성 완료 · '+amount.toLocaleString()+'원'+autoMsg);
 }
 
 // ── 배송 목록 (한줄+클릭상세) ─────────────────────────────
@@ -729,7 +752,6 @@ function closeBulkDriverPanel(){
 }
 async function confirmBulkAssign2(){
   const driverId=document.getElementById('bulkDriverSel2').value;
-  if(!driverId){showToast('기사를 선택하세요');return;}
   if(!_selectedIds.size){showToast('배송을 선택하세요 (체크박스)');return;}
   const driver=_drivers.find(d=>d.id===driverId);
 
@@ -746,15 +768,22 @@ async function confirmBulkAssign2(){
 
   for(const id of _selectedIds){
     if(deliveries[id]){
-      // 이미 배송 데이터 → 기사만 배정
+      // 이미 배송 데이터 → 기사만 배정 (패널에서 기사 선택 필수)
+      if(!driverId) continue;
       await Auth.DB.update('deliveries/'+id, {
         driverId, driverName:driver?.name||'', driverPhone:driver?.phone||'',
         updatedAt:new Date().toISOString()
       });
       assignedCount++;
     } else if(orders[id]){
-      // 발주 데이터 → 배송 생성 (발주 정보 전체 복사)
+      // 발주 데이터 → 배송 생성: 패널 기사 우선, 없으면 전속기사 자동배정
       const ord = orders[id];
+      let useDriverId = driverId;
+      let useDriver = driver;
+      if(!useDriverId){
+        const pre = await getPreassignedDriver(ord.storeId, ord.storeName);
+        if(pre){ useDriverId = pre.driverId; useDriver = {name:pre.driverName, phone:pre.driverPhone}; }
+      }
       const store = _storePool.find(f =>
         (ord.storeBusinessNumber && f.businessNumber === ord.storeBusinessNumber) ||
         f.id === ord.storeId ||
@@ -771,7 +800,7 @@ async function confirmBulkAssign2(){
         brandId:             ord.brandId || '',
         brandName:           ord.brandName || '',
         address:             ord.storeAddress || store.address || '',
-        driverId, driverName:driver?.name||'', driverPhone:driver?.phone||'',
+        driverId: useDriverId||'', driverName:useDriver?.name||'', driverPhone:useDriver?.phone||'',
         items:               ord.items || '',
         itemDetails:         ord.itemDetails || [],
         amount:              ord.amount || 0,
@@ -832,15 +861,20 @@ async function delDelivery(id){
 }
 async function createDeliveryFromOrder(orderId){
   const sel=document.getElementById('osel-'+orderId);
-  const driverId=sel?.value||'';
+  let driverId=sel?.value||'';
   const ordData=await Auth.DB.get('franchise_orders/'+orderId);
   if(!ordData){showToast('발주 정보 없음');return;}
-  const driver=_drivers.find(d=>d.id===driverId);
+  let driver=_drivers.find(d=>d.id===driverId);
+  if(!driverId){
+    const pre=await getPreassignedDriver(ordData.storeId,ordData.storeName);
+    if(pre){driverId=pre.driverId;driver={name:pre.driverName,phone:pre.driverPhone};}
+  }
   await ensureStorePool();
   const store=_storePool.find(f=>f.id===ordData.storeId||f.businessName===ordData.storeName||f.name===ordData.storeName)||{};
+  const autoMsg=driverId&&!sel?.value?` (전속기사 자동배정: ${driver?.name||''})` :'';
   await Auth.createDelivery({storeId:store.id||ordData.storeId||'',storeName:ordData.storeName||store.businessName||store.name||'',storeBusinessNumber:ordData.storeBusinessNumber||store.businessNumber||'',storeAddress:ordData.storeAddress||store.address||'',storePhone:ordData.storePhone||store.phone||'',storeOwner:ordData.storeOwner||store.owner||'',brandId:ordData.brandId||'',brandName:ordData.brandName||'',address:ordData.storeAddress||ordData.address||store.address||'',driverId:driverId||'',driverName:driver?.name||'',driverPhone:driver?.phone||'',items:ordData.items||'',itemDetails:ordData.itemDetails||[],amount:ordData.amount||0,fromOrderId:orderId});
   await Auth.DB.update('franchise_orders/'+orderId,{status:'shipping'});
-  await loadDeliveries();showToast('배송 생성 완료!');
+  await loadDeliveries();showToast('배송 생성 완료!'+autoMsg);
 }
 function copyDeliveryLink(id){
   const link=`${location.origin}/site_driver.html?delivery=${id}`;
