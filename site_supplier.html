@@ -473,6 +473,7 @@ async function getPreassignedDriver(rawId, storeName, bizNumber){
 
   // 1) rawId가 곧 driver_store_map 키(fr_xxx)인 경우
   let entry = rawId ? map[rawId] : null;
+  if(entry) console.log('  [매칭 단계1:키]', rawId);
 
   // 2) rawId가 hq_franchises.id가 아닐 수 있으므로
   //    hq_franchises에서 사업자번호/이름으로 진짜 fr_xxx를 역추적
@@ -483,7 +484,7 @@ async function getPreassignedDriver(rawId, storeName, bizNumber){
     if(rawId)            fr = hqList.find(f => f.id === rawId);
     if(!fr && bizNumber) fr = hqList.find(f => f.businessNumber && f.businessNumber === bizNumber);
     if(!fr && storeName) fr = hqList.find(f => f.name === storeName || normalize(f.name) === normalize(storeName));
-    if(fr && map[fr.id]) entry = map[fr.id];
+    if(fr && map[fr.id]){ entry = map[fr.id]; console.log('  [매칭 단계2:hq역추적]', fr?.id); }
   }
 
   // 3) 그래도 못 찾으면 map 안의 franchiseName으로 직접 매칭(정규화 포함)
@@ -492,9 +493,10 @@ async function getPreassignedDriver(rawId, storeName, bizNumber){
       m && m.franchiseName &&
       (m.franchiseName === storeName || normalize(m.franchiseName) === normalize(storeName))
     );
+    if(entry) console.log('  [매칭 단계3:이름]', storeName);
   }
 
-  if(!entry || !entry.driverId) return null;
+  if(!entry || !entry.driverId){ console.log('  [매칭 실패] rawId:', rawId, 'storeName:', storeName, 'biz:', bizNumber); return null; }
 
   if(!_drivers || !_drivers.length){ _drivers = await Auth.loadSupplierDrivers(); }
   const drv = (_drivers||[]).find(d => d.id === entry.driverId);
@@ -567,6 +569,7 @@ async function createDelivery(){
 // ── 확정 발주 자동 배송전환 ───────────────────────────────
 async function autoConvertConfirmedOrders(){
   const map = await Auth.DB.get('driver_store_map') || {};
+  console.log('[자동전환 시작] map 키:', Object.keys(map).length, '| _drivers:', (_drivers||[]).length, '| _storePool:', (_storePool||[]).length);
   if(!Object.keys(map).length) return 0;
 
   const [ordData, dlvData] = await Promise.all([
@@ -585,10 +588,12 @@ async function autoConvertConfirmedOrders(){
 
   for(const [orderId, ord] of Object.entries(orders)){
     if(!ord) continue;
+    if(!['waiting','confirmed'].includes(ord.status)){ console.log('[skip:상태]', orderId, ord.status); continue; }
+    if(convertedIds.has(orderId)){ console.log('[skip:이미전환]', orderId, ord.storeName); continue; }
     if(ord.status !== 'confirmed') continue;
-    if(convertedIds.has(orderId)) continue;
 
     const pre = await getPreassignedDriver(ord.storeId, ord.storeName, ord.storeBusinessNumber);
+    console.log('[조회]', orderId, '| storeName:', ord.storeName, '| storeId:', ord.storeId, '| 사업자:', ord.storeBusinessNumber, '→ 결과:', pre ? pre.driverName : 'null');
     if(!pre) continue;
 
     const store = _storePool.find(f =>
