@@ -568,6 +568,7 @@ async function createDelivery(){
 
 // ── 확정 발주 자동 배송전환 ───────────────────────────────
 async function autoConvertConfirmedOrders(){
+  if(!_drivers||!_drivers.length){ _drivers = await Auth.loadSupplierDrivers(); }
   const map = await Auth.DB.get('driver_store_map') || {};
   console.log('[자동전환 시작] map 키:', Object.keys(map).length, '| _drivers:', (_drivers||[]).length, '| _storePool:', (_storePool||[]).length);
   if(!Object.keys(map).length) return 0;
@@ -1278,6 +1279,26 @@ async function unassignStore(franchiseId){
   await loadPreAssign();
 }
 
+// ── 실시간 자동전환 구독 ──────────────────────────────────
+let _autoConvertSubscribed = false;
+function subscribeAutoConvert(){
+  if(_autoConvertSubscribed) return;
+  if(!Auth.isFirebaseReady || !Auth.db) return;
+  _autoConvertSubscribed = true;
+  Auth.db.ref('franchise_orders').on('value', async ()=>{
+    try{
+      const n = await autoConvertConfirmedOrders();
+      if(n > 0){
+        console.log('[실시간 자동전환]', n, '건 처리됨');
+        const assignPage = document.getElementById('page-assign');
+        if(assignPage && assignPage.classList.contains('active')){
+          await loadDeliveries();
+        }
+      }
+    }catch(e){ console.warn('[실시간 자동전환 오류]', e); }
+  });
+}
+
 // ── 초기화 ────────────────────────────────────────────────
 async function init(){
   await Promise.all([loadDrivers(),loadStores(),loadHqData()]);
@@ -1287,6 +1308,7 @@ async function init(){
   if(session&&session.role==='supplier'){
     document.getElementById('supNameText').textContent=session.businessName||session.name||'납품업체';
   }
+  subscribeAutoConvert();
 }
 document.addEventListener('firebaseReady',init);
 if(Auth.isFirebaseReady)init();
