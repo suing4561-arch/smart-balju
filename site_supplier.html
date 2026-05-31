@@ -634,6 +634,10 @@ let _storeFilter='all';
 
 async function loadDeliveries(){
   await runAutoConvertSafely();
+  await renderDeliveries();
+}
+
+async function renderDeliveries(){
   await ensureStorePool();
   const [ordData, dlvList] = await Promise.all([
     Auth.DB.get('franchise_orders'),
@@ -1285,11 +1289,17 @@ async function unassignStore(franchiseId){
 let _autoConvertSubscribed = false;
 let _isConverting = false;
 let _convertPending = false;
+let _convertStartAt = 0;
 
 async function runAutoConvertSafely(){
   console.log('[safely 진입] isConverting=', _isConverting);
+  if(_isConverting && _convertStartAt && (Date.now() - _convertStartAt > 30000)){
+    console.warn('[자동전환] 플래그 박제 감지 → 강제 해제');
+    _isConverting = false;
+  }
   if(_isConverting){ console.log('[safely 대기표시] pending=true'); _convertPending = true; return; }
   _isConverting = true;
+  _convertStartAt = Date.now();
   try{
     do{
       _convertPending = false;
@@ -1300,7 +1310,7 @@ async function runAutoConvertSafely(){
         console.log('[실시간 자동전환]', n, '건 처리됨');
         const assignPage = document.getElementById('page-assign');
         if(assignPage && assignPage.classList.contains('active')){
-          await loadDeliveries();
+          await renderDeliveries();
         }
       }
     } while(_convertPending);
@@ -1308,8 +1318,12 @@ async function runAutoConvertSafely(){
     console.warn('[실시간 자동전환 오류]', e);
   }finally{
     _isConverting = false;
+    _convertStartAt = 0;
   }
 }
+
+window._debugConvert = runAutoConvertSafely;
+window._debugFlags = ()=>({isConverting:_isConverting, pending:_convertPending});
 
 function subscribeAutoConvert(){
   if(_autoConvertSubscribed) return;
