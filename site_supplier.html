@@ -593,7 +593,6 @@ async function autoConvertConfirmedOrders(){
     console.log('  발주', orderId, '| 상태', ord.status, '| 전환됨?', convertedIds.has(orderId));
     if(!['waiting','confirmed'].includes(ord.status)){ console.log('[skip:상태]', orderId, ord.status); continue; }
     if(convertedIds.has(orderId)){ console.log('[skip:이미전환]', orderId, ord.storeName); continue; }
-    if(ord.status !== 'confirmed') continue;
 
     const pre = await getPreassignedDriver(ord.storeId, ord.storeName, ord.storeBusinessNumber);
     console.log('[조회]', orderId, '| storeName:', ord.storeName, '| storeId:', ord.storeId, '| 사업자:', ord.storeBusinessNumber, '→ 결과:', pre ? pre.driverName : 'null');
