@@ -631,7 +631,7 @@ async function autoConvertConfirmedOrders(){
 let _storeFilter='all';
 
 async function loadDeliveries(){
-  await autoConvertConfirmedOrders();
+  await runAutoConvertSafely();
   await ensureStorePool();
   const [ordData, dlvList] = await Promise.all([
     Auth.DB.get('franchise_orders'),
@@ -1281,12 +1281,15 @@ async function unassignStore(franchiseId){
 
 // ── 실시간 자동전환 구독 ──────────────────────────────────
 let _autoConvertSubscribed = false;
-function subscribeAutoConvert(){
-  if(_autoConvertSubscribed) return;
-  if(!Auth.isFirebaseReady || !Auth.db) return;
-  _autoConvertSubscribed = true;
-  Auth.db.ref('franchise_orders').on('value', async ()=>{
-    try{
+let _isConverting = false;
+let _convertPending = false;
+
+async function runAutoConvertSafely(){
+  if(_isConverting){ _convertPending = true; return; }
+  _isConverting = true;
+  try{
+    do{
+      _convertPending = false;
       const n = await autoConvertConfirmedOrders();
       if(n > 0){
         console.log('[실시간 자동전환]', n, '건 처리됨');
@@ -1295,8 +1298,19 @@ function subscribeAutoConvert(){
           await loadDeliveries();
         }
       }
-    }catch(e){ console.warn('[실시간 자동전환 오류]', e); }
-  });
+    } while(_convertPending);
+  }catch(e){
+    console.warn('[실시간 자동전환 오류]', e);
+  }finally{
+    _isConverting = false;
+  }
+}
+
+function subscribeAutoConvert(){
+  if(_autoConvertSubscribed) return;
+  if(!Auth.isFirebaseReady || !Auth.db) return;
+  _autoConvertSubscribed = true;
+  Auth.db.ref('franchise_orders').on('value', ()=>{ runAutoConvertSafely(); });
 }
 
 // ── 초기화 ────────────────────────────────────────────────
