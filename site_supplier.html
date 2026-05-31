@@ -144,6 +144,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
   <div class="tab-bar">
     <button class="tab-btn active" onclick="switchTab('assign')">배송배정<span class="tbadge" id="assignBadge">0</span></button>
     <button class="tab-btn" onclick="switchTab('driver')">기사별 조회</button>
+    <button class="tab-btn" onclick="switchTab('preassign')">기사 미리등록</button>
     <button class="tab-btn" onclick="switchTab('register')">등록관리</button>
     <button class="tab-btn" onclick="switchTab('settle')">정산관리</button>
   </div>
@@ -302,6 +303,21 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
     </div>
   </div>
 
+  <!-- ── 탭5: 기사 미리등록 ── -->
+  <div class="page" id="page-preassign">
+    <div class="scroll-body" id="preassignBody">
+      <div class="card">
+        <div class="form-field">
+          <div class="form-label">배송기사 선택</div>
+          <select class="form-select" id="preassignDriverSel" onchange="loadPreAssign()">
+            <option value="">기사를 선택하세요</option>
+          </select>
+        </div>
+      </div>
+      <div id="preassignContent"><div class="empty-state">기사를 선택하세요</div></div>
+    </div>
+  </div>
+
   <!-- ── 탭4: 정산관리 ── -->
   <div class="page" id="page-settle">
     <div class="scroll-body">
@@ -324,6 +340,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
   <div class="nav-bar">
     <button class="nav-item" onclick="switchTab('assign')" id="nav-assign"><i class="ti ti-truck-delivery active" id="ni-assign"></i><span class="nav-lbl active" id="nl-assign">배송배정</span></button>
     <button class="nav-item" onclick="switchTab('driver')" id="nav-driver"><i class="ti ti-user-check" id="ni-driver"></i><span class="nav-lbl" id="nl-driver">기사별</span></button>
+    <button class="nav-item" onclick="switchTab('preassign')" id="nav-preassign"><i class="ti ti-user-plus" id="ni-preassign"></i><span class="nav-lbl" id="nl-preassign">미리등록</span></button>
     <button class="nav-item" onclick="switchTab('register')" id="nav-register"><i class="ti ti-list-check" id="ni-register"></i><span class="nav-lbl" id="nl-register">등록관리</span></button>
     <button class="nav-item" onclick="switchTab('settle')" id="nav-settle"><i class="ti ti-coin" id="ni-settle"></i><span class="nav-lbl" id="nl-settle">정산관리</span></button>
   </div>
@@ -371,16 +388,17 @@ const ST_LABEL={assigned:'배정됨',shipping:'배송중',done:'완료',issue:'�
 (function tick(){ const n=new Date(); document.getElementById('stTime').textContent=String(n.getHours()).padStart(2,'0')+':'+String(n.getMinutes()).padStart(2,'0'); setTimeout(tick,1000); })();
 
 // ── 탭 전환 ──────────────────────────────────────────────
-const TAB_ICONS={assign:'ti-truck-delivery',driver:'ti-user-check',register:'ti-list-check',settle:'ti-coin'};
+const TAB_ICONS={assign:'ti-truck-delivery',driver:'ti-user-check',preassign:'ti-user-plus',register:'ti-list-check',settle:'ti-coin'};
 function switchTab(tab){
-  ['assign','driver','register','settle'].forEach(t=>{
+  ['assign','driver','preassign','register','settle'].forEach(t=>{
     document.getElementById('page-'+t).classList.toggle('active',t===tab);
     document.getElementById('ni-'+t).className='ti '+TAB_ICONS[t]+(t===tab?' active':'');
     document.getElementById('nl-'+t).className='nav-lbl'+(t===tab?' active':'');
   });
-  document.querySelectorAll('.tab-btn').forEach((b,i)=>b.classList.toggle('active',['assign','driver','register','settle'][i]===tab));
+  document.querySelectorAll('.tab-btn').forEach((b,i)=>b.classList.toggle('active',['assign','driver','preassign','register','settle'][i]===tab));
   if(tab==='assign') loadDeliveries();
   if(tab==='driver') loadDriverFilterSelect();
+  if(tab==='preassign') loadPreAssign();
   if(tab==='register') { loadDrivers(); loadStores(); }
   if(tab==='settle') loadSettle();
 }
@@ -1062,6 +1080,80 @@ async function printAllSettleSlips(){
   const slips=done.map((d,i)=>buildSlipHtml(d,i,done.length)).join('');
   w.document.write(buildPrintPage(slips,'납품 완료 거래명세서 '+done.length+'건'));
   w.document.close();
+}
+
+// ── 기사 미리등록 ─────────────────────────────────────────
+async function loadPreAssign(){
+  // 기사 select 채우기
+  const sel=document.getElementById('preassignDriverSel');
+  if(!_drivers.length){
+    const drivers=await Auth.loadSupplierDrivers();
+    _drivers=drivers;
+  }
+  const prevVal=sel.value;
+  sel.innerHTML='<option value="">기사를 선택하세요</option>'+_drivers.map(d=>`<option value="${d.id}">${d.name} (${d.phone})</option>`).join('');
+  if(prevVal) sel.value=prevVal;
+
+  const driverId=sel.value;
+  const content=document.getElementById('preassignContent');
+  if(!driverId){content.innerHTML='<div class="empty-state">기사를 선택하세요</div>';return;}
+
+  content.innerHTML='<div class="loading-wrap"><div class="spinner"></div>불러오는 중...</div>';
+
+  const [hqFrData, mapData]=await Promise.all([
+    Auth.DB.get('hq_franchises').catch(()=>({})),
+    Auth.DB.get('driver_store_map').catch(()=>({}))
+  ]);
+  const allFranchises=Object.entries(hqFrData||{}).map(([id,v])=>({id,...v}));
+  const mapEntries=Object.entries(mapData||{});
+  const assignedIds=new Set(mapEntries.map(([fid])=>fid));
+
+  // (A) 아직 배정 안 된 가맹점 (이 기사 + 다른 기사 모두)
+  const available=allFranchises.filter(f=>!assignedIds.has(f.id));
+  // (B) 이 기사에 배정된 가맹점
+  const myStores=mapEntries.filter(([,v])=>v.driverId===driverId).map(([fid,v])=>({id:fid,...v}));
+
+  const driver=_drivers.find(d=>d.id===driverId);
+
+  content.innerHTML=`
+    <div class="section-label" style="margin-bottom:6px">이 기사의 담당 가맹점 (${myStores.length}곳)</div>
+    <div style="display:flex;flex-direction:column;gap:7px" id="pa-assigned">
+      ${myStores.length?myStores.map(s=>`<div class="list-item">
+        <div class="li-icon" style="background:var(--green-bg);color:var(--green)"><i class="ti ti-building-store"></i></div>
+        <div class="li-info"><div class="li-name">${s.franchiseName||s.id}</div><div class="li-sub">담당기사: ${driver?.name||''}</div></div>
+        <div class="li-actions">
+          <button class="act-btn red" onclick="unassignStore('${s.id}')">해제</button>
+        </div>
+      </div>`).join(''):'<div class="empty-state" style="padding:14px">배정된 가맹점 없음</div>'}
+    </div>
+    <div class="section-label" style="margin-top:14px;margin-bottom:6px">배정 가능한 가맹점 (${available.length}곳)</div>
+    <div style="display:flex;flex-direction:column;gap:7px" id="pa-available">
+      ${available.length?available.map(f=>`<div class="list-item">
+        <div class="li-icon" style="background:var(--surface2);color:var(--dim)"><i class="ti ti-building-store"></i></div>
+        <div class="li-info"><div class="li-name">${f.businessName||f.name||f.id}</div><div class="li-sub">${f.address||f.phone||''}</div></div>
+        <div class="li-actions">
+          <button class="act-btn blue" onclick="assignStore('${f.id}','${(f.businessName||f.name||f.id).replace(/'/g,'&#39;')}')">배정</button>
+        </div>
+      </div>`).join(''):'<div class="empty-state" style="padding:14px">배정 가능한 가맹점 없음</div>'}
+    </div>`;
+}
+
+async function assignStore(franchiseId, franchiseName){
+  const driverId=document.getElementById('preassignDriverSel').value;
+  if(!driverId){showToast('기사를 먼저 선택하세요');return;}
+  const driver=_drivers.find(d=>d.id===driverId);
+  await Auth.DB.set('driver_store_map/'+franchiseId,{
+    driverId, driverName:driver?.name||'', franchiseName, assignedAt:new Date().toISOString()
+  });
+  showToast(franchiseName+' → '+driver?.name+' 배정 완료');
+  await loadPreAssign();
+}
+
+async function unassignStore(franchiseId){
+  if(!confirm('배정을 해제하시겠습니까?'))return;
+  await Auth.DB.remove('driver_store_map/'+franchiseId);
+  showToast('배정 해제 완료');
+  await loadPreAssign();
 }
 
 // ── 초기화 ────────────────────────────────────────────────
