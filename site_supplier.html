@@ -465,19 +465,44 @@ function renderItemList(){
 }
 
 // ── 전속기사 조회 헬퍼 ────────────────────────────────────
-async function getPreassignedDriver(franchiseId, storeName){
-  const map = await Auth.DB.get('driver_store_map').catch(()=>({})) || {};
-  let entry = franchiseId ? map[franchiseId] : null;
-  if(!entry && storeName){
-    entry = Object.values(map).find(m => m && m.franchiseName === storeName);
+async function getPreassignedDriver(rawId, storeName, bizNumber){
+  const map = await Auth.DB.get('driver_store_map') || {};
+  if(!map || !Object.keys(map).length) return null;
+
+  const normalize = s => (s||'').replace(/\s+/g,'').toLowerCase();
+
+  // 1) rawId가 곧 driver_store_map 키(fr_xxx)인 경우
+  let entry = rawId ? map[rawId] : null;
+
+  // 2) rawId가 hq_franchises.id가 아닐 수 있으므로
+  //    hq_franchises에서 사업자번호/이름으로 진짜 fr_xxx를 역추적
+  if(!entry){
+    const hq = await Auth.DB.get('hq_franchises') || {};
+    const hqList = Object.values(hq);
+    let fr = null;
+    if(rawId)            fr = hqList.find(f => f.id === rawId);
+    if(!fr && bizNumber) fr = hqList.find(f => f.businessNumber && f.businessNumber === bizNumber);
+    if(!fr && storeName) fr = hqList.find(f => f.name === storeName || normalize(f.name) === normalize(storeName));
+    if(fr && map[fr.id]) entry = map[fr.id];
   }
+
+  // 3) 그래도 못 찾으면 map 안의 franchiseName으로 직접 매칭(정규화 포함)
+  if(!entry && storeName){
+    entry = Object.values(map).find(m =>
+      m && m.franchiseName &&
+      (m.franchiseName === storeName || normalize(m.franchiseName) === normalize(storeName))
+    );
+  }
+
   if(!entry || !entry.driverId) return null;
+
   if(!_drivers || !_drivers.length){ _drivers = await Auth.loadSupplierDrivers(); }
   const drv = (_drivers||[]).find(d => d.id === entry.driverId);
+  console.log('[전속배정] 매칭:', entry.franchiseName, '→', entry.driverName);
   return {
-    driverId:    entry.driverId,
-    driverName:  drv?.name  || entry.driverName || '',
-    driverPhone: drv?.phone || ''
+    driverId:   entry.driverId,
+    driverName: drv?.name  || entry.driverName || '',
+    driverPhone:drv?.phone || ''
   };
 }
 
@@ -526,7 +551,7 @@ async function createDelivery(){
   const store=_stores.find(s=>s.id===storeId);
   let driverId=newDriver.value;let driver=_drivers.find(d=>d.id===driverId);
   if(!driverId){
-    const pre=await getPreassignedDriver(storeId,store?.businessName);
+    const pre=await getPreassignedDriver(store?.id,store?.businessName||store?.name,store?.businessNumber);
     if(pre){driverId=pre.driverId;driver={name:pre.driverName,phone:pre.driverPhone};}
   }
   let itemsText=_selectedItems.map(x=>`${x.name} ${x.qty}${x.unit}`).join(' · ');
@@ -781,7 +806,7 @@ async function confirmBulkAssign2(){
       let useDriverId = driverId;
       let useDriver = driver;
       if(!useDriverId){
-        const pre = await getPreassignedDriver(ord.storeId, ord.storeName);
+        const pre = await getPreassignedDriver(ord.storeId, ord.storeName, ord.storeBusinessNumber);
         if(pre){ useDriverId = pre.driverId; useDriver = {name:pre.driverName, phone:pre.driverPhone}; }
       }
       const store = _storePool.find(f =>
@@ -866,7 +891,7 @@ async function createDeliveryFromOrder(orderId){
   if(!ordData){showToast('발주 정보 없음');return;}
   let driver=_drivers.find(d=>d.id===driverId);
   if(!driverId){
-    const pre=await getPreassignedDriver(ordData.storeId,ordData.storeName);
+    const pre=await getPreassignedDriver(ordData.storeId,ordData.storeName,ordData.storeBusinessNumber);
     if(pre){driverId=pre.driverId;driver={name:pre.driverName,phone:pre.driverPhone};}
   }
   await ensureStorePool();
