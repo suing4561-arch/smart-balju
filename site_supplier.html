@@ -251,6 +251,10 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
           </button>
         </div>
       </div>
+      <div class="sub-filters" id="driverViewFilters" style="margin-bottom:8px;display:none">
+        <button class="sf active" id="dvf-active" onclick="setDriverView('active')">진행중</button>
+        <button class="sf" id="dvf-done" onclick="setDriverView('done')">완료</button>
+      </div>
       <div id="driverDeliveryList"><div class="empty-state">기사를 선택하세요</div></div>
     </div>
   </div>
@@ -1053,10 +1057,24 @@ async function loadDriverFilterSelect(){
   const sel=document.getElementById('driverFilterSel');
   sel.innerHTML='<option value="">기사 선택</option>'+_drivers.map(d=>`<option value="${d.id}">${d.name} (${d.phone})</option>`).join('');
 }
+let _driverView = 'active';
+function setDriverView(v){
+  _driverView = v;
+  document.getElementById('dvf-active').classList.toggle('active', v==='active');
+  document.getElementById('dvf-done').classList.toggle('active', v==='done');
+  loadDriverDeliveries();
+}
+
 async function loadDriverDeliveries(){
   const driverId=document.getElementById('driverFilterSel').value;
   const el=document.getElementById('driverDeliveryList');
-  if(!driverId){el.innerHTML='<div class="empty-state">기사를 선택하세요</div>';return;}
+  const filterBar=document.getElementById('driverViewFilters');
+  if(!driverId){
+    el.innerHTML='<div class="empty-state">기사를 선택하세요</div>';
+    if(filterBar) filterBar.style.display='none';
+    return;
+  }
+  if(filterBar) filterBar.style.display='';
   el.innerHTML='<div class="loading-wrap"><div class="spinner"></div>불러오는 중...</div>';
   await ensureStorePool();
   const deliveries=await Auth.loadDeliveries();
@@ -1065,6 +1083,8 @@ async function loadDriverDeliveries(){
   if(!list.length){el.innerHTML='<div class="empty-state">배정된 배송이 없습니다</div>';return;}
   const total=list.reduce((s,d)=>s+Number(d.amount||0),0);
   const done=list.filter(d=>d.status==='done').length;
+  // _driverView 기준 목록 필터 (요약은 전체 기준 유지)
+  const viewList = _driverView==='done' ? list.filter(d=>d.status==='done') : list.filter(d=>d.status!=='done');
   el.innerHTML=`<div style="background:var(--blue-bg);border-radius:11px;padding:12px 14px;margin-bottom:10px">
     <div style="font-size:14px;font-weight:700;color:var(--blue)">${driver?.name} 배송 현황</div>
     <div style="display:flex;gap:14px;margin-top:6px;font-size:12px">
@@ -1072,8 +1092,8 @@ async function loadDriverDeliveries(){
       <span>잔여 <strong style="color:var(--amber)">${list.length-done}건</strong></span>
       <span>총액 <strong style="font-family:var(--mono)">${total.toLocaleString()}원</strong></span>
     </div>
-  </div>`+
-  list.map(d=>{
+  </div>`+(viewList.length?'':`<div class="empty-state">${_driverView==='done'?'완료된 배송이 없습니다':'진행중인 배송이 없습니다'}</div>`)+
+  viewList.map(d=>{
     const stColor=ST_COLOR[d.status]||'var(--muted)';
     const isOpen=_openDetailId===('drv_'+d.id);
     const dd=new Date(d.createdAt||'');

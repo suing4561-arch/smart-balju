@@ -151,6 +151,13 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
   <div class="dlv-list" id="dlvList">
     <div class="loading-wrap"><div class="spinner"></div>불러오는 중...</div>
   </div>
+  <div id="doneSection" style="display:none;padding:0 20px 24px">
+    <div id="doneSectionHeader" onclick="toggleDoneSection()" style="display:flex;align-items:center;justify-content:space-between;padding:11px 14px;background:var(--green-bg);border:.5px solid rgba(26,122,74,.25);border-radius:12px;cursor:pointer;font-size:13px;font-weight:700;color:var(--green)">
+      <span><i class="ti ti-circle-check" style="margin-right:6px"></i><span id="doneSectionLabel">완료 0건</span></span>
+      <i class="ti ti-chevron-down" id="doneSectionArrow" style="font-size:16px;transition:transform .2s"></i>
+    </div>
+    <div id="doneSectionBody" class="dlv-list" style="display:none;padding:8px 0 0;gap:8px"></div>
+  </div>
 </div>
 
 <!-- 완료 모달 -->
@@ -269,64 +276,87 @@ function updateBulkBar(){
   bar.classList.toggle('show', cnt > 0);
 }
 
+let _doneOpen = false;
+function toggleDoneSection(){
+  _doneOpen = !_doneOpen;
+  document.getElementById('doneSectionBody').style.display = _doneOpen ? '' : 'none';
+  document.getElementById('doneSectionArrow').style.transform = _doneOpen ? 'rotate(180deg)' : '';
+}
+
+function buildCard(d, i, activeIdx){
+  const isDone = d.status==='done';
+  const isShipping = d.status==='shipping';
+  const isWaiting = d.status==='assigned';
+  const isFirst = i===activeIdx;
+  const numCls = isDone?'done':isShipping?'active':'waiting';
+  const numContent = isDone?'<i class="ti ti-check" style="font-size:13px"></i>':isShipping?'<i class="ti ti-truck-delivery" style="font-size:13px"></i>':(i+1);
+  const stCls = isDone?'sc-done':isShipping?'sc-active':'sc-waiting';
+  const stLabel = isDone?'완료':isShipping?'배송중':'대기';
+  const isChecked = checked.has(d.id);
+  let body = '';
+  if(!isDone){
+    body += `<div class="addr-row"><span class="addr-text"><i class="ti ti-map-pin" style="font-size:13px;color:var(--muted);margin-right:4px"></i>${d.address||'-'}</span>${d.driverPhone?`<a href="tel:${d.driverPhone}" class="call-btn"><i class="ti ti-phone" style="font-size:14px"></i>전화</a>`:''}</div>`;
+    body += `<div class="items-box">${d.items||'품목 없음'}${d.amount?'<br><span style="color:var(--text);font-weight:700;font-family:var(--mono)">'+(Number(d.amount)||0).toLocaleString()+'원</span>':''}</div>`;
+  }
+  if(isShipping){
+    body += `<div style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--muted)"><i class="ti ti-clock" style="font-size:13px"></i>출발: ${d.startedAt?.slice(11,16)||'-'}</div>`;
+    body += `<button class="big-btn btn-done" onclick="openDone('${d.id}')"><i class="ti ti-circle-check"></i>도착 완료</button>`;
+    body += `<button class="big-btn btn-issue" style="padding:11px" onclick="openIssue('${d.id}')"><i class="ti ti-alert-triangle" style="font-size:17px"></i>이슈 보고</button>`;
+  }
+  if(isWaiting && isFirst){
+    body += `<button class="big-btn btn-start" onclick="startDlv('${d.id}')"><i class="ti ti-truck-delivery"></i>배송 출발</button>`;
+    body += `<button class="big-btn btn-done" onclick="openDone('${d.id}')"><i class="ti ti-circle-check"></i>도착 완료</button>`;
+  }
+  if(isWaiting && !isFirst){
+    body += `<button class="big-btn btn-done" onclick="openDone('${d.id}')"><i class="ti ti-circle-check"></i>도착 완료</button>`;
+  }
+  if(isDone){
+    body = `<div class="done-stamp"><i class="ti ti-circle-check"></i><div><div class="done-stamp-title">납품 완료</div><div class="done-stamp-time">${d.doneAt?.slice(11,16)||''} 도착 확인</div></div></div>`;
+  }
+  return `<div class="dlv-card${isShipping?' is-active':''}${isDone?' is-done':''}">
+    <div class="dlv-header">
+      <input type="checkbox" class="dlv-check" value="${d.id}" ${isDone?'disabled':''} ${isChecked?'checked':''} onchange="toggleCheck('${d.id}',this.checked)">
+      <div class="dlv-num ${numCls}">${numContent}</div>
+      <div class="dlv-info">
+        <div class="dlv-store">${d.storeName||'-'}</div>
+        <div class="dlv-addr">${d.address||''}</div>
+        ${isShipping?`<div class="dlv-items">${d.items||''}</div>`:''}
+      </div>
+      <span class="status-chip ${stCls}">${stLabel}</span>
+    </div>
+    ${body?`<div class="dlv-body">${body}</div>`:''}
+  </div>`;
+}
+
 function render(){
   updateProgress();
-  const activeIdx = deliveries.findIndex(d=>d.status==='shipping'||d.status==='assigned');
   const el = document.getElementById('dlvList');
 
   if(!deliveries.length){
     el.innerHTML = '<div class="empty-state"><i class="ti ti-mood-smile" style="font-size:40px;display:block;margin-bottom:10px;opacity:.4"></i>오늘 배송이 없습니다</div>';
+    document.getElementById('doneSection').style.display = 'none';
     return;
   }
 
-  el.innerHTML = deliveries.map((d, i) => {
-    const isDone = d.status==='done';
-    const isShipping = d.status==='shipping';
-    const isWaiting = d.status==='assigned';
-    const isFirst = i===activeIdx;
-    const numCls = isDone?'done':isShipping?'active':'waiting';
-    const numContent = isDone?'<i class="ti ti-check" style="font-size:13px"></i>':isShipping?'<i class="ti ti-truck-delivery" style="font-size:13px"></i>':(i+1);
-    const stCls = isDone?'sc-done':isShipping?'sc-active':'sc-waiting';
-    const stLabel = isDone?'완료':isShipping?'배송중':'대기';
-    const isChecked = checked.has(d.id);
+  const active = deliveries.filter(d=>d.status!=='done');
+  const done   = deliveries.filter(d=>d.status==='done');
+  const activeIdx = deliveries.findIndex(d=>d.status==='shipping'||d.status==='assigned');
 
-    let body = '';
-    if(!isDone){
-      body += `<div class="addr-row"><span class="addr-text"><i class="ti ti-map-pin" style="font-size:13px;color:var(--muted);margin-right:4px"></i>${d.address||'-'}</span>${d.driverPhone?`<a href="tel:${d.driverPhone}" class="call-btn"><i class="ti ti-phone" style="font-size:14px"></i>전화</a>`:''}</div>`;
-    }
-    if(!isDone){
-      body += `<div class="items-box">${d.items||'품목 없음'}${d.amount?'<br><span style="color:var(--text);font-weight:700;font-family:var(--mono)">'+(Number(d.amount)||0).toLocaleString()+'원</span>':''}</div>`;
-    }
-    if(isShipping){
-      body += `<div style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--muted)"><i class="ti ti-clock" style="font-size:13px"></i>출발: ${d.startedAt?.slice(11,16)||'-'}</div>`;
-      body += `<button class="big-btn btn-done" onclick="openDone('${d.id}')"><i class="ti ti-circle-check"></i>도착 완료</button>`;
-      body += `<button class="big-btn btn-issue" style="padding:11px" onclick="openIssue('${d.id}')"><i class="ti ti-alert-triangle" style="font-size:17px"></i>이슈 보고</button>`;
-    }
-    if(isWaiting && isFirst){
-      body += `<button class="big-btn btn-start" onclick="startDlv('${d.id}')"><i class="ti ti-truck-delivery"></i>배송 출발</button>`;
-      body += `<button class="big-btn btn-done" onclick="openDone('${d.id}')"><i class="ti ti-circle-check"></i>도착 완료</button>`;
-    }
-    if(isWaiting && !isFirst){
-      body += `<button class="big-btn btn-done" onclick="openDone('${d.id}')"><i class="ti ti-circle-check"></i>도착 완료</button>`;
-    }
-    if(isDone){
-      body = `<div class="done-stamp"><i class="ti ti-circle-check"></i><div><div class="done-stamp-title">납품 완료</div><div class="done-stamp-time">${d.doneAt?.slice(11,16)||''} 도착 확인</div></div></div>`;
-    }
+  // 메인 목록: 미완료만
+  el.innerHTML = active.length
+    ? active.map((d,i)=>buildCard(d,i,activeIdx)).join('')
+    : '';
 
-    return `<div class="dlv-card${isShipping?' is-active':''}${isDone?' is-done':''}">
-      <div class="dlv-header">
-        <input type="checkbox" class="dlv-check" value="${d.id}" ${isDone?'disabled':''} ${isChecked?'checked':''} onchange="toggleCheck('${d.id}',this.checked)">
-        <div class="dlv-num ${numCls}">${numContent}</div>
-        <div class="dlv-info">
-          <div class="dlv-store">${d.storeName||'-'}</div>
-          <div class="dlv-addr">${d.address||''}</div>
-          ${isShipping?`<div class="dlv-items">${d.items||''}</div>`:''}
-        </div>
-        <span class="status-chip ${stCls}">${stLabel}</span>
-      </div>
-      ${body?`<div class="dlv-body">${body}</div>`:''}
-    </div>`;
-  }).join('');
+  // 완료 접이식 섹션
+  const doneSection = document.getElementById('doneSection');
+  if(done.length){
+    doneSection.style.display = '';
+    document.getElementById('doneSectionLabel').textContent = '완료 '+done.length+'건';
+    document.getElementById('doneSectionBody').innerHTML = done.map((d,i)=>buildCard(d,i,-1)).join('');
+    document.getElementById('doneSectionBody').style.display = _doneOpen ? '' : 'none';
+  } else {
+    doneSection.style.display = 'none';
+  }
 }
 
 function toggleCheck(id, val){
