@@ -564,10 +564,68 @@ async function createDelivery(){
   await loadDeliveries();showToast('배송 생성 완료 · '+amount.toLocaleString()+'원'+autoMsg);
 }
 
+// ── 확정 발주 자동 배송전환 ───────────────────────────────
+async function autoConvertConfirmedOrders(){
+  const map = await Auth.DB.get('driver_store_map') || {};
+  if(!Object.keys(map).length) return 0;
+
+  const [ordData, dlvData] = await Promise.all([
+    Auth.DB.get('franchise_orders'),
+    Auth.DB.get('deliveries')
+  ]);
+  const orders = ordData || {};
+  const deliveries = dlvData || {};
+
+  const convertedIds = new Set(
+    Object.values(deliveries).map(d => d && d.fromOrderId).filter(Boolean)
+  );
+
+  await ensureStorePool();
+  let count = 0;
+
+  for(const [orderId, ord] of Object.entries(orders)){
+    if(!ord) continue;
+    if(ord.status !== 'confirmed') continue;
+    if(convertedIds.has(orderId)) continue;
+
+    const pre = await getPreassignedDriver(ord.storeId, ord.storeName, ord.storeBusinessNumber);
+    if(!pre) continue;
+
+    const store = _storePool.find(f =>
+      (ord.storeBusinessNumber && f.businessNumber === ord.storeBusinessNumber) ||
+      f.id === ord.storeId || f.businessName === ord.storeName || f.name === ord.storeName
+    ) || {};
+
+    await Auth.createDelivery({
+      storeId:             ord.storeId || store.id || '',
+      storeName:           ord.storeName || store.businessName || store.name || '',
+      storeBusinessNumber: ord.storeBusinessNumber || store.businessNumber || '',
+      storeAddress:        ord.storeAddress || store.address || '',
+      storePhone:          ord.storePhone || store.phone || '',
+      storeOwner:          ord.storeOwner || store.owner || '',
+      brandId:             ord.brandId || '',
+      brandName:           ord.brandName || '',
+      address:             ord.storeAddress || store.address || '',
+      driverId:            pre.driverId,
+      driverName:          pre.driverName,
+      driverPhone:         pre.driverPhone,
+      items:               ord.items || '',
+      itemDetails:         ord.itemDetails || [],
+      amount:              ord.amount || 0,
+      fromOrderId:         orderId,
+    });
+    await Auth.DB.update('franchise_orders/'+orderId, {status:'shipping'});
+    console.log('[자동전환] 발주', orderId, ord.storeName, '→ 배송생성+기사배정:', pre.driverName);
+    count++;
+  }
+  return count;
+}
+
 // ── 배송 목록 (한줄+클릭상세) ─────────────────────────────
 let _storeFilter='all';
 
 async function loadDeliveries(){
+  await autoConvertConfirmedOrders();
   await ensureStorePool();
   const [ordData, dlvList] = await Promise.all([
     Auth.DB.get('franchise_orders'),
