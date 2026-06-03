@@ -262,9 +262,15 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
               <div class="fl"><div class="flb">최소주문수량</div><input class="fi" id="mMinQty" type="number" placeholder="1" min="1"></div>
               <div class="fl"><div class="flb">최대주문수량</div><input class="fi" id="mMaxQty" type="number" placeholder="999" min="1"></div>
             </div>
-            <div class="fl" style="margin-top:2px">
-              <div class="flb">기준재고 (발주 1회 입고량)</div>
-              <input class="fi" id="mBaseStock" type="number" placeholder="0 (예: 50000)" min="0">
+            <div class="two-col" style="margin-top:2px">
+              <div class="fl">
+                <div class="flb">입고가격 (원) <span style="font-weight:400;color:var(--muted)">납품업체 매입가 · 정산 기준</span></div>
+                <input class="fi" id="mCostPrice" type="number" placeholder="0" min="0">
+              </div>
+              <div class="fl">
+                <div class="flb">기준재고 (발주 1회 입고량)</div>
+                <input class="fi" id="mBaseStock" type="number" placeholder="0 (예: 50000)" min="0">
+              </div>
             </div>
 
             <button class="rb green" id="menuSaveBtn" onclick="saveMenu()"><i class="ti ti-plus"></i>품목·가격 등록</button>
@@ -279,7 +285,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
             </div>
             <div style="overflow:auto;max-height:300px">
               <table class="lt">
-                <thead><tr><th>코드</th><th>품목명</th><th>카테고리</th><th>거래처</th><th>단가</th><th>단위</th><th></th></tr></thead>
+                <thead><tr><th>코드</th><th>품목명</th><th>카테고리</th><th>거래처</th><th>단가</th><th>입고가</th><th>단위</th><th></th></tr></thead>
                 <tbody id="menuList"></tbody>
               </table>
             </div>
@@ -1047,6 +1053,7 @@ async function resetMenuForm(){
   mName.value=mSpec.value=mUnit.value=mPrice.value=mMinQty.value=mMaxQty.value='';
   mCat.value=''; mPartner.value='';
   document.getElementById('mBaseStock').value='';
+  document.getElementById('mCostPrice').value='';
   document.getElementById('menuSaveBtn').innerHTML='<i class="ti ti-plus"></i>품목·가격 등록';
   await autoNextSeq();
   mName.focus();
@@ -1074,18 +1081,19 @@ async function saveMenu(){
   const finalBrandName = _myBrandName || (bOpt.text.split('] ')[1]||'');
 
   if(_editMenuId){
-    await Auth.updateMenu(_editMenuId,{name:mName.value,category:mCat.value,spec:mSpec.value,unit:mUnit.value,partnerId:pSel.value,partnerName:pOpt.text.split('] ')[1]||'',brandId:bSel.value,brandName:bOpt.text.split('] ')[1]||'',price:Number(mPrice.value),minQty:Number(mMinQty.value)||1,maxQty:Number(mMaxQty.value)||999,code,baseStock:Number(document.getElementById('mBaseStock').value)||0});
+    await Auth.updateMenu(_editMenuId,{name:mName.value,category:mCat.value,spec:mSpec.value,unit:mUnit.value,partnerId:pSel.value,partnerName:pOpt.text.split('] ')[1]||'',brandId:bSel.value,brandName:bOpt.text.split('] ')[1]||'',price:Number(mPrice.value),minQty:Number(mMinQty.value)||1,maxQty:Number(mMaxQty.value)||999,code,baseStock:Number(document.getElementById('mBaseStock').value)||0,costPrice:Number(document.getElementById('mCostPrice').value)||0});
     _editMenuId=''; document.getElementById('menuSaveBtn').innerHTML='<i class="ti ti-plus"></i>품목·가격 등록';
     showToast('수정 완료 ('+code+')');
   } else {
     const existing = await Auth.loadMenus();
     if(existing.find(m=>m.code===code)){ showToast('코드 '+code+' 는 이미 사용 중입니다. 일련번호를 변경하세요'); return; }
-    await Auth.registerMenu({code,name:mName.value,category:mCat.value,spec:mSpec.value,unit:mUnit.value,partnerId:pSel.value,partnerName:pOpt.text.split('] ')[1]||'',brandId:finalBrandId,brandName:finalBrandName,price:Number(mPrice.value),minQty:Number(mMinQty.value)||1,maxQty:Number(mMaxQty.value)||999,baseStock:Number(document.getElementById('mBaseStock').value)||0});
+    await Auth.registerMenu({code,name:mName.value,category:mCat.value,spec:mSpec.value,unit:mUnit.value,partnerId:pSel.value,partnerName:pOpt.text.split('] ')[1]||'',brandId:finalBrandId,brandName:finalBrandName,price:Number(mPrice.value),minQty:Number(mMinQty.value)||1,maxQty:Number(mMaxQty.value)||999,baseStock:Number(document.getElementById('mBaseStock').value)||0,costPrice:Number(document.getElementById('mCostPrice').value)||0});
     showToast('등록 완료 ('+code+')');
   }
   mName.value=mSpec.value=mUnit.value=mPrice.value=mMinQty.value=mMaxQty.value='';
   mCat.value=''; mPartner.value=''; mSeq.value='000001';
   document.getElementById('mBaseStock').value='';
+  document.getElementById('mCostPrice').value='';
   updateCodePreview(); await rMenu(); await autoNextSeq();
 }
 
@@ -1101,10 +1109,11 @@ async function rMenu(){
         <td>${m.category||'-'}</td>
         <td>${m.partnerName||'-'}</td>
         <td style="font-family:var(--mono)">${Number(m.price||0).toLocaleString()}원</td>
+        <td style="font-family:var(--mono);color:var(--muted)">${Number(m.costPrice||0).toLocaleString()}원</td>
         <td>${m.unit||'-'}</td>
         <td><button class="delbtn" onclick="delM('${m.id}')">삭제</button></td>
       </tr>`).join('')
-    :`<tr><td colspan="7" class="empty">등록된 품목 없음</td></tr>`;
+    :`<tr><td colspan="8" class="empty">등록된 품목 없음</td></tr>`;
 }
 
 async function editMenu(id){
@@ -1115,6 +1124,7 @@ async function editMenu(id){
   mUnit.value=m.unit||''; mPrice.value=m.price||'';
   mMinQty.value=m.minQty||1; mMaxQty.value=m.maxQty||999;
   document.getElementById('mBaseStock').value=m.baseStock||0;
+  document.getElementById('mCostPrice').value=m.costPrice||0;
   if(m.code){ mSeq.value=m.code.slice(4)||'01'; }
   // 거래처/브랜드 선택
   if(m.partnerId){ mPartner.value=m.partnerId; }
