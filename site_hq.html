@@ -1935,9 +1935,7 @@ async function calcSupplierPayables(fromDate, toDate){
     Auth.DB.get('menus'),
     Auth.DB.get('deliveries'),
   ]);
-  const partners = Object.values(partData||{}).filter(p=>
-    p.status !== 'inactive' && (!_myBrandId || p.brandId === _myBrandId)
-  );
+  const partners = Object.values(partData||{}).filter(p=> p.status !== 'inactive');
   const menus = Object.values(menuData||{});
   const costById = {}, costByName = {};
   menus.forEach(m=>{ if(m.id) costById[m.id]=Number(m.costPrice)||0; if(m.name) costByName[m.name]=Number(m.costPrice)||0; });
