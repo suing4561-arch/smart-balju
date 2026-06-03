@@ -212,14 +212,9 @@ th{color:var(--muted);font-size:11px;text-transform:uppercase}
       <div><label>비밀번호 <span style="font-weight:400;color:var(--muted)">(수정 시 비워두면 유지)</span></label>
         <input id="fPassword" type="password" placeholder="비밀번호"></div>
 
-      <div class="form-divider">브랜드 연동 <span style="font-weight:400;color:var(--red)">★ brandId가 정확해야 화면 필터가 동작합니다</span></div>
-      <div class="form-full">
-        <label>연동 브랜드</label>
-        <select id="fBrand" onchange="onBrandChange()">
-          <option value="">브랜드 선택</option>
-        </select>
-        <div id="brandPreview" style="display:none;margin-top:6px;padding:8px 12px;background:var(--bg);border-radius:8px;font-size:12px;color:var(--muted)"></div>
-      </div>
+      <div class="form-divider">브랜드 연동</div>
+      <div><label>브랜드명</label><input id="fBrandName" placeholder="이바구밀면"></div>
+      <div><label>브랜드 코드 <span style="font-weight:400;color:var(--muted)">(2자리, 예: IB)</span></label><input id="fBrandCode" placeholder="IB" maxlength="4" style="text-transform:uppercase"></div>
 
     </div>
 
@@ -416,19 +411,8 @@ async function openEditor(uid){
   _editUid = uid || '';
   const u = uid ? _users.find(x => x.uid === uid) : null;
   document.getElementById('editorTitle').textContent = u ? '본사 계정 수정' : '본사 계정 생성';
-  ['fName','fBusinessName','fBusinessNumber','fPhone','fLoginId','fPassword','fOkposId','fOkposPw']
+  ['fName','fBusinessName','fBusinessNumber','fPhone','fLoginId','fPassword','fBrandName','fBrandCode']
     .forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
-  document.getElementById('fBrand').value = '';
-  document.getElementById('brandPreview').style.display = 'none';
-
-  // 브랜드 드롭다운 채우기
-  const brands = await Auth.loadBrands();
-  const bSel = document.getElementById('fBrand');
-  const cur = bSel.value;
-  bSel.innerHTML = '<option value="">브랜드 선택</option>' +
-    brands.map(b => `<option value="${b.id}" data-name="${esc(b.name)}">[${b.code||'-'}] ${esc(b.name)}${b.category?' ('+b.category+')':''}</option>`).join('');
-  if(cur) bSel.value = cur;
-
   if(u){
     document.getElementById('fStatus').value = u.status;
     document.getElementById('fName').value = u.name || '';
@@ -436,7 +420,13 @@ async function openEditor(uid){
     document.getElementById('fBusinessNumber').value = u.businessNumber || '';
     document.getElementById('fPhone').value = u.phone || '';
     document.getElementById('fLoginId').value = u.loginId || '';
-    if(u.brandId){ bSel.value = u.brandId; onBrandChange(); }
+    document.getElementById('fBrandName').value = u.brandName || '';
+    // 기존 브랜드 코드는 brands에서 조회
+    if(u.brandId){
+      const brands = await Auth.loadBrands();
+      const b = brands.find(x => x.id === u.brandId);
+      if(b) document.getElementById('fBrandCode').value = b.code || '';
+    }
   } else {
     document.getElementById('fStatus').value = 'active';
     document.getElementById('fPassword').value = '1234';
@@ -444,18 +434,17 @@ async function openEditor(uid){
   document.getElementById('editorModal').classList.add('show');
 }
 
-function onBrandChange(){
-  const sel = document.getElementById('fBrand');
-  const opt = sel.options[sel.selectedIndex];
-  const prev = document.getElementById('brandPreview');
-  if(sel.value){ prev.style.display=''; prev.textContent='연동 브랜드: '+opt.dataset.name+' (id: '+sel.value+')'; }
-  else prev.style.display = 'none';
-}
-
 async function saveEditor(){
   if(!document.getElementById('fLoginId').value.trim()){ toast('로그인 ID를 입력하세요'); return; }
-  const bSel = document.getElementById('fBrand');
-  const bOpt = bSel.options[bSel.selectedIndex];
+  const brandName = document.getElementById('fBrandName').value.trim();
+  const brandCode = document.getElementById('fBrandCode').value.trim().toUpperCase();
+  if(!brandName){ toast('브랜드명을 입력하세요'); return; }
+
+  // 동일 이름 브랜드 조회 → 없으면 신규 생성
+  const brands = await Auth.loadBrands();
+  let brand = brands.find(b => b.name === brandName);
+  if(!brand) brand = await Auth.registerBrand({ name: brandName, code: brandCode });
+
   await Auth.upsertUser({
     uid: _editUid,
     role: 'hq',
@@ -466,8 +455,8 @@ async function saveEditor(){
     phone: document.getElementById('fPhone').value,
     loginId: document.getElementById('fLoginId').value,
     password: document.getElementById('fPassword').value || undefined,
-    brandId: bSel.value || '',
-    brandName: bOpt?.dataset?.name || '',
+    brandId: brand.id,
+    brandName: brand.name,
   });
   closeModal('editorModal');
   await refreshAll();
