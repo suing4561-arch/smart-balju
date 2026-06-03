@@ -216,6 +216,10 @@ th{color:var(--muted);font-size:11px;text-transform:uppercase}
       <div><label>브랜드명</label><input id="fBrandName" placeholder="이바구밀면"></div>
       <div><label>브랜드 코드 <span style="font-weight:400;color:var(--muted)">(2자리, 예: IB)</span></label><input id="fBrandCode" placeholder="IB" maxlength="4" style="text-transform:uppercase"></div>
 
+      <div class="form-divider">OKPos 연동</div>
+      <div><label>OKPos 아이디</label><input id="fOkposId" placeholder="OKPos 로그인 아이디"></div>
+      <div><label>OKPos 비밀번호</label><input id="fOkposPw" type="password" placeholder="OKPos 비밀번호"></div>
+
     </div>
 
     <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:18px">
@@ -411,7 +415,7 @@ async function openEditor(uid){
   _editUid = uid || '';
   const u = uid ? _users.find(x => x.uid === uid) : null;
   document.getElementById('editorTitle').textContent = u ? '본사 계정 수정' : '본사 계정 생성';
-  ['fName','fBusinessName','fBusinessNumber','fPhone','fLoginId','fPassword','fBrandName','fBrandCode']
+  ['fName','fBusinessName','fBusinessNumber','fPhone','fLoginId','fPassword','fBrandName','fBrandCode','fOkposId','fOkposPw']
     .forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
   if(u){
     document.getElementById('fStatus').value = u.status;
@@ -420,6 +424,7 @@ async function openEditor(uid){
     document.getElementById('fBusinessNumber').value = u.businessNumber || '';
     document.getElementById('fPhone').value = u.phone || '';
     document.getElementById('fLoginId').value = u.loginId || '';
+    document.getElementById('fOkposId').value = u.okposId || '';
     document.getElementById('fBrandName').value = u.brandName || '';
     // 기존 브랜드 코드는 brands에서 조회
     if(u.brandId){
@@ -455,6 +460,8 @@ async function saveEditor(){
     phone: document.getElementById('fPhone').value,
     loginId: document.getElementById('fLoginId').value,
     password: document.getElementById('fPassword').value || undefined,
+    okposId: document.getElementById('fOkposId').value,
+    okposPw: document.getElementById('fOkposPw').value || undefined,
     brandId: brand.id,
     brandName: brand.name,
   });
