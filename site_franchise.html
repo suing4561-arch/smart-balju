@@ -1003,6 +1003,7 @@ async function selectStore(s) {
     loadHqProducts();
   }
   loadStockStatus();
+  loadNotices();
 }
 
 // 세션 자동 복원 (UI 즉시 반영 — Firebase 불필요 항목만)
@@ -1056,7 +1057,8 @@ else setTimeout(init, 2000);
 let _noticeSheetOpen = false;
 
 async function loadNotices(){
-  const brandId = _currentStore?.brandId || Auth.getSession()?.brandId || '';
+  const brandId = (typeof _currentStore !== 'undefined' && _currentStore?.brandId)
+                  || Auth.getSession()?.brandId || '';
   if(!brandId) return;
   const data = await Auth.DB.get('notices') || {};
   let list = Object.values(data).filter(n => n.brandId === brandId);
@@ -1085,10 +1087,11 @@ async function loadNotices(){
 }
 
 function toggleNoticeSheet(){
+  console.log('[공지펼치기] 호출됨, 현재상태:', _noticeSheetOpen);
   _noticeSheetOpen = !_noticeSheetOpen;
   const sheet = document.getElementById('noticeSheet');
   const arrow = document.getElementById('noticeBannerArrow');
-  sheet.style.display = _noticeSheetOpen ? '' : 'none';
+  sheet.style.display = _noticeSheetOpen ? 'block' : 'none';  // '' 대신 'block' — CSS display:none 오버라이드
   arrow.textContent   = _noticeSheetOpen ? '▲ 접기' : '▼ 펼치기';
 }
 </script>
