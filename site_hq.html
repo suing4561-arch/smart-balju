@@ -700,7 +700,11 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
     <div class="card">
       <div class="ch" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
         <span class="ct">재고 소진 현황</span>
+        <span id="stockShopLabel" style="font-size:12px;font-weight:700;padding:3px 10px;border-radius:999px;background:var(--blue-bg);color:var(--blue-mid);display:none"></span>
         <div style="display:flex;align-items:center;gap:8px;margin-left:auto;flex-wrap:wrap">
+          <select id="stockShopSel" class="fi" style="width:auto;padding:5px 10px;font-size:12px" onchange="loadStockView()">
+            <option value="">전체 가맹점</option>
+          </select>
           <input type="date" id="stockDate" class="fi" style="width:140px;padding:5px 10px;font-size:12px">
           <button class="rb" onclick="loadStockView()" style="font-size:12px;padding:6px 14px"><i class="ti ti-refresh"></i> 조회</button>
           <button class="rb" onclick="injectTestData()" style="font-size:12px;padding:6px 14px;background:var(--surface2);color:var(--dim)"><i class="ti ti-test-pipe"></i> 테스트</button>
@@ -2308,7 +2312,7 @@ async function runMigration(dryRun){
 }
 
 // ── 재고 소진 현황 ────────────────────────────────────────
-async function calcStockUsage(dateStr){
+async function calcStockUsage(dateStr, shopCd=''){
   const [salesRaw, recipesRaw, menusRaw] = await Promise.all([
     Auth.DB.get('okpos_menu_sales/' + dateStr.replace(/-/g, '')),
     Auth.DB.get('recipes'),
@@ -2337,17 +2341,20 @@ async function calcStockUsage(dateStr){
     if(r.menuName) recipeMap[r.menuName] = r.ingredients || [];
   }
 
-  // OKPos 메뉴명 → 판매수량 합산 (전체 매장 합계)
-  // 3단계 순회: salesRaw[shopCd][prod_cd] → row
+  // OKPos 메뉴명 → 판매수량 합산
+  // shopCd 지정 시 해당 매장만, 없으면 전체 합산
   const saleByMenu = {};
-  for(const shopData of Object.values(salesRaw || {})){
+  const shopEntries = shopCd
+    ? (salesRaw && salesRaw[shopCd] ? [[shopCd, salesRaw[shopCd]]] : [])
+    : Object.entries(salesRaw || {});
+  for(const [, shopData] of shopEntries){
     for(const row of Object.values(shopData || {})){
       const nm = (row.prod_nm || '').trim();
       if(!nm) continue;
       saleByMenu[nm] = (saleByMenu[nm] || 0) + Number(row.sale_qty || 0);
     }
   }
-  console.log('[재고점검] saleByMenu:', saleByMenu);
+  console.log('[재고점검] shopCd:', shopCd||'전체', '/ saleByMenu:', saleByMenu);
 
   // 재료별 소진량 집계
   const ingUsage = {};
@@ -2381,7 +2388,24 @@ async function calcStockUsage(dateStr){
   };
 }
 
+async function loadStockShopOptions(){
+  const sel = document.getElementById('stockShopSel');
+  if(!sel || sel.options.length > 1) return; // 이미 채워진 경우 skip
+  const frData = await Auth.DB.get('hq_franchises');
+  const franchises = Object.values(frData||{})
+    .filter(f=>f.okposShopCd && (!_myBrandId||f.brandId===_myBrandId))
+    .sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+  franchises.forEach(f=>{
+    const opt = document.createElement('option');
+    opt.value = f.okposShopCd;
+    opt.textContent = f.name;
+    sel.appendChild(opt);
+  });
+}
+
 async function loadStockView(){
+  await loadStockShopOptions();
+
   const dateInput = document.getElementById('stockDate');
   if(!dateInput.value){
     // 기본값: okpos_menu_sales에 실제 데이터가 있는 가장 최근 날짜
@@ -2393,11 +2417,19 @@ async function loadStockView(){
       : new Date().toISOString().slice(0,10);
   }
   const dateStr = dateInput.value;
+  const shopCd  = document.getElementById('stockShopSel')?.value || '';
+  const shopLabel = document.getElementById('stockShopLabel');
+  const selEl   = document.getElementById('stockShopSel');
+  const shopName = shopCd ? (selEl.options[selEl.selectedIndex]?.text || shopCd) : '';
+  if(shopLabel){
+    shopLabel.textContent = shopName || '전체 가맹점';
+    shopLabel.style.display = '';
+  }
 
   document.getElementById('stock-tbody').innerHTML = '<tr><td colspan="6" class="empty">불러오는 중…</td></tr>';
   document.getElementById('stock-summary').innerHTML = '';
 
-  const { rows, salesEmpty, hasConfig } = await calcStockUsage(dateStr);
+  const { rows, salesEmpty, hasConfig } = await calcStockUsage(dateStr, shopCd);
 
   if(!rows.length){
     const msg = salesEmpty
