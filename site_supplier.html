@@ -381,6 +381,8 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 <script src="auth.js"></script>
 <script>
 const Auth = window.SmartBaljuAuth;
+const _mySession = Auth.getSession();
+const _mySupplierName = _mySession?.businessName || _mySession?.name || '';
 let _drivers=[], _stores=[], _storePool=[], _deliveries=[], _hqMenus=[], _selectedItems=[];
 let _dlvFilter='all', _currentBiz=null, _selectedIds=new Set();
 let _openDetailId='';
@@ -564,7 +566,7 @@ async function createDelivery(){
   if(!itemsText){showToast('품목을 추가하세요');return;}
   const amount=_selectedItems.reduce((s,x)=>s+x.price*x.qty,0);
   const autoMsg=driverId&&!newDriver.value?` (전속기사 자동배정: ${driver?.name||''})` :'';
-  await Auth.createDelivery({storeId,storeName:store?.businessName||'',storeBusinessNumber:store?.businessNumber||'',storeAddress:store?.address||'',storePhone:store?.phone||'',storeOwner:store?.owner||'',brandId:store?.brandId||'',brandName:store?.brandName||'',address:store?.address||'',driverId:driverId||'',driverName:driver?.name||'',driverPhone:driver?.phone||'',items:itemsText,itemDetails:[..._selectedItems],amount,note:newNote.value.trim()});
+  await Auth.createDelivery({storeId,storeName:store?.businessName||'',storeBusinessNumber:store?.businessNumber||'',storeAddress:store?.address||'',storePhone:store?.phone||'',storeOwner:store?.owner||'',brandId:store?.brandId||'',brandName:store?.brandName||'',supplierName:_mySupplierName,address:store?.address||'',driverId:driverId||'',driverName:driver?.name||'',driverPhone:driver?.phone||'',items:itemsText,itemDetails:[..._selectedItems],amount,note:newNote.value.trim()});
   newStore.value='';newDriver.value='';newNote.value='';_selectedItems=[];renderItemList();
   toggleCollapse('newDeliveryCollapse');
   await loadDeliveries();showToast('배송 생성 완료 · '+amount.toLocaleString()+'원'+autoMsg);
@@ -616,6 +618,7 @@ async function autoConvertConfirmedOrders(){
       storeOwner:          ord.storeOwner || store.owner || '',
       brandId:             ord.brandId || '',
       brandName:           ord.brandName || '',
+      supplierName:        _mySupplierName,
       address:             ord.storeAddress || store.address || '',
       driverId:            pre.driverId,
       driverName:          pre.driverName,
@@ -897,6 +900,7 @@ async function confirmBulkAssign2(){
         storeOwner:          ord.storeOwner || store.owner || '',
         brandId:             ord.brandId || '',
         brandName:           ord.brandName || '',
+        supplierName:        _mySupplierName,
         address:             ord.storeAddress || store.address || '',
         driverId: useDriverId||'', driverName:useDriver?.name||'', driverPhone:useDriver?.phone||'',
         items:               ord.items || '',
@@ -970,7 +974,7 @@ async function createDeliveryFromOrder(orderId){
   await ensureStorePool();
   const store=_storePool.find(f=>f.id===ordData.storeId||f.businessName===ordData.storeName||f.name===ordData.storeName)||{};
   const autoMsg=driverId&&!sel?.value?` (전속기사 자동배정: ${driver?.name||''})` :'';
-  await Auth.createDelivery({storeId:store.id||ordData.storeId||'',storeName:ordData.storeName||store.businessName||store.name||'',storeBusinessNumber:ordData.storeBusinessNumber||store.businessNumber||'',storeAddress:ordData.storeAddress||store.address||'',storePhone:ordData.storePhone||store.phone||'',storeOwner:ordData.storeOwner||store.owner||'',brandId:ordData.brandId||'',brandName:ordData.brandName||'',address:ordData.storeAddress||ordData.address||store.address||'',driverId:driverId||'',driverName:driver?.name||'',driverPhone:driver?.phone||'',items:ordData.items||'',itemDetails:ordData.itemDetails||[],amount:ordData.amount||0,fromOrderId:orderId});
+  await Auth.createDelivery({storeId:store.id||ordData.storeId||'',storeName:ordData.storeName||store.businessName||store.name||'',storeBusinessNumber:ordData.storeBusinessNumber||store.businessNumber||'',storeAddress:ordData.storeAddress||store.address||'',storePhone:ordData.storePhone||store.phone||'',storeOwner:ordData.storeOwner||store.owner||'',brandId:ordData.brandId||'',brandName:ordData.brandName||'',supplierName:_mySupplierName,address:ordData.storeAddress||ordData.address||store.address||'',driverId:driverId||'',driverName:driver?.name||'',driverPhone:driver?.phone||'',items:ordData.items||'',itemDetails:ordData.itemDetails||[],amount:ordData.amount||0,fromOrderId:orderId});
   await Auth.DB.update('franchise_orders/'+orderId,{status:'shipping'});
   await loadDeliveries();showToast('배송 생성 완료!'+autoMsg);
 }

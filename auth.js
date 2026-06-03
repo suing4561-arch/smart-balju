@@ -431,6 +431,7 @@ async function createDelivery(fields) {
     address:             fields.storeAddress        || fields.address || '',
     brandId:             fields.brandId             || '',
     brandName:           fields.brandName           || '',
+    supplierName:        fields.supplierName        || '',
     driverId:            fields.driverId            || '',
     driverName:          fields.driverName          || '',
     driverPhone:         fields.driverPhone         || '',

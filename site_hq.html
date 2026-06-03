@@ -7,6 +7,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 :root{--bg:#f7f6f2;--sidebar:#1a1916;--surface:#fff;--surface2:#f0ede8;--line:#e8e4dc;--text:#1a1916;--muted:#6b6860;--dim:#a8a49c;--green:#1a7a4a;--green-bg:#e8f5ee;--green-mid:#2d9e65;--red:#c0392b;--red-bg:#fdecea;--amber:#b85c00;--amber-bg:#fef3e2;--blue:#1a5fa8;--blue-bg:#e8f0fb;--blue-mid:#2874cc;--purple:#5a3fb5;--purple-bg:#f0eeff;--mono:"Space Mono",monospace;--sans:"Noto Sans KR",sans-serif;--sw:220px}
 *{box-sizing:border-box;margin:0;padding:0}
@@ -588,18 +589,52 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
   <!-- ── 정산 관리 ── -->
   <div class="hqp" id="hqp-settle"><div class="content">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-      <div><div style="font-size:18px;font-weight:700">정산 관리</div><div style="font-size:13px;color:var(--muted);margin-top:2px">가맹점 미수금 및 입금 관리</div></div>
-      <button onclick="loadSettle()" style="padding:8px 14px;border-radius:9px;border:.5px solid var(--line);background:var(--surface2);font-size:12px;font-weight:700;cursor:pointer"><i class="ti ti-refresh" style="font-size:13px"></i> 새로고침</button>
+      <div><div style="font-size:18px;font-weight:700">정산 관리</div><div style="font-size:13px;color:var(--muted);margin-top:2px">가맹점 미수금 및 납품업체 미지급 관리</div></div>
+      <button onclick="_currentSettleTab==='franchise'?loadSettle():loadSupplierSettle()" style="padding:8px 14px;border-radius:9px;border:.5px solid var(--line);background:var(--surface2);font-size:12px;font-weight:700;cursor:pointer"><i class="ti ti-refresh" style="font-size:13px"></i> 새로고침</button>
     </div>
-    <!-- 요약 -->
-    <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:16px">
-      <div class="kpi" style="padding:14px"><div class="kpi-val" id="set-total-unpaid" style="font-size:20px;color:var(--red)">-</div><div class="kpi-lbl">전체 미수금</div></div>
-      <div class="kpi" style="padding:14px"><div class="kpi-val" id="set-over-limit" style="font-size:20px;color:var(--amber)">-</div><div class="kpi-lbl">한도 초과 가맹점</div></div>
-      <div class="kpi" style="padding:14px"><div class="kpi-val" id="set-this-month" style="font-size:20px;color:var(--green)">-</div><div class="kpi-lbl">이달 발주 총액</div></div>
+
+    <!-- 서브탭 -->
+    <div class="reg-tabs" style="margin-bottom:0">
+      <button class="reg-tab active" id="stab-franchise" onclick="switchSettleTab('franchise')">가맹점 미수</button>
+      <button class="reg-tab" id="stab-supplier" onclick="switchSettleTab('supplier')">납품업체 미지급</button>
     </div>
-    <!-- 가맹점별 정산 목록 -->
-    <div class="card" style="padding:0;overflow:hidden">
-      <div id="settleBody"><div style="text-align:center;padding:40px;color:var(--dim)">불러오는 중...</div></div>
+
+    <!-- 서브패널1: 가맹점 미수 (기존) -->
+    <div id="spanel-franchise" style="display:block">
+      <!-- 요약 -->
+      <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:16px 0">
+        <div class="kpi" style="padding:14px"><div class="kpi-val" id="set-total-unpaid" style="font-size:20px;color:var(--red)">-</div><div class="kpi-lbl">전체 미수금</div></div>
+        <div class="kpi" style="padding:14px"><div class="kpi-val" id="set-over-limit" style="font-size:20px;color:var(--amber)">-</div><div class="kpi-lbl">한도 초과 가맹점</div></div>
+        <div class="kpi" style="padding:14px"><div class="kpi-val" id="set-this-month" style="font-size:20px;color:var(--green)">-</div><div class="kpi-lbl">이달 발주 총액</div></div>
+      </div>
+      <!-- 가맹점별 정산 목록 -->
+      <div class="card" style="padding:0;overflow:hidden">
+        <div id="settleBody"><div style="text-align:center;padding:40px;color:var(--dim)">불러오는 중...</div></div>
+      </div>
+    </div>
+
+    <!-- 서브패널2: 납품업체 미지급 (신규) -->
+    <div id="spanel-supplier" style="display:none">
+      <!-- 요약 스트립 -->
+      <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:16px 0">
+        <div class="kpi" style="padding:14px"><div class="kpi-val" id="sset-total-payable" style="font-size:20px;color:var(--red)">-</div><div class="kpi-lbl">전체 미지급액</div></div>
+        <div class="kpi" style="padding:14px"><div class="kpi-val" id="sset-supplier-cnt" style="font-size:20px;color:var(--amber)">-</div><div class="kpi-lbl">납품업체 수</div></div>
+        <div class="kpi" style="padding:14px"><div class="kpi-val" id="sset-this-month" style="font-size:20px;color:var(--green)">-</div><div class="kpi-lbl">이번달 납품액</div></div>
+      </div>
+      <!-- 기간 엑셀 저장 -->
+      <div class="card" style="margin-bottom:12px;padding:14px 16px">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <span style="font-size:13px;font-weight:700;color:var(--muted)">기간별 엑셀 저장</span>
+          <input type="date" id="sset-from" class="fi" style="width:140px;padding:5px 10px;font-size:12px">
+          <span style="color:var(--dim);font-size:12px">~</span>
+          <input type="date" id="sset-to" class="fi" style="width:140px;padding:5px 10px;font-size:12px">
+          <button onclick="exportSupplierSettleXlsx()" style="padding:8px 14px;border-radius:9px;border:.5px solid rgba(26,122,74,.3);background:var(--green-bg);color:var(--green);font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:5px"><i class="ti ti-file-spreadsheet" style="font-size:13px"></i>엑셀저장</button>
+        </div>
+      </div>
+      <!-- 납품업체별 목록 -->
+      <div class="card" style="padding:0;overflow:hidden">
+        <div id="supplierSettleBody"><div style="text-align:center;padding:40px;color:var(--dim)">불러오는 중...</div></div>
+      </div>
     </div>
   </div></div>
 
@@ -730,7 +765,7 @@ function goto(p){
   if(p==='orders') loadOrders();
   if(p==='stock') loadStockView();
   if(p==='stats') { document.getElementById('hqp-stats').classList.add('active'); initStatsMonth(); loadOkposDashboard(); loadStats(); }
-  if(p==='settle') loadSettle();
+  if(p==='settle') switchSettleTab('franchise');
   if(p==='migration') loadMigrationPage();
 }
 
@@ -1870,6 +1905,149 @@ async function toggleOrderEnabled(id, enabled){
   await loadSettle();
   showToast(enabled?'주문 허용됨':'주문 중지됨');
 }
+
+// ── 정산 서브탭 전환 ────────────────────────────────────────
+let _currentSettleTab = 'franchise';
+function switchSettleTab(tab){
+  _currentSettleTab = tab;
+  ['franchise','supplier'].forEach(t=>{
+    document.getElementById('stab-'+t).classList.toggle('active', t===tab);
+    document.getElementById('spanel-'+t).style.display = t===tab ? '' : 'none';
+  });
+  if(tab==='franchise') loadSettle();
+  else loadSupplierSettle();
+}
+
+// ── 납품업체 미지급 집계 ────────────────────────────────────
+async function calcSupplierPayables(fromDate, toDate){
+  const [supData, menuData, dlvData] = await Promise.all([
+    Auth.DB.get('hq_suppliers'),
+    Auth.DB.get('menus'),
+    Auth.DB.get('deliveries'),
+  ]);
+  const suppliers = Object.values(supData||{}).filter(s=>!_myBrandId||s.brandId===_myBrandId);
+  const menus = Object.values(menuData||{});
+  const costById = {}, costByName = {};
+  menus.forEach(m=>{ if(m.id) costById[m.id]=Number(m.costPrice)||0; if(m.name) costByName[m.name]=Number(m.costPrice)||0; });
+
+  let deliveries = Object.values(dlvData||{}).filter(d=>d && d.status==='done');
+  if(fromDate) deliveries = deliveries.filter(d=>(d.doneAt||'') >= fromDate);
+  if(toDate)   deliveries = deliveries.filter(d=>(d.doneAt||'') <= toDate+'T23:59:59');
+
+  const result = suppliers.map(s=>{
+    const sid = s.id;
+    let total=0, cnt=0;
+    deliveries.forEach(d=>{
+      let hit=false;
+      (d.itemDetails||[]).forEach(it=>{
+        if(it.partnerId !== sid) return;
+        const cost = costById[it.menuId] ?? costByName[it.name] ?? 0;
+        total += cost * (Number(it.qty)||0);
+        hit=true;
+      });
+      if(hit) cnt++;
+    });
+    const paid = Number(s.paidAmt)||0;
+    const payable = Math.max(0, total - paid);
+    const settleType = s.settleType || 'via_hq';
+    return { id:sid, name:s.name||'', businessNumber:s.businessNumber||'', settleType,
+             totalSupplied:total, paidAmt:paid, payable, deliveryCount:cnt, lastPaidAt:s.lastPaidAt||'' };
+  });
+  return result;
+}
+
+// ── 납품업체 미지급 화면 ────────────────────────────────────
+async function loadSupplierSettle(){
+  const el = document.getElementById('supplierSettleBody');
+  el.innerHTML='<div style="text-align:center;padding:40px;color:var(--dim)">불러오는 중...</div>';
+
+  const now = new Date();
+  const thisMonth = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+  const lastDay = new Date(now.getFullYear(), now.getMonth()+1, 0).getDate();
+  const [rows, monthRows] = await Promise.all([
+    calcSupplierPayables(),
+    calcSupplierPayables(thisMonth+'-01', `${thisMonth}-${String(lastDay).padStart(2,'0')}`),
+  ]);
+  const monthTotal = monthRows.reduce((s,r)=>s+r.totalSupplied,0);
+
+  const totalPayable = rows.reduce((s,r)=>s+r.payable,0);
+  document.getElementById('sset-total-payable').textContent = totalPayable.toLocaleString()+'원';
+  document.getElementById('sset-supplier-cnt').textContent = rows.length+'개사';
+  document.getElementById('sset-this-month').textContent = fmtAmt(monthTotal);
+
+  if(!rows.length){ el.innerHTML='<div style="text-align:center;padding:40px;color:var(--dim)">등록된 납품업체 없음</div>'; return; }
+
+  el.innerHTML=`<table class="lt"><thead><tr>
+    <th>납품업체</th>
+    <th style="text-align:right">누적납품액</th>
+    <th style="text-align:right">지급완료</th>
+    <th style="text-align:right">미지급액</th>
+    <th style="text-align:right">납품건수</th>
+    <th>정산방식</th>
+    <th>최근지급</th>
+    <th>관리</th>
+  </tr></thead><tbody>`+
+  rows.map(r=>{
+    const isDirect = r.settleType==='direct';
+    const typeBadge = isDirect
+      ? `<span style="font-size:11px;font-weight:700;padding:3px 8px;border-radius:999px;background:var(--blue-bg);color:var(--blue)">직접입금</span>`
+      : `<span style="font-size:11px;font-weight:700;padding:3px 8px;border-radius:999px;background:var(--green-bg);color:var(--green)">본사경유</span>`;
+    const payableCell = isDirect
+      ? `<td style="font-size:11px;color:var(--blue);font-weight:700;text-align:right">직접입금</td>`
+      : `<td style="font-family:var(--mono);text-align:right;color:${r.payable>0?'var(--red)':'var(--green)'};font-weight:700">${r.payable.toLocaleString()}원</td>`;
+    return `<tr>
+      <td><strong>${r.name}</strong><div style="font-size:11px;color:var(--muted)">${r.businessNumber}</div></td>
+      <td style="font-family:var(--mono);text-align:right">${r.totalSupplied.toLocaleString()}원</td>
+      <td style="font-family:var(--mono);text-align:right;color:var(--muted)">${r.paidAmt.toLocaleString()}원</td>
+      ${payableCell}
+      <td style="text-align:right;color:var(--muted)">${r.deliveryCount}건</td>
+      <td>${typeBadge}</td>
+      <td style="font-size:11px;color:var(--muted)">${r.lastPaidAt?r.lastPaidAt.slice(0,10):'-'}</td>
+      <td><button class="delbtn" style="background:var(--green-bg);color:var(--green);border-color:rgba(26,122,74,.3)" onclick="confirmSupplierPayment('${r.id}')">지급확인</button></td>
+    </tr>`;
+  }).join('')+'</tbody></table>';
+}
+
+// ── 납품업체 지급 확인 ──────────────────────────────────────
+async function confirmSupplierPayment(id){
+  const data = await Auth.DB.get('hq_suppliers')||{};
+  const s = Object.values(data).find(x=>x.id===id); if(!s) return;
+  const rows = await calcSupplierPayables();
+  const row = rows.find(r=>r.id===id); if(!row) return;
+  const payable = row.payable;
+  if(payable===0 && (s.settleType||'via_hq')!=='direct'){ showToast('미지급액이 없습니다'); return; }
+  const amt = prompt(`[${s.name}] 지급 확인\n현재 미지급액: ${payable.toLocaleString()}원\n\n지급 금액을 입력하세요:`, payable||0);
+  if(!amt) return;
+  const amtNum = Number(amt.replace(/,/g,''))||0;
+  if(amtNum<=0){ showToast('올바른 금액을 입력하세요'); return; }
+  const newPaid = Number(s.paidAmt||0) + amtNum;
+  await Auth.DB.update('hq_suppliers/'+id, {
+    paidAmt: newPaid,
+    lastPaidAt: new Date().toISOString(),
+    lastPaidAmt: amtNum,
+  });
+  await loadSupplierSettle();
+  showToast(`[${s.name}] ${amtNum.toLocaleString()}원 지급 확인 완료!`);
+}
+
+// ── 납품업체 정산 엑셀 저장 ────────────────────────────────
+async function exportSupplierSettleXlsx(){
+  if(typeof XLSX==='undefined'){ showToast('XLSX 라이브러리 로드 중... 잠시 후 재시도'); return; }
+  const from = document.getElementById('sset-from').value;
+  const to   = document.getElementById('sset-to').value;
+  const rows = await calcSupplierPayables(from||undefined, to||undefined);
+  const sheetData = [
+    ['납품업체명','사업자번호','납품건수','누적납품액(입고가)','지급완료','미지급액','정산방식'],
+    ...rows.map(r=>[ r.name, r.businessNumber, r.deliveryCount, r.totalSupplied, r.paidAmt, r.payable, r.settleType==='direct'?'직접입금':'본사경유' ])
+  ];
+  const ws = XLSX.utils.aoa_to_sheet(sheetData);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, '납품업체정산');
+  const fname = `납품업체정산_${from||'전체'}_${to||'전체'}.xlsx`;
+  XLSX.writeFile(wb, fname);
+  showToast(`${fname} 저장 완료`);
+}
+
 document.addEventListener('firebaseReady', loadOrders);
 if(Auth.isFirebaseReady) loadOrders();
 else setTimeout(loadOrders, 2000);

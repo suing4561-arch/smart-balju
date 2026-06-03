@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>배송 기사님 — 대상정보통신</title>
+<title>배송 기사님</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
 <style>
@@ -122,6 +122,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
     <div>
       <div class="driver-name" id="driverName">기사님</div>
       <div class="driver-sub" id="driverPhone">-</div>
+      <div class="driver-sub" id="companyName" style="display:none;font-weight:700;margin-top:2px"></div>
     </div>
   </div>
 
@@ -221,6 +222,12 @@ let orderMap = {};
 
 function now(){ return new Date().toTimeString().slice(0,5); }
 function closeModal(id){ document.getElementById(id).classList.remove('show'); }
+function setCompanyName(name){
+  if(!name) return;
+  const el = document.getElementById('companyName');
+  if(el){ el.textContent = name; el.style.display = ''; }
+  document.title = '배송 기사님 — ' + name;
+}
 let _tt;
 function showToast(msg){ const el=document.getElementById('toast'); el.textContent=msg; el.classList.add('show'); clearTimeout(_tt); _tt=setTimeout(()=>el.classList.remove('show'),2500); }
 function visibleDeliveries(list){
@@ -436,15 +443,15 @@ async function init(){
   if(targetDeliveryId){
     // 링크로 직접 접근 — 특정 배송 1건
     const d = await Auth.DB.get('deliveries/'+targetDeliveryId);
-    if(d){ list=[d]; document.getElementById('driverName').textContent=d.driverName||'기사님'; document.getElementById('driverPhone').textContent=d.driverPhone||''; }
+    if(d){ list=[d]; document.getElementById('driverName').textContent=d.driverName||'기사님'; document.getElementById('driverPhone').textContent=d.driverPhone||''; setCompanyName(d.supplierName||d.brandName||''); }
   } else if(targetDriverId){
     // 기사 ID로 전체 배송 조회
     list = await Auth.loadDeliveries({driverId:targetDriverId});
-    if(list.length){ document.getElementById('driverName').textContent=list[0].driverName||'기사님'; document.getElementById('driverPhone').textContent=list[0].driverPhone||''; }
+    if(list.length){ document.getElementById('driverName').textContent=list[0].driverName||'기사님'; document.getElementById('driverPhone').textContent=list[0].driverPhone||''; setCompanyName(list[0].supplierName||list[0].brandName||''); }
   } else {
     // 파라미터 없음 — 모든 배송 (테스트용)
     list = await Auth.loadDeliveries();
-    if(list.length){ document.getElementById('driverName').textContent=list[0].driverName||'기사님'; document.getElementById('driverPhone').textContent=list[0].driverPhone||''; }
+    if(list.length){ document.getElementById('driverName').textContent=list[0].driverName||'기사님'; document.getElementById('driverPhone').textContent=list[0].driverPhone||''; setCompanyName(list[0].supplierName||list[0].brandName||''); }
   }
   deliveries = visibleDeliveries(list).map(enrichDelivery); // null 제거 + 주소/상호 보강
   render();
