@@ -595,14 +595,14 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
   <!-- ── 정산 관리 ── -->
   <div class="hqp" id="hqp-settle"><div class="content">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-      <div><div style="font-size:18px;font-weight:700">정산 관리</div><div style="font-size:13px;color:var(--muted);margin-top:2px">가맹점 미수금 및 납품업체 미지급 관리</div></div>
+      <div><div style="font-size:18px;font-weight:700">정산 관리</div><div style="font-size:13px;color:var(--muted);margin-top:2px">가맹점 미수금 및 거래처 미지급 관리</div></div>
       <button onclick="_currentSettleTab==='franchise'?loadSettle():loadSupplierSettle()" style="padding:8px 14px;border-radius:9px;border:.5px solid var(--line);background:var(--surface2);font-size:12px;font-weight:700;cursor:pointer"><i class="ti ti-refresh" style="font-size:13px"></i> 새로고침</button>
     </div>
 
     <!-- 서브탭 -->
     <div class="reg-tabs" style="margin-bottom:0">
       <button class="reg-tab active" id="stab-franchise" onclick="switchSettleTab('franchise')">가맹점 미수</button>
-      <button class="reg-tab" id="stab-supplier" onclick="switchSettleTab('supplier')">납품업체 미지급</button>
+      <button class="reg-tab" id="stab-supplier" onclick="switchSettleTab('supplier')">거래처 미지급</button>
     </div>
 
     <!-- 서브패널1: 가맹점 미수 (기존) -->
@@ -1928,14 +1928,16 @@ function switchSettleTab(tab){
   else loadSupplierSettle();
 }
 
-// ── 납품업체 미지급 집계 ────────────────────────────────────
+// ── 거래처 미지급 집계 ─────────────────────────────────────
 async function calcSupplierPayables(fromDate, toDate){
-  const [supData, menuData, dlvData] = await Promise.all([
-    Auth.DB.get('hq_suppliers'),
+  const [partData, menuData, dlvData] = await Promise.all([
+    Auth.DB.get('partners'),
     Auth.DB.get('menus'),
     Auth.DB.get('deliveries'),
   ]);
-  const suppliers = Object.values(supData||{}).filter(s=>!_myBrandId||s.brandId===_myBrandId);
+  const partners = Object.values(partData||{}).filter(p=>
+    p.status !== 'inactive' && (!_myBrandId || p.brandId === _myBrandId)
+  );
   const menus = Object.values(menuData||{});
   const costById = {}, costByName = {};
   menus.forEach(m=>{ if(m.id) costById[m.id]=Number(m.costPrice)||0; if(m.name) costByName[m.name]=Number(m.costPrice)||0; });
@@ -1944,24 +1946,24 @@ async function calcSupplierPayables(fromDate, toDate){
   if(fromDate) deliveries = deliveries.filter(d=>(d.doneAt||'') >= fromDate);
   if(toDate)   deliveries = deliveries.filter(d=>(d.doneAt||'') <= toDate+'T23:59:59');
 
-  const result = suppliers.map(s=>{
-    const sid = s.id;
+  const result = partners.map(p=>{
+    const pid = p.id;
     let total=0, cnt=0;
     deliveries.forEach(d=>{
       let hit=false;
       (d.itemDetails||[]).forEach(it=>{
-        if(it.partnerId !== sid) return;
+        if(it.partnerId !== pid) return;
         const cost = costById[it.menuId] ?? costByName[it.name] ?? 0;
         total += cost * (Number(it.qty)||0);
         hit=true;
       });
       if(hit) cnt++;
     });
-    const paid = Number(s.paidAmt)||0;
+    const paid = Number(p.paidAmt)||0;
     const payable = Math.max(0, total - paid);
-    const settleType = s.settleType || 'via_hq';
-    return { id:sid, name:s.name||'', businessNumber:s.businessNumber||'', settleType,
-             totalSupplied:total, paidAmt:paid, payable, deliveryCount:cnt, lastPaidAt:s.lastPaidAt||'' };
+    const settleType = p.settleType || 'via_hq';
+    return { id:pid, name:p.name||'', businessNumber:p.businessNumber||'', code:p.code||'', settleType,
+             totalSupplied:total, paidAmt:paid, payable, deliveryCount:cnt, lastPaidAt:p.lastPaidAt||'' };
   });
   return result;
 }
@@ -1985,10 +1987,10 @@ async function loadSupplierSettle(){
   document.getElementById('sset-supplier-cnt').textContent = rows.length+'개사';
   document.getElementById('sset-this-month').textContent = fmtAmt(monthTotal);
 
-  if(!rows.length){ el.innerHTML='<div style="text-align:center;padding:40px;color:var(--dim)">등록된 납품업체 없음</div>'; return; }
+  if(!rows.length){ el.innerHTML='<div style="text-align:center;padding:40px;color:var(--dim)">등록된 거래처 없음</div>'; return; }
 
   el.innerHTML=`<table class="lt"><thead><tr>
-    <th>납품업체</th>
+    <th>거래처</th>
     <th style="text-align:right">누적납품액</th>
     <th style="text-align:right">지급완료</th>
     <th style="text-align:right">미지급액</th>
@@ -2018,9 +2020,9 @@ async function loadSupplierSettle(){
   }).join('')+'</tbody></table>';
 }
 
-// ── 납품업체 지급 확인 ──────────────────────────────────────
+// ── 거래처 지급 확인 ───────────────────────────────────────
 async function confirmSupplierPayment(id){
-  const data = await Auth.DB.get('hq_suppliers')||{};
+  const data = await Auth.DB.get('partners')||{};
   const s = Object.values(data).find(x=>x.id===id); if(!s) return;
   const rows = await calcSupplierPayables();
   const row = rows.find(r=>r.id===id); if(!row) return;
@@ -2031,7 +2033,7 @@ async function confirmSupplierPayment(id){
   const amtNum = Number(amt.replace(/,/g,''))||0;
   if(amtNum<=0){ showToast('올바른 금액을 입력하세요'); return; }
   const newPaid = Number(s.paidAmt||0) + amtNum;
-  await Auth.DB.update('hq_suppliers/'+id, {
+  await Auth.DB.update('partners/'+id, {
     paidAmt: newPaid,
     lastPaidAt: new Date().toISOString(),
     lastPaidAmt: amtNum,
@@ -2047,12 +2049,12 @@ async function exportSupplierSettleXlsx(){
   const to   = document.getElementById('sset-to').value;
   const rows = await calcSupplierPayables(from||undefined, to||undefined);
   const sheetData = [
-    ['납품업체명','사업자번호','납품건수','누적납품액(입고가)','지급완료','미지급액','정산방식'],
-    ...rows.map(r=>[ r.name, r.businessNumber, r.deliveryCount, r.totalSupplied, r.paidAmt, r.payable, r.settleType==='direct'?'직접입금':'본사경유' ])
+    ['거래처명','사업자번호','코드','납품건수','누적매입액(입고가)','지급완료','미지급액'],
+    ...rows.map(r=>[ r.name, r.businessNumber, r.code, r.deliveryCount, r.totalSupplied, r.paidAmt, r.payable ])
   ];
   const ws = XLSX.utils.aoa_to_sheet(sheetData);
   const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, '납품업체정산');
+  XLSX.utils.book_append_sheet(wb, ws, '거래처정산');
   const fname = `납품업체정산_${from||'전체'}_${to||'전체'}.xlsx`;
   XLSX.writeFile(wb, fname);
   showToast(`${fname} 저장 완료`);
