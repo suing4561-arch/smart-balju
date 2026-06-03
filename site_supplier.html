@@ -191,7 +191,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
       <div>
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
           <span class="section-label">배송 목록</span>
-          <button onclick="loadDeliveries()" style="border:none;background:none;color:var(--blue);font-size:12px;cursor:pointer"><i class="ti ti-refresh" style="font-size:13px"></i></button>
+          <button onclick="loadDeliveries()" style="display:flex;align-items:center;gap:4px;padding:5px 10px;border-radius:8px;border:.5px solid var(--line);background:var(--surface2);color:var(--blue);font-size:12px;font-weight:700;cursor:pointer;font-family:var(--sans)"><i class="ti ti-refresh" style="font-size:13px"></i>새로고침</button>
         </div>
         <!-- 상태 필터 -->
         <div class="sub-filters" style="margin-bottom:6px" id="dlvFilters"></div>
@@ -243,6 +243,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
           </select>
         </div>
         <div style="display:flex;gap:7px;margin-top:10px">
+          <button onclick="loadDriverDeliveries()" style="display:flex;align-items:center;justify-content:center;gap:5px;flex:1;padding:9px;border-radius:9px;border:.5px solid var(--line);background:var(--surface2);color:var(--blue);font-size:12px;font-weight:700;cursor:pointer;font-family:var(--sans)"><i class="ti ti-refresh" style="font-size:14px"></i>새로고침</button>
           <button onclick="printAllDriverSlips()" class="rb outline" style="flex:1;padding:9px;font-size:12px">
             <i class="ti ti-printer" style="font-size:14px"></i>납품서 일괄출력
           </button>
@@ -331,7 +332,10 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
         <div class="strip-card"><div class="strip-val" style="color:var(--blue)">-</div><div class="strip-lbl">이번달 합계</div></div>
       </div>
       <div class="card">
-        <div style="font-size:14px;font-weight:700;margin-bottom:12px">납품 내역</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+          <div style="font-size:14px;font-weight:700">납품 내역</div>
+          <button onclick="loadSettle()" style="display:flex;align-items:center;gap:4px;padding:5px 10px;border-radius:8px;border:.5px solid var(--line);background:var(--surface2);color:var(--blue);font-size:12px;font-weight:700;cursor:pointer;font-family:var(--sans)"><i class="ti ti-refresh" style="font-size:13px"></i>새로고침</button>
+        </div>
         <div id="settleList"><div class="loading-wrap"><div class="spinner"></div></div></div>
       </div>
       <div style="display:flex;gap:7px">
