@@ -221,9 +221,6 @@ th{color:var(--muted);font-size:11px;text-transform:uppercase}
         <div id="brandPreview" style="display:none;margin-top:6px;padding:8px 12px;background:var(--bg);border-radius:8px;font-size:12px;color:var(--muted)"></div>
       </div>
 
-      <div class="form-divider">OKPos 연동</div>
-      <div><label>OKPos 아이디</label><input id="fOkposId" placeholder="OKPos 아이디"></div>
-      <div><label>OKPos 비밀번호</label><input id="fOkposPw" type="password" placeholder="OKPos 비밀번호"></div>
     </div>
 
     <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:18px">
@@ -439,7 +436,6 @@ async function openEditor(uid){
     document.getElementById('fBusinessNumber').value = u.businessNumber || '';
     document.getElementById('fPhone').value = u.phone || '';
     document.getElementById('fLoginId').value = u.loginId || '';
-    document.getElementById('fOkposId').value = u.okposId || '';
     if(u.brandId){ bSel.value = u.brandId; onBrandChange(); }
   } else {
     document.getElementById('fStatus').value = 'active';
@@ -470,8 +466,6 @@ async function saveEditor(){
     phone: document.getElementById('fPhone').value,
     loginId: document.getElementById('fLoginId').value,
     password: document.getElementById('fPassword').value || undefined,
-    okposId: document.getElementById('fOkposId').value,
-    okposPw: document.getElementById('fOkposPw').value || undefined,
     brandId: bSel.value || '',
     brandName: bOpt?.dataset?.name || '',
   });
