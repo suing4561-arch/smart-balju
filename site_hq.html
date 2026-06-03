@@ -644,7 +644,29 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
     </div>
   </div></div>
 
-  <div class="hqp" id="hqp-notice"><div class="content"><div style="padding:60px;text-align:center;color:var(--dim)"><i class="ti ti-speakerphone" style="font-size:48px;opacity:.4;display:block;margin-bottom:12px"></i><div style="font-size:18px;font-weight:700;color:var(--muted)">공지·레시피</div><div style="margin-top:6px">다음 업데이트 예정</div></div></div></div>
+  <div class="hqp" id="hqp-notice"><div class="content">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <div><div style="font-size:18px;font-weight:700">공지 관리</div><div style="font-size:13px;color:var(--muted);margin-top:2px">가맹점에 공지사항을 전달합니다</div></div>
+      <button onclick="loadNotices()" style="padding:8px 14px;border-radius:9px;border:.5px solid var(--line);background:var(--surface2);font-size:12px;font-weight:700;cursor:pointer"><i class="ti ti-refresh" style="font-size:13px"></i> 새로고침</button>
+    </div>
+    <!-- 작성 폼 -->
+    <div class="card" style="margin-bottom:16px">
+      <div class="ch"><span class="ct" id="noticeFormTitle">공지 작성</span></div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div class="fl"><div class="flb">제목 *</div><input class="fi" id="noticeTitle" placeholder="공지 제목을 입력하세요"></div>
+        <div class="fl"><div class="flb">내용 *</div><textarea class="fi" id="noticeContent" rows="5" placeholder="공지 내용을 입력하세요" style="resize:vertical;line-height:1.6"></textarea></div>
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;font-weight:700;color:var(--amber)">
+          <input type="checkbox" id="noticeImportant" style="width:16px;height:16px;accent-color:var(--amber)"> 중요 공지로 고정
+        </label>
+        <button class="rb green" id="noticeSaveBtn" onclick="saveNotice()"><i class="ti ti-speakerphone"></i>공지 등록</button>
+        <button id="noticeCancelBtn" onclick="cancelEditNotice()" style="display:none;padding:8px;border-radius:9px;border:.5px solid var(--line);background:var(--surface2);font-size:12px;font-weight:700;cursor:pointer">취소</button>
+      </div>
+    </div>
+    <!-- 공지 목록 -->
+    <div class="card" style="padding:0;overflow:hidden">
+      <div id="noticeList"><div style="text-align:center;padding:40px;color:var(--dim)">불러오는 중...</div></div>
+    </div>
+  </div></div>
 
   <!-- ── 데이터 마이그레이션 (1회용) ── -->
   <div class="hqp" id="hqp-migration"><div class="content">
@@ -776,6 +798,7 @@ function goto(p){
   if(p==='stock') loadStockView();
   if(p==='stats') { document.getElementById('hqp-stats').classList.add('active'); initStatsMonth(); loadOkposDashboard(); loadStats(); }
   if(p==='settle') switchSettleTab('franchise');
+  if(p==='notice') loadNotices();
   if(p==='migration') loadMigrationPage();
 }
 
@@ -2065,6 +2088,88 @@ async function exportSupplierSettleXlsx(){
 document.addEventListener('firebaseReady', loadOrders);
 if(Auth.isFirebaseReady) loadOrders();
 else setTimeout(loadOrders, 2000);
+
+// ── 공지 관리 ─────────────────────────────────────────────
+let _editNoticeId = '';
+
+async function loadNotices(){
+  const el = document.getElementById('noticeList');
+  if(!el) return;
+  el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--dim)">불러오는 중...</div>';
+  const data = await Auth.DB.get('notices') || {};
+  let list = Object.values(data).filter(n => !_myBrandId || n.brandId === _myBrandId);
+  list.sort((a,b) => {
+    if(!!a.important !== !!b.important) return a.important ? -1 : 1;
+    return (b.createdAt||'').localeCompare(a.createdAt||'');
+  });
+  if(!list.length){ el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--dim)">등록된 공지가 없습니다</div>'; return; }
+  el.innerHTML = '<table class="lt"><thead><tr><th>제목</th><th>작성일</th><th>상태</th><th>관리</th></tr></thead><tbody>'+
+    list.map(n=>`<tr style="${n.important?'background:var(--amber-bg)':''}">
+      <td><strong>${n.title||''}</strong>${n.important?'<span style="margin-left:6px;font-size:10px;font-weight:700;padding:2px 7px;border-radius:999px;background:var(--amber);color:#fff">중요</span>':''}</td>
+      <td style="font-size:11px;color:var(--muted)">${(n.updatedAt||n.createdAt||'').slice(0,10)}</td>
+      <td>${n.important?'<span style="font-size:11px;color:var(--amber);font-weight:700">고정</span>':'<span style="font-size:11px;color:var(--dim)">일반</span>'}</td>
+      <td><div style="display:flex;gap:4px">
+        <button class="delbtn" style="background:var(--blue-bg);color:var(--blue-mid);border-color:rgba(26,95,168,.3)" onclick="editNotice('${n.id}')">수정</button>
+        <button class="delbtn" onclick="delNotice('${n.id}')">삭제</button>
+      </div></td>
+    </tr>`).join('')+'</tbody></table>';
+}
+
+async function saveNotice(){
+  const title = document.getElementById('noticeTitle').value.trim();
+  const content = document.getElementById('noticeContent').value.trim();
+  if(!title){ showToast('제목을 입력하세요'); return; }
+  if(!content){ showToast('내용을 입력하세요'); return; }
+  const important = document.getElementById('noticeImportant').checked;
+  const now = new Date().toISOString();
+  if(_editNoticeId){
+    await Auth.DB.update('notices/'+_editNoticeId, { title, content, important, updatedAt: now });
+    showToast('공지 수정 완료');
+    cancelEditNotice();
+  } else {
+    const id = 'notice_'+Date.now();
+    await Auth.DB.set('notices/'+id, {
+      id, brandId:_myBrandId, brandName:_myBrandName,
+      title, content, important, createdAt:now, updatedAt:now,
+    });
+    showToast('공지 등록 완료');
+  }
+  document.getElementById('noticeTitle').value = '';
+  document.getElementById('noticeContent').value = '';
+  document.getElementById('noticeImportant').checked = false;
+  await loadNotices();
+}
+
+async function editNotice(id){
+  const data = await Auth.DB.get('notices/'+id);
+  if(!data) return;
+  document.getElementById('noticeTitle').value = data.title || '';
+  document.getElementById('noticeContent').value = data.content || '';
+  document.getElementById('noticeImportant').checked = !!data.important;
+  _editNoticeId = id;
+  document.getElementById('noticeFormTitle').textContent = '공지 수정';
+  document.getElementById('noticeSaveBtn').innerHTML = '<i class="ti ti-pencil"></i>공지 수정 저장';
+  document.getElementById('noticeCancelBtn').style.display = '';
+  document.getElementById('noticeTitle').focus();
+  showToast('수정 모드');
+}
+
+function cancelEditNotice(){
+  _editNoticeId = '';
+  document.getElementById('noticeTitle').value = '';
+  document.getElementById('noticeContent').value = '';
+  document.getElementById('noticeImportant').checked = false;
+  document.getElementById('noticeFormTitle').textContent = '공지 작성';
+  document.getElementById('noticeSaveBtn').innerHTML = '<i class="ti ti-speakerphone"></i>공지 등록';
+  document.getElementById('noticeCancelBtn').style.display = 'none';
+}
+
+async function delNotice(id){
+  if(!confirm('공지를 삭제할까요?')) return;
+  await Auth.DB.remove('notices/'+id);
+  await loadNotices();
+  showToast('삭제 완료');
+}
 
 // ────────────────────────────────────────────────────
 //  데이터 마이그레이션 (1회용 도구)

@@ -37,6 +37,11 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);display:flex
 .store-sub{font-size:12px;color:var(--dim);margin-top:3px}
 .scroll-body{padding:16px 20px;display:flex;flex-direction:column;gap:14px}
 .alert-banner{background:var(--amber-bg);border:.5px solid rgba(184,92,0,.25);border-radius:12px;padding:11px 14px;display:flex;align-items:flex-start;gap:10px}
+.notice-banner{background:var(--blue-bg);border:.5px solid rgba(26,95,168,.2);border-radius:12px;padding:11px 14px;cursor:pointer}
+.notice-sheet{background:var(--surface);border:.5px solid var(--line);border-radius:12px;overflow:hidden;display:none}
+.notice-item{padding:12px 14px;border-bottom:.5px solid var(--line)}
+.notice-item:last-child{border-bottom:none}
+.notice-item.important{background:var(--amber-bg)}
 .alert-icon{font-size:16px;color:var(--amber);margin-top:1px;flex-shrink:0}
 .alert-text{font-size:12px;color:var(--amber);line-height:1.55;flex:1}
 .alert-action{margin-left:auto;flex-shrink:0;background:var(--amber);color:#fff;border:none;border-radius:8px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;font-family:var(--sans)}
@@ -198,6 +203,13 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);display:flex
         <button class="home-tab" onclick="switchHomeTab('sales')">매출 현황</button>
       </div>
       <div class="scroll-body">
+        <div class="notice-banner" id="noticeBanner" style="display:none" onclick="toggleNoticeSheet()">
+          <div style="display:flex;align-items:center;justify-content:space-between">
+            <span style="font-size:12px;font-weight:700;color:var(--blue-mid)" id="noticeBannerText">📢 공지</span>
+            <span style="font-size:11px;color:var(--blue-mid)" id="noticeBannerArrow">▼ 펼치기</span>
+          </div>
+        </div>
+        <div class="notice-sheet" id="noticeSheet"></div>
         <div class="alert-banner" id="stockAlertBanner" style="display:none">
           <i class="ti ti-alert-triangle alert-icon"></i>
           <span class="alert-text" id="stockAlertText">재고 알림</span>
@@ -1034,10 +1046,51 @@ async function init(){
   }
 
   await loadStockStatus();
+  await loadNotices();
 }
 document.addEventListener('firebaseReady', init);
 if(Auth.isFirebaseReady) init();
 else setTimeout(init, 2000);
+
+// ── 공지 열람 ──────────────────────────────────────────────
+let _noticeSheetOpen = false;
+
+async function loadNotices(){
+  const brandId = _currentStore?.brandId || Auth.getSession()?.brandId || '';
+  if(!brandId) return;
+  const data = await Auth.DB.get('notices') || {};
+  let list = Object.values(data).filter(n => n.brandId === brandId);
+  list.sort((a,b)=>{
+    if(!!a.important !== !!b.important) return a.important ? -1 : 1;
+    return (b.createdAt||'').localeCompare(a.createdAt||'');
+  });
+  const banner = document.getElementById('noticeBanner');
+  const sheet  = document.getElementById('noticeSheet');
+  if(!list.length){ banner.style.display='none'; sheet.style.display='none'; return; }
+  const importantCnt = list.filter(n=>n.important).length;
+  const label = importantCnt
+    ? `📢 공지 ${list.length}건 (중요 ${importantCnt}건)`
+    : `📢 공지 ${list.length}건`;
+  document.getElementById('noticeBannerText').textContent = label;
+  banner.style.display = '';
+  sheet.innerHTML = list.map(n=>`
+    <div class="notice-item${n.important?' important':''}">
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+        ${n.important?'<span style="font-size:10px;font-weight:700;padding:1px 7px;border-radius:999px;background:var(--amber);color:#fff">중요</span>':''}
+        <strong style="font-size:13px">${n.title||''}</strong>
+        <span style="margin-left:auto;font-size:10px;color:var(--dim)">${(n.updatedAt||n.createdAt||'').slice(0,10)}</span>
+      </div>
+      <div style="font-size:12px;color:var(--muted);line-height:1.6;white-space:pre-wrap">${n.content||''}</div>
+    </div>`).join('');
+}
+
+function toggleNoticeSheet(){
+  _noticeSheetOpen = !_noticeSheetOpen;
+  const sheet = document.getElementById('noticeSheet');
+  const arrow = document.getElementById('noticeBannerArrow');
+  sheet.style.display = _noticeSheetOpen ? '' : 'none';
+  arrow.textContent   = _noticeSheetOpen ? '▲ 접기' : '▼ 펼치기';
+}
 </script>
 </body>
 </html>
