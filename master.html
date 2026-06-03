@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>대상정보통신 Master 계정관리</title>
+<title>대상정보통신 Master</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -27,11 +27,40 @@ button,input,select{font:inherit}button{cursor:pointer}
 .page-sub{font-size:13px;color:var(--muted);margin-top:3px}
 .btn{border:1px solid var(--line);border-radius:9px;padding:9px 14px;background:var(--panel);color:var(--text);font-weight:700}
 .btn.primary{background:var(--blue);border-color:var(--blue);color:#fff}
+.btn.green{background:var(--green);border-color:var(--green);color:#fff}
 .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px;box-shadow:var(--shadow)}
 label{display:block;margin-bottom:5px;color:var(--muted);font-size:12px;font-weight:700}
 input,select{width:100%;border:1px solid var(--line);border-radius:9px;padding:10px 12px;background:#fff;color:var(--text);outline:none}
 input:focus,select:focus{border-color:var(--blue)}
-.filter-bar{display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap}
+
+/* HQ 카드 그리드 */
+.hq-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;margin-bottom:20px}
+.hq-card{background:var(--panel);border:1.5px solid var(--line);border-radius:14px;padding:18px 20px;box-shadow:var(--shadow);cursor:pointer;transition:border-color .15s,box-shadow .15s;position:relative}
+.hq-card:hover{border-color:var(--blue);box-shadow:0 0 0 3px rgba(37,99,235,.08)}
+.hq-card.selected{border-color:var(--blue);box-shadow:0 0 0 3px rgba(37,99,235,.12)}
+.hq-card.no-brand{opacity:.75;cursor:default}
+.hq-card.no-brand:hover{border-color:var(--line);box-shadow:var(--shadow)}
+.hq-name{font-size:16px;font-weight:900;margin-bottom:4px}
+.hq-brand{font-size:12px;color:var(--muted);margin-bottom:10px}
+.hq-badges{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+.badge{display:inline-flex;align-items:center;border-radius:999px;padding:3px 10px;font-size:11px;font-weight:700}
+.badge-active{background:#ecfdf5;color:#047857}
+.badge-inactive{background:#f1f5f9;color:#475569}
+.badge-suspended{background:#fef2f2;color:#b91c1c}
+.badge-expired{background:#fff7ed;color:#c2410c}
+.badge-warn{background:#fef9c3;color:#854d0e}
+.badge-blue{background:#eff6ff;color:#1d4ed8}
+
+/* 선택된 본사 진입 패널 */
+.enter-panel{background:linear-gradient(135deg,#eff6ff 0%,#f0fdf4 100%);border:1.5px solid var(--blue);border-radius:14px;padding:20px 22px;margin-bottom:20px}
+.enter-panel-title{font-size:14px;font-weight:700;color:var(--navy);margin-bottom:4px}
+.enter-panel-sub{font-size:12px;color:var(--muted);margin-bottom:14px}
+.enter-btns{display:flex;gap:10px;flex-wrap:wrap}
+.enter-btn{display:flex;align-items:center;gap:8px;padding:11px 18px;border-radius:10px;border:1.5px solid var(--line);background:#fff;color:var(--text);font-size:13px;font-weight:700;cursor:pointer;transition:all .15s}
+.enter-btn:hover{border-color:var(--blue);color:var(--blue);background:#eff6ff}
+.enter-btn .icon{font-size:18px}
+
+/* 계정 관리 테이블 */
 .status-filters{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
 .sf{border:1px solid var(--line);border-radius:999px;padding:6px 13px;background:#fff;color:var(--muted);font-size:12px;font-weight:700;cursor:pointer}
 .sf.active{border-color:var(--blue);background:#eff6ff;color:var(--blue)}
@@ -39,14 +68,14 @@ table{width:100%;border-collapse:collapse;font-size:13px}
 th,td{padding:11px 8px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
 th{color:var(--muted);font-size:11px;text-transform:uppercase}
 .pill{display:inline-flex;align-items:center;border-radius:999px;padding:3px 9px;font-size:11px;font-weight:700}
-.role-hq{background:#eff6ff;color:#1d4ed8}.role-franchise{background:#ecfdf5;color:#047857}
-.role-supplier{background:#fff7ed;color:#c2410c}.role-driver{background:#f5f3ff;color:#6d28d9}.role-master{background:#f8fafc;color:#334155}
+.role-hq{background:#eff6ff;color:#1d4ed8}
 .status-active{background:#ecfdf5;color:#047857}.status-inactive{background:#f1f5f9;color:#475569}
 .status-suspended{background:#fef2f2;color:#b91c1c}.status-expired{background:#fff7ed;color:#c2410c}
 .mini{border:1px solid var(--line);border-radius:7px;background:#fff;padding:5px 8px;font-size:11px;font-weight:700;cursor:pointer;margin:2px}
 .mini.blue{color:var(--blue)}.mini.green{color:var(--green)}.mini.red{color:var(--red)}.mini.yellow{color:var(--yellow)}
 .muted{color:var(--muted);font-size:12px}
-.login-ok{color:var(--green);font-weight:700}.login-no{color:var(--red);font-weight:700}
+
+/* 모달 */
 .modal{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(15,23,42,.55);z-index:50;padding:16px}
 .modal.show{display:flex}
 .modal-box{width:100%;max-width:580px;background:#fff;border-radius:18px;padding:24px;box-shadow:0 24px 80px rgba(0,0,0,.25);max-height:92vh;overflow-y:auto}
@@ -54,8 +83,6 @@ th{color:var(--muted);font-size:11px;text-transform:uppercase}
 .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .form-divider{grid-column:1/-1;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;padding-top:10px;margin-top:4px;border-top:1px solid var(--line)}
 .form-full{grid-column:1/-1}
-.acct-item{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border:1px solid var(--line);border-radius:10px;cursor:pointer;margin-bottom:8px;transition:background .15s}
-.acct-item:hover{background:var(--bg)}
 .perm-section{margin-bottom:14px}
 .perm-title{font-size:13px;font-weight:900;color:var(--navy);display:flex;align-items:center;gap:6px;padding:8px 12px;background:var(--bg);border-radius:8px;margin-bottom:8px}
 .perm-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
@@ -68,6 +95,7 @@ th{color:var(--muted);font-size:11px;text-transform:uppercase}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 .spinner{width:20px;height:20px;border:2px solid var(--line);border-top-color:var(--blue);border-radius:50%;animation:spin .7s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
+.view{display:none}.view.active{display:block}
 </style>
 </head>
 <body>
@@ -80,18 +108,9 @@ th{color:var(--muted);font-size:11px;text-transform:uppercase}
       <div class="brand-sub">Smart Balju Master</div>
     </div>
 
-    <div class="side-section">계정 관리</div>
-    <button class="side-btn active" id="tab-all"       onclick="switchTab('all')">전체 계정</button>
-    <button class="side-btn"        id="tab-hq"        onclick="switchTab('hq')">본사 (HQ)</button>
-    <button class="side-btn"        id="tab-franchise" onclick="switchTab('franchise')">가맹점</button>
-    <button class="side-btn"        id="tab-supplier"  onclick="switchTab('supplier')">납품업체</button>
-    <button class="side-btn"        id="tab-driver"    onclick="switchTab('driver')">배송기사</button>
-
-    <div class="side-section">화면 이동</div>
-    <button class="side-btn" onclick="goToSite('hq')">본사 화면 →</button>
-    <button class="side-btn" onclick="goToSite('franchise')">가맹점 화면 →</button>
-    <button class="side-btn" onclick="goToSite('supplier')">납품업체 화면 →</button>
-    <button class="side-btn" onclick="goToSite('driver')">배송기사 화면 →</button>
+    <div class="side-section">화면</div>
+    <button class="side-btn active" id="nav-main" onclick="showView('main')">🏢 본사 선택</button>
+    <button class="side-btn"        id="nav-manage" onclick="showView('manage')">⚙ 본사 계정 관리</button>
 
     <div class="side-footer">
       <button class="side-btn" onclick="Auth.logout()" style="background:rgba(220,38,38,.2);color:#fca5a5">로그아웃</button>
@@ -100,100 +119,101 @@ th{color:var(--muted);font-size:11px;text-transform:uppercase}
 
   <!-- 메인 -->
   <main class="main">
-    <div class="page-top">
-      <div>
-        <div class="page-title" id="pageTitle">전체 계정</div>
-        <div class="page-sub muted" id="pageSub">모든 역할의 계정을 관리합니다</div>
+
+    <!-- ── 뷰1: 본사 선택 관문 ── -->
+    <div class="view active" id="view-main">
+      <div class="page-top">
+        <div>
+          <div class="page-title">본사 선택</div>
+          <div class="page-sub muted">진입할 본사(브랜드)를 선택하세요</div>
+        </div>
+        <button class="btn primary" onclick="openEditor()">+ 본사 계정 추가</button>
       </div>
-      <div style="display:flex;gap:8px">
-        <button class="btn" onclick="resetAccounts()">초기화</button>
-        <button class="btn primary" onclick="openEditor()">+ 계정 생성</button>
+
+      <!-- 선택된 본사 진입 패널 -->
+      <div class="enter-panel" id="enterPanel" style="display:none">
+        <div class="enter-panel-title" id="enterPanelTitle"></div>
+        <div class="enter-panel-sub" id="enterPanelSub"></div>
+        <div class="enter-btns">
+          <button class="enter-btn" onclick="enterSite('site_hq.html')">
+            <span class="icon">🏛</span><span>본사 관리화면</span>
+          </button>
+          <button class="enter-btn" onclick="enterSite('site_franchise.html')">
+            <span class="icon">🏪</span><span>가맹점 화면</span>
+          </button>
+          <button class="enter-btn" onclick="enterSite('site_supplier.html')">
+            <span class="icon">🚚</span><span>납품업체 화면</span>
+          </button>
+          <button class="btn" onclick="deselectHq()" style="margin-left:auto">취소</button>
+        </div>
+      </div>
+
+      <!-- 본사 카드 목록 -->
+      <div class="hq-grid" id="hqGrid">
+        <div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--muted)">
+          <div class="spinner" style="margin:0 auto 12px"></div>불러오는 중...
+        </div>
       </div>
     </div>
 
-    <div class="card">
-      <!-- 브랜드 필터 -->
-      <div class="filter-bar" id="brandFilterBar">
-        <label style="margin:0;white-space:nowrap;font-size:13px">브랜드 필터</label>
-        <select id="brandFilter" onchange="setBrand(this.value)" style="min-width:200px;width:auto">
-          <option value="">전체 브랜드</option>
-        </select>
-        <span id="countBadge" style="font-size:12px;color:var(--muted)"></span>
+    <!-- ── 뷰2: 본사 계정 관리 ── -->
+    <div class="view" id="view-manage">
+      <div class="page-top">
+        <div>
+          <div class="page-title">본사 계정 관리</div>
+          <div class="page-sub muted">HQ 계정 생성·수정·상태변경·권한부여</div>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button class="btn" onclick="refreshAll()">새로고침</button>
+          <button class="btn primary" onclick="openEditor()">+ 본사 계정 추가</button>
+        </div>
       </div>
-      <!-- 역할 필터 -->
-      <div class="status-filters" id="roleFilters"></div>
-      <!-- 상태 필터 -->
-      <div class="status-filters" id="statusFilters"></div>
-      <!-- 테이블 -->
-      <div style="overflow:auto">
-        <table>
-          <thead><tr>
-            <th>역할·브랜드</th><th>계정 정보</th><th>상태</th>
-            <th>로그인</th><th>부여된 권한</th><th>관리</th>
-          </tr></thead>
-          <tbody id="userBody">
-            <tr><td colspan="6" style="text-align:center;padding:40px">
-              <div style="display:flex;align-items:center;justify-content:center;gap:8px;color:var(--muted)">
-                <div class="spinner"></div>불러오는 중...
-              </div>
-            </td></tr>
-          </tbody>
-        </table>
+      <div class="card">
+        <div class="status-filters" id="manageStatusFilters"></div>
+        <div style="overflow:auto">
+          <table>
+            <thead><tr>
+              <th>본사명</th><th>브랜드</th><th>로그인ID</th><th>상태</th><th>관리</th>
+            </tr></thead>
+            <tbody id="manageBody">
+              <tr><td colspan="5" style="text-align:center;padding:32px;color:var(--muted)">불러오는 중...</td></tr>
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
+
   </main>
-</div>
-
-<!-- 계정선택 모달 (화면이동 시) -->
-<div class="modal" id="siteModal">
-  <div class="modal-box" style="max-width:420px">
-    <h2 id="siteModalTitle">계정 선택</h2>
-    <div class="muted" style="margin-bottom:14px">접속할 계정을 선택하세요.</div>
-    <div id="siteModalList"></div>
-    <div style="text-align:right;margin-top:12px">
-      <button class="btn" onclick="closeModal('siteModal')">취소</button>
-    </div>
-  </div>
 </div>
 
 <!-- 계정 생성/수정 모달 -->
 <div class="modal" id="editorModal">
   <div class="modal-box">
-    <h2 id="editorTitle">계정 생성</h2>
+    <h2 id="editorTitle">본사 계정 생성</h2>
     <div class="form-grid">
-      <div><label>역할</label>
-        <select id="fRole" onchange="onRoleChange()">
-          <option value="hq">프랜차이즈 본사 (HQ)</option>
-          <option value="franchise">가맹점</option>
-          <option value="supplier">납품업체</option>
-          <option value="driver">배송기사</option>
-          <option value="master">Master</option>
-        </select>
-      </div>
       <div><label>상태</label>
         <select id="fStatus">
           <option value="active">정상</option>
           <option value="inactive">비활성</option>
           <option value="suspended">사용중지</option>
           <option value="expired">계약만료</option>
-          <option value="password_reset_required">비밀번호 재설정 필요</option>
         </select>
       </div>
+      <div></div>
 
       <div class="form-divider">기본 정보</div>
       <div><label>담당자명</label><input id="fName" placeholder="홍길동"></div>
-      <div><label>상호명</label><input id="fBusinessName" placeholder="부산 1호점"></div>
+      <div><label>상호명 (본사명)</label><input id="fBusinessName" placeholder="이바구밀면 본사"></div>
       <div><label>사업자번호</label><input id="fBusinessNumber" placeholder="000-00-00000"></div>
       <div><label>연락처</label><input id="fPhone" placeholder="010-0000-0000"></div>
 
       <div class="form-divider">로그인 정보</div>
       <div><label>로그인 ID</label><input id="fLoginId" placeholder="아이디"></div>
-      <div><label>비밀번호 <span style="font-weight:400;color:var(--muted)">(수정시 비워두면 유지)</span></label>
+      <div><label>비밀번호 <span style="font-weight:400;color:var(--muted)">(수정 시 비워두면 유지)</span></label>
         <input id="fPassword" type="password" placeholder="비밀번호"></div>
 
-      <!-- 브랜드 연동 -->
-      <div class="form-divider" id="divBrand" style="display:none">브랜드 연동</div>
-      <div class="form-full" id="wrapBrand" style="display:none">
+      <div class="form-divider">브랜드 연동 <span style="font-weight:400;color:var(--red)">★ brandId가 정확해야 화면 필터가 동작합니다</span></div>
+      <div class="form-full">
         <label>연동 브랜드</label>
         <select id="fBrand" onchange="onBrandChange()">
           <option value="">브랜드 선택</option>
@@ -201,10 +221,9 @@ th{color:var(--muted);font-size:11px;text-transform:uppercase}
         <div id="brandPreview" style="display:none;margin-top:6px;padding:8px 12px;background:var(--bg);border-radius:8px;font-size:12px;color:var(--muted)"></div>
       </div>
 
-      <!-- OKPos 연동 -->
-      <div class="form-divider" id="divOkpos" style="display:none">OKPos 연동</div>
-      <div id="wrapOkposId" style="display:none"><label>OKPos 아이디</label><input id="fOkposId" placeholder="OKPos 아이디"></div>
-      <div id="wrapOkposPw" style="display:none"><label>OKPos 비밀번호</label><input id="fOkposPw" type="password" placeholder="OKPos 비밀번호"></div>
+      <div class="form-divider">OKPos 연동</div>
+      <div><label>OKPos 아이디</label><input id="fOkposId" placeholder="OKPos 아이디"></div>
+      <div><label>OKPos 비밀번호</label><input id="fOkposPw" type="password" placeholder="OKPos 비밀번호"></div>
     </div>
 
     <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:18px">
@@ -248,21 +267,12 @@ th{color:var(--muted);font-size:11px;text-transform:uppercase}
 const Auth = window.SmartBaljuAuth;
 
 // ── 상태 ───────────────────────────────────────────────────
-let _users=[], _brands=[];
-let _tab='all', _status='all', _brand='';
-let _editUid='', _permUid='';
+let _users = [], _brands = [];
+let _editUid = '', _permUid = '';
+let _selectedHq = null;
+let _manageStatus = 'all';
 
-const ROLE_LABEL = {master:'Master',hq:'본사(HQ)',franchise:'가맹점',supplier:'납품업체',driver:'배송기사'};
-const SITE_URL   = {hq:'site_hq.html',franchise:'site_franchise.html',supplier:'site_supplier.html',driver:'site_driver.html'};
-const TAB_INFO   = {
-  all:      ['전체 계정',  '모든 역할의 계정을 관리합니다'],
-  hq:       ['본사 (HQ)', '프랜차이즈 본사 계정 관리'],
-  franchise:['가맹점',    '가맹점 계정 관리'],
-  supplier: ['납품업체',  '납품업체 계정 관리'],
-  driver:   ['배송기사',  '배송기사 계정 관리'],
-};
-const STATUS_LIST = [['all','전체'],['active','활성'],['inactive','비활성'],['suspended','중지'],['expired','만료']];
-const ROLE_FILTERS = [['all','전체'],['hq','본사'],['franchise','가맹점'],['supplier','납품업체'],['driver','배송기사']];
+const SITE_URL = {hq:'site_hq.html', franchise:'site_franchise.html', supplier:'site_supplier.html'};
 const PERM_DEFS = {
   hq:{label:'본사 기능',dot:'#3b82f6',items:[
     {key:'hq_dashboard',label:'대시보드',sub:'매출·KPI'},
@@ -295,89 +305,92 @@ let _tt;
 function toast(m){const el=document.getElementById('toast');el.textContent=m;el.classList.add('show');clearTimeout(_tt);_tt=setTimeout(()=>el.classList.remove('show'),2600);}
 function closeModal(id){document.getElementById(id).classList.remove('show');}
 
-// ── 탭 전환 ────────────────────────────────────────────────
-function switchTab(tab){
-  _tab=tab; _status='all';
-  ['all','hq','franchise','supplier','driver'].forEach(t=>{
-    document.getElementById('tab-'+t).classList.toggle('active',t===tab);
+// ── 뷰 전환 ────────────────────────────────────────────────
+function showView(v){
+  ['main','manage'].forEach(k=>{
+    document.getElementById('view-'+k).classList.toggle('active', k===v);
+    document.getElementById('nav-'+k).classList.toggle('active', k===v);
   });
-  const [title,sub]=TAB_INFO[tab]||TAB_INFO.all;
-  document.getElementById('pageTitle').textContent=title;
-  document.getElementById('pageSub').textContent=sub;
-  // 배송기사는 브랜드 필터 숨김
-  document.getElementById('brandFilterBar').style.display=tab==='driver'?'none':'';
-  renderStatusFilters();
-  render();
+  if(v==='manage') renderManageTable();
 }
 
-// ── 상태 필터 ──────────────────────────────────────────────
-function renderStatusFilters(){
-  document.getElementById('statusFilters').innerHTML=STATUS_LIST.map(([k,l])=>
-    `<button class="sf ${_status===k?'active':''}" onclick="setStatus('${k}')">${l}</button>`
+// ── 본사 카드 렌더 ─────────────────────────────────────────
+function renderHqCards(){
+  const hqList = _users.filter(u => u.role === 'hq');
+  const grid = document.getElementById('hqGrid');
+  if(!hqList.length){
+    grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:48px;color:var(--muted)">등록된 본사 계정이 없습니다.<br><br><button class="btn primary" onclick="openEditor()" style="margin-top:8px">+ 본사 계정 추가</button></div>';
+    return;
+  }
+  grid.innerHTML = hqList.map(u => {
+    const hasBrand = !!u.brandId;
+    const statusClass = {active:'badge-active',inactive:'badge-inactive',suspended:'badge-suspended',expired:'badge-expired'}[u.status] || 'badge-inactive';
+    const statusLabel = {active:'활성',inactive:'비활성',suspended:'중지',expired:'만료'}[u.status] || u.status;
+    const isSelected = _selectedHq?.uid === u.uid;
+    return `<div class="hq-card${hasBrand?'':' no-brand'}${isSelected?' selected':''}" onclick="${hasBrand?`selectHq('${esc(u.uid)}')`:'void(0)'}">
+      <div class="hq-name">${esc(u.businessName || u.name || u.loginId)}</div>
+      <div class="hq-brand">${hasBrand ? '🏷 '+esc(u.brandName||u.brandId) : '브랜드 미연결'}</div>
+      <div class="hq-badges">
+        <span class="badge ${statusClass}">${statusLabel}</span>
+        ${hasBrand ? `<span class="badge badge-blue">brandId: ${esc(u.brandId)}</span>` : '<span class="badge badge-warn">⚠ 브랜드 미연결 — 진입 불가</span>'}
+      </div>
+      ${hasBrand
+        ? `<button onclick="event.stopPropagation();selectHq('${esc(u.uid)}')" style="width:100%;padding:9px;border-radius:9px;border:1.5px solid ${isSelected?'var(--blue)':'var(--line)'};background:${isSelected?'var(--blue)':'#fff'};color:${isSelected?'#fff':'var(--text)'};font-weight:700;font-size:13px;transition:all .15s">${isSelected?'✓ 선택됨':'이 본사로 진입'}</button>`
+        : `<div style="padding:9px;text-align:center;border-radius:9px;background:var(--bg);color:var(--muted);font-size:12px;font-weight:700">브랜드 연결 필요</div>`
+      }
+    </div>`;
+  }).join('');
+}
+
+// ── 본사 선택 ──────────────────────────────────────────────
+function selectHq(uid){
+  _selectedHq = _users.find(u => u.uid === uid) || null;
+  renderHqCards();
+  const panel = document.getElementById('enterPanel');
+  if(!_selectedHq){ panel.style.display='none'; return; }
+  document.getElementById('enterPanelTitle').textContent =
+    `"${_selectedHq.businessName || _selectedHq.name}" 선택됨`;
+  document.getElementById('enterPanelSub').textContent =
+    `브랜드: ${_selectedHq.brandName || _selectedHq.brandId} · 진입할 화면을 선택하세요`;
+  panel.style.display = '';
+  panel.scrollIntoView({behavior:'smooth', block:'nearest'});
+}
+
+function deselectHq(){
+  _selectedHq = null;
+  document.getElementById('enterPanel').style.display = 'none';
+  renderHqCards();
+}
+
+// ── 화면 진입 (★ brandId 세션 확실히 전달) ─────────────────
+function enterSite(url){
+  if(!_selectedHq){ toast('본사를 먼저 선택하세요'); return; }
+  if(!_selectedHq.brandId){ toast('brandId가 없습니다. 계정 수정에서 브랜드를 연결하세요'); return; }
+  Auth.setSession(_selectedHq);   // user 객체 전체 저장 → brandId 포함
+  location.href = url;
+}
+
+// ── 계정 관리 테이블 ────────────────────────────────────────
+function renderManageTable(){
+  const STATUS_LIST = [['all','전체'],['active','활성'],['inactive','비활성'],['suspended','중지'],['expired','만료']];
+  document.getElementById('manageStatusFilters').innerHTML = STATUS_LIST.map(([k,l])=>
+    `<button class="sf ${_manageStatus===k?'active':''}" onclick="_manageStatus='${k}';renderManageTable()">${l}</button>`
   ).join('');
-  document.getElementById('roleFilters').innerHTML=ROLE_FILTERS.map(([k,l])=>
-    `<button class="sf ${_tab===k?'active':''}" onclick="switchTab('${k}')">${l}</button>`
-  ).join('');
-}
-function setStatus(s){_status=s;renderStatusFilters();render();}
 
-// ── 브랜드 필터 ────────────────────────────────────────────
-async function loadBrandFilter(){
-  _brands=await Auth.loadBrands();
-  const sel=document.getElementById('brandFilter');
-  const cur=sel.value;
-  sel.innerHTML='<option value="">전체 브랜드</option>'+_brands.map(b=>`<option value="${b.id}">${b.name}</option>`).join('');
-  if(cur)sel.value=cur;
-}
-function setBrand(v){_brand=v;render();}
-
-// ── 필터링·렌더 ────────────────────────────────────────────
-function filtered(){
-  return _users.filter(u=>{
-    if(_tab!=='all'&&u.role!==_tab)return false;
-    if(_status!=='all'&&u.status!==_status)return false;
-    if(_brand&&u.brandId!==_brand)return false;
-    return true;
-  });
-}
-
-function permBadges(u){
-  const p=u.permissions||{};
-  const a=Object.keys(p).filter(k=>p[k]);
-  if(!a.length)return '<span style="color:var(--muted);font-size:11px">없음</span>';
-  const g={hq:0,fr:0,sup:0};
-  a.forEach(k=>{if(k.startsWith('hq_'))g.hq++;else if(k.startsWith('fr_'))g.fr++;else if(k.startsWith('sup_'))g.sup++;});
-  return [g.hq&&`<span class="pill role-hq" style="font-size:10px;margin:1px">본사 ${g.hq}</span>`,
-    g.fr&&`<span class="pill role-franchise" style="font-size:10px;margin:1px">가맹점 ${g.fr}</span>`,
-    g.sup&&`<span class="pill role-supplier" style="font-size:10px;margin:1px">납품업체 ${g.sup}</span>`]
-    .filter(Boolean).join('')||'<span style="color:var(--muted);font-size:11px">없음</span>';
-}
-
-function render(){
-  const list=filtered();
-  document.getElementById('countBadge').textContent=list.length+'명';
-  document.getElementById('userBody').innerHTML=!list.length
-    ?'<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:32px">계정이 없습니다.</td></tr>'
-    :list.map(u=>`<tr>
-      <td>
-        <span class="pill role-${esc(u.role)}">${esc(ROLE_LABEL[u.role]||u.role)}</span>
-        ${u.brandName?`<div style="font-size:11px;color:var(--muted);margin-top:3px">${esc(u.brandName)}</div>`:''}
-      </td>
-      <td>
-        <strong>${esc(u.businessName||u.name||'-')}</strong>
-        <div class="muted">${esc(u.name||'')} · ${esc(u.loginId)}</div>
-        ${u.okposId?`<div style="font-size:11px;color:#6366f1">OKPos: ${esc(u.okposId)}</div>`:''}
-        ${u.businessNumber?`<div class="muted">${esc(u.businessNumber)}</div>`:''}
-      </td>
-      <td><span class="pill status-${esc(u.status)}">${esc(Auth.STATUS_LABELS[u.status]||u.status)}</span></td>
-      <td>
-        ${!Auth.BLOCKED_LOGIN_STATUSES.includes(u.status)?'<span class="login-ok">가능</span>':'<span class="login-no">불가</span>'}
-        ${u.mustChangePassword?'<div class="muted" style="font-size:10px">비번변경필요</div>':''}
-      </td>
-      <td>
-        ${permBadges(u)}
-        ${u.role!=='master'?`<br><button class="mini blue" style="margin-top:4px" onclick="openPerm('${esc(u.uid)}')">권한부여</button>`:''}
-      </td>
+  const hqList = _users.filter(u => u.role === 'hq' && (_manageStatus==='all' || u.status===_manageStatus));
+  const body = document.getElementById('manageBody');
+  if(!hqList.length){
+    body.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:32px">해당 계정이 없습니다.</td></tr>';
+    return;
+  }
+  body.innerHTML = hqList.map(u => {
+    const statusLabel = {active:'활성',inactive:'비활성',suspended:'중지',expired:'만료'}[u.status] || u.status;
+    const statusClass = {active:'status-active',inactive:'status-inactive',suspended:'status-suspended',expired:'status-expired'}[u.status] || '';
+    return `<tr>
+      <td><strong>${esc(u.businessName||u.name||'-')}</strong><div class="muted">${esc(u.name||'')} · ${esc(u.loginId)}</div></td>
+      <td>${u.brandId ? `<span style="font-size:12px;font-weight:700;color:var(--blue)">${esc(u.brandName||'')} <span style="color:var(--muted)">(${esc(u.brandId)})</span></span>` : '<span style="color:var(--red);font-size:12px;font-weight:700">⚠ 미연결</span>'}</td>
+      <td class="muted">${esc(u.loginId)}</td>
+      <td><span class="pill ${statusClass}">${statusLabel}</span></td>
       <td><div style="display:flex;flex-wrap:wrap">
         <button class="mini blue" onclick="openEditor('${esc(u.uid)}')">수정</button>
         <button class="mini green" onclick="doStatus('${esc(u.uid)}','active')">활성</button>
@@ -385,129 +398,115 @@ function render(){
         <button class="mini yellow" onclick="doStatus('${esc(u.uid)}','suspended')">중지</button>
         <button class="mini red" onclick="doStatus('${esc(u.uid)}','expired')">만료</button>
         <button class="mini blue" onclick="doResetPw('${esc(u.uid)}')">비번초기화</button>
+        <button class="mini blue" onclick="openPerm('${esc(u.uid)}')">권한</button>
         <button class="mini" onclick="showDetail('${esc(u.uid)}')">상세</button>
-        ${u.role!=='master'?`<button class="mini red" onclick="doDelete('${esc(u.uid)}')">삭제</button>`:''}
+        <button class="mini red" onclick="doDelete('${esc(u.uid)}')">삭제</button>
       </div></td>
-    </tr>`).join('');
+    </tr>`;
+  }).join('');
 }
 
+// ── 전체 새로고침 ──────────────────────────────────────────
 async function refreshAll(){
-  _users=await Auth.loadUsers();
-  await loadBrandFilter();
-  renderStatusFilters();
-  render();
-}
-
-// ── 화면이동 ───────────────────────────────────────────────
-async function goToSite(role){
-  const list=_users.filter(u=>u.role===role&&u.status==='active');
-  if(!list.length){toast(ROLE_LABEL[role]+' 활성 계정이 없습니다');return;}
-  if(list.length===1){Auth.setSession(list[0]);location.href=SITE_URL[role];return;}
-  // 여러 계정 → 선택 모달
-  document.getElementById('siteModalTitle').textContent=ROLE_LABEL[role]+' 계정 선택';
-  document.getElementById('siteModalList').innerHTML=list.map(a=>`
-    <div class="acct-item" onclick="pickSite('${esc(a.uid)}','${SITE_URL[role]}')">
-      <div>
-        <strong>${esc(a.businessName||a.name||a.loginId)}</strong>
-        ${a.brandName?`<span class="muted" style="margin-left:6px">${esc(a.brandName)}</span>`:''}
-        <div class="muted">${esc(a.loginId)}</div>
-      </div>
-      <span style="color:var(--blue);font-size:20px">›</span>
-    </div>`).join('');
-  document.getElementById('siteModal').classList.add('show');
-}
-function pickSite(uid,url){
-  const u=_users.find(x=>x.uid===uid);
-  if(u)Auth.setSession(u);
-  closeModal('siteModal');
-  location.href=url;
+  _users = await Auth.loadUsers();
+  _brands = await Auth.loadBrands();
+  renderHqCards();
+  if(document.getElementById('view-manage').classList.contains('active')) renderManageTable();
 }
 
 // ── 계정 편집 ──────────────────────────────────────────────
 async function openEditor(uid){
-  _editUid=uid||'';
-  const u=uid?_users.find(x=>x.uid===uid):null;
-  document.getElementById('editorTitle').textContent=u?'계정 수정':'계정 생성';
+  _editUid = uid || '';
+  const u = uid ? _users.find(x => x.uid === uid) : null;
+  document.getElementById('editorTitle').textContent = u ? '본사 계정 수정' : '본사 계정 생성';
   ['fName','fBusinessName','fBusinessNumber','fPhone','fLoginId','fPassword','fOkposId','fOkposPw']
-    .forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
-  document.getElementById('fBrand').value='';
-  document.getElementById('brandPreview').style.display='none';
+    .forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
+  document.getElementById('fBrand').value = '';
+  document.getElementById('brandPreview').style.display = 'none';
+
+  // 브랜드 드롭다운 채우기
+  const brands = await Auth.loadBrands();
+  const bSel = document.getElementById('fBrand');
+  const cur = bSel.value;
+  bSel.innerHTML = '<option value="">브랜드 선택</option>' +
+    brands.map(b => `<option value="${b.id}" data-name="${esc(b.name)}">[${b.code||'-'}] ${esc(b.name)}${b.category?' ('+b.category+')':''}</option>`).join('');
+  if(cur) bSel.value = cur;
+
   if(u){
-    fRole.value=u.role;fStatus.value=u.status;fName.value=u.name||'';
-    fBusinessName.value=u.businessName||'';fBusinessNumber.value=u.businessNumber||'';
-    fPhone.value=u.phone||'';fLoginId.value=u.loginId||'';fOkposId.value=u.okposId||'';
-    await onRoleChange();
-    if(u.brandId){document.getElementById('fBrand').value=u.brandId;onBrandChange();}
+    document.getElementById('fStatus').value = u.status;
+    document.getElementById('fName').value = u.name || '';
+    document.getElementById('fBusinessName').value = u.businessName || '';
+    document.getElementById('fBusinessNumber').value = u.businessNumber || '';
+    document.getElementById('fPhone').value = u.phone || '';
+    document.getElementById('fLoginId').value = u.loginId || '';
+    document.getElementById('fOkposId').value = u.okposId || '';
+    if(u.brandId){ bSel.value = u.brandId; onBrandChange(); }
   } else {
-    fRole.value=_tab!=='all'?_tab:'franchise';
-    fStatus.value='active';fPassword.value='1234';
-    await onRoleChange();
+    document.getElementById('fStatus').value = 'active';
+    document.getElementById('fPassword').value = '1234';
   }
   document.getElementById('editorModal').classList.add('show');
 }
 
-async function onRoleChange(){
-  const role=fRole.value;
-  const showBrand=['hq','franchise','supplier'].includes(role);
-  const showOkpos=['hq','franchise'].includes(role);
-  ['divBrand','wrapBrand'].forEach(id=>document.getElementById(id).style.display=showBrand?'':'none');
-  ['divOkpos','wrapOkposId','wrapOkposPw'].forEach(id=>document.getElementById(id).style.display=showOkpos?'':'none');
-  if(showBrand){
-    const brands=await Auth.loadBrands();
-    const sel=document.getElementById('fBrand');
-    const cur=sel.value;
-    sel.innerHTML='<option value="">브랜드 선택</option>'+brands.map(b=>`<option value="${b.id}" data-name="${b.name}">[${b.code||'-'}] ${b.name}${b.category?' ('+b.category+')':''}</option>`).join('');
-    if(cur)sel.value=cur;
-  }
-}
-
 function onBrandChange(){
-  const sel=document.getElementById('fBrand');
-  const opt=sel.options[sel.selectedIndex];
-  const prev=document.getElementById('brandPreview');
-  if(sel.value){prev.style.display='';prev.textContent='연동 브랜드: '+opt.dataset.name;}
-  else prev.style.display='none';
+  const sel = document.getElementById('fBrand');
+  const opt = sel.options[sel.selectedIndex];
+  const prev = document.getElementById('brandPreview');
+  if(sel.value){ prev.style.display=''; prev.textContent='연동 브랜드: '+opt.dataset.name+' (id: '+sel.value+')'; }
+  else prev.style.display = 'none';
 }
 
 async function saveEditor(){
-  if(!fLoginId.value.trim()){toast('로그인 ID를 입력하세요');return;}
-  const bSel=document.getElementById('fBrand');
-  const bOpt=bSel.options[bSel.selectedIndex];
+  if(!document.getElementById('fLoginId').value.trim()){ toast('로그인 ID를 입력하세요'); return; }
+  const bSel = document.getElementById('fBrand');
+  const bOpt = bSel.options[bSel.selectedIndex];
   await Auth.upsertUser({
-    uid:_editUid,role:fRole.value,status:fStatus.value,
-    name:fName.value,businessName:fBusinessName.value,
-    businessNumber:fBusinessNumber.value,phone:fPhone.value,
-    loginId:fLoginId.value,password:fPassword.value||undefined,
-    okposId:fOkposId.value,okposPw:fOkposPw.value||undefined,
-    brandId:bSel.value||'',
-    brandName:bOpt?.dataset?.name||'',
+    uid: _editUid,
+    role: 'hq',
+    status: document.getElementById('fStatus').value,
+    name: document.getElementById('fName').value,
+    businessName: document.getElementById('fBusinessName').value,
+    businessNumber: document.getElementById('fBusinessNumber').value,
+    phone: document.getElementById('fPhone').value,
+    loginId: document.getElementById('fLoginId').value,
+    password: document.getElementById('fPassword').value || undefined,
+    okposId: document.getElementById('fOkposId').value,
+    okposPw: document.getElementById('fOkposPw').value || undefined,
+    brandId: bSel.value || '',
+    brandName: bOpt?.dataset?.name || '',
   });
   closeModal('editorModal');
   await refreshAll();
-  toast('계정 저장 완료');
+  toast('저장 완료');
 }
 
-async function doStatus(uid,s){await Auth.setUserStatus(uid,s);await refreshAll();toast('상태 변경');}
+// ── 상태·비번·삭제·상세 ────────────────────────────────────
+async function doStatus(uid,s){ await Auth.setUserStatus(uid,s); await refreshAll(); toast('상태 변경'); }
 async function doResetPw(uid){
-  const r=await Auth.resetPasswordByMaster(uid);
+  const r = await Auth.resetPasswordByMaster(uid);
   await refreshAll();
   alert(`임시 비밀번호 발급\n\n계정: ${r.user.loginId}\n임시 비밀번호: ${r.tempPassword}\n\n로그인 후 변경 필요`);
 }
-async function doDelete(uid){if(!confirm('삭제할까요?'))return;await Auth.deleteUser(uid);await refreshAll();toast('삭제 완료');}
+async function doDelete(uid){
+  if(!confirm('삭제할까요?')) return;
+  await Auth.deleteUser(uid);
+  await refreshAll();
+  toast('삭제 완료');
+}
 function showDetail(uid){
-  const u=_users.find(x=>x.uid===uid);
-  const s={...u};delete s.passwordHash;delete s.okposPw;
-  document.getElementById('detailPre').textContent=JSON.stringify(s,null,2);
+  const u = _users.find(x => x.uid === uid);
+  const s = {...u}; delete s.passwordHash; delete s.okposPw;
+  document.getElementById('detailPre').textContent = JSON.stringify(s, null, 2);
   document.getElementById('detailModal').classList.add('show');
 }
 
 // ── 권한부여 ───────────────────────────────────────────────
 function openPerm(uid){
-  _permUid=uid;
-  const u=_users.find(x=>x.uid===uid);
-  const p=u?.permissions||{};
-  document.getElementById('permTarget').innerHTML=`<strong>${u?.businessName||u?.name||uid}</strong> 에게 부여할 기능을 선택하세요.`;
-  document.getElementById('permGrid').innerHTML=Object.entries(PERM_DEFS).map(([rk,def])=>`
+  _permUid = uid;
+  const u = _users.find(x => x.uid === uid);
+  const p = u?.permissions || {};
+  document.getElementById('permTarget').innerHTML = `<strong>${u?.businessName||u?.name||uid}</strong> 에게 부여할 기능을 선택하세요.`;
+  document.getElementById('permGrid').innerHTML = Object.entries(PERM_DEFS).map(([rk,def])=>`
     <div class="perm-section">
       <div class="perm-title">
         <div class="perm-dot" style="background:${def.dot}"></div>
@@ -525,27 +524,21 @@ function openPerm(uid){
     </div>`).join('');
   document.getElementById('permModal').classList.add('show');
 }
-function togglePerm(k){const c=document.getElementById('pc_'+k).checked;document.getElementById('pr_'+k).classList.toggle('active',c);}
-function setAll(rk,v){PERM_DEFS[rk].items.forEach(it=>{const el=document.getElementById('pc_'+it.key);if(el){el.checked=v;document.getElementById('pr_'+it.key).classList.toggle('active',v);}});}
+function togglePerm(k){ const c=document.getElementById('pc_'+k).checked; document.getElementById('pr_'+k).classList.toggle('active',c); }
+function setAll(rk,v){ PERM_DEFS[rk].items.forEach(it=>{ const el=document.getElementById('pc_'+it.key); if(el){ el.checked=v; document.getElementById('pr_'+it.key).classList.toggle('active',v); } }); }
 async function savePerm(){
-  const perms={};
-  Object.values(PERM_DEFS).forEach(def=>def.items.forEach(it=>{perms[it.key]=document.getElementById('pc_'+it.key)?.checked||false;}));
-  await Auth.setPermissions(_permUid,perms);
-  await refreshAll();closeModal('permModal');toast('권한 저장 완료');
-}
-
-// ── 초기화 ─────────────────────────────────────────────────
-async function resetAccounts(){
-  if(!confirm('master 계정 외 모든 계정을 삭제할까요?'))return;
-  const users=await Auth.loadUsers();
-  for(const u of users){if(u.role!=='master')await Auth.deleteUser(u.uid);}
-  await refreshAll();toast('초기화 완료');
+  const perms = {};
+  Object.values(PERM_DEFS).forEach(def => def.items.forEach(it => { perms[it.key] = document.getElementById('pc_'+it.key)?.checked || false; }));
+  await Auth.setPermissions(_permUid, perms);
+  await refreshAll();
+  closeModal('permModal');
+  toast('권한 저장 완료');
 }
 
 // ── 시작 ───────────────────────────────────────────────────
-document.addEventListener('firebaseReady',refreshAll);
-if(Auth.isFirebaseReady)refreshAll();
-else setTimeout(refreshAll,2000);
+document.addEventListener('firebaseReady', refreshAll);
+if(Auth.isFirebaseReady) refreshAll();
+else setTimeout(refreshAll, 2000);
 </script>
 </body>
 </html>
