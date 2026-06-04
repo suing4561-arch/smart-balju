@@ -1507,7 +1507,7 @@ async function confirmPayment(id){
     lastPaymentAmt: pay,
   });
   await loadFranchises();
-  showToast(`[${f.name}] ${amtNum.toLocaleString()}원 입금 확인 완료! 미수금: ${newUnpaid.toLocaleString()}원`);
+  showToast(`[${f.name}] ${pay.toLocaleString()}원 입금 확인 완료! 미수금: ${newUnpaid.toLocaleString()}원`);
 }
 
 // ── 납품업체 관리 ─────────────────────────────────────────
