@@ -462,11 +462,14 @@ async function loadFranchiseSales(){
     const unpaid=Number(myStore.unpaidAmt||0);
     const limit=Number(myStore.orderLimit||2000000);
     const remain=limit-unpaid;
-    document.getElementById('fr-unpaid').textContent=unpaid.toLocaleString()+'원';
-    document.getElementById('fr-unpaid-sub').textContent=`한도 ${limit.toLocaleString()}원 · 잔여 ${remain.toLocaleString()}원`;
+    const elUnpaid=document.getElementById('fr-unpaid');
+    if(elUnpaid) elUnpaid.textContent=unpaid.toLocaleString()+'원';
+    const elUnpaidSub=document.getElementById('fr-unpaid-sub');
+    if(elUnpaidSub) elUnpaidSub.textContent=`한도 ${limit.toLocaleString()}원 · 잔여 ${remain.toLocaleString()}원`;
     const card=document.getElementById('unpaidCard');
-    card.style.display='';
-    document.getElementById('unpaidDetail').innerHTML=`
+    if(card) card.style.display='';
+    const detailEl=document.getElementById('unpaidDetail');
+    if(detailEl) detailEl.innerHTML=`
       <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:.5px solid var(--line);font-size:13px"><span style="color:var(--muted)">주문 한도</span><span style="font-family:var(--mono);font-weight:700">${limit.toLocaleString()}원</span></div>
       <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:.5px solid var(--line);font-size:13px"><span style="color:var(--muted)">미수금</span><span style="font-family:var(--mono);font-weight:700;color:var(--red)">${unpaid.toLocaleString()}원</span></div>
       <div style="display:flex;justify-content:space-between;padding:8px 0;font-size:13px"><span style="color:var(--muted)">잔여 한도</span><span style="font-family:var(--mono);font-weight:700;color:${remain>0?'var(--green)':'var(--red)'}">${remain.toLocaleString()}원</span></div>
@@ -814,7 +817,6 @@ async function submitOrder(){
   } catch(e){ console.warn('발주 저장 실패:', e); }
 
   closeConfirm();
-  document.getElementById('orderNo').textContent='주문번호: '+no;
   document.getElementById('successOverlay').innerHTML=''; // 초기화
   document.getElementById('successOverlay').classList.add('show');
   // 성공 UI 복원
