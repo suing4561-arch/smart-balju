@@ -1497,15 +1497,14 @@ async function confirmPayment(id){
   if(unpaid===0){ showToast('미수금이 없습니다'); return; }
   const amt=prompt(`[${f.name}] 입금 확인\n현재 미수금: ${unpaid.toLocaleString()}원\n\n입금 확인할 금액을 입력하세요:`, unpaid);
   if(!amt) return;
-  const amtNum=Number(amt.replace(/,/g,''))||0;
-  const newUnpaid=Math.max(0, unpaid-amtNum);
-  const limit=Number(f.orderLimit)||2000000;
-  await Auth.DB.set('hq_franchises/'+id, {
-    ...f,
+  const pay=Number(amt.replace(/,/g,''))||0;
+  const newUnpaid=Math.max(0, (Number(f.unpaidAmt)||0)-pay);
+  const limit=Number(f.orderLimit)||Infinity;
+  await Auth.DB.update('hq_franchises/'+id, {
     unpaidAmt: newUnpaid,
     orderEnabled: newUnpaid < limit,
     lastPaymentAt: new Date().toISOString(),
-    lastPaymentAmt: amtNum,
+    lastPaymentAmt: pay,
   });
   await loadFranchises();
   showToast(`[${f.name}] ${amtNum.toLocaleString()}원 입금 확인 완료! 미수금: ${newUnpaid.toLocaleString()}원`);
