@@ -750,7 +750,7 @@ async function submitOrder(){
   if(_currentStore){
     const storeData = await Auth.DB.get('hq_franchises/'+_currentStore.id);
     if(storeData){
-      const limit = Number(storeData.orderLimit)||2000000;
+      const limit = Number(storeData.orderLimit)||Infinity;
       const unpaid = Number(storeData.unpaidAmt)||0;
       const enabled = storeData.orderEnabled !== false;
       if(!enabled || (unpaid + total) > limit){
@@ -804,7 +804,7 @@ async function submitOrder(){
       const storeData = await Auth.DB.get('hq_franchises/'+_currentStore.id);
       if(storeData){
         const newUnpaid = Number(storeData.unpaidAmt||0) + total;
-        const limit = Number(storeData.orderLimit)||2000000;
+        const limit = Number(storeData.orderLimit)||Infinity;
         await Auth.DB.update('hq_franchises/'+_currentStore.id, {
           unpaidAmt: newUnpaid,
           orderEnabled: newUnpaid < limit,
@@ -913,6 +913,23 @@ async function loadDeliveryPage(){
 
 // ── 가맹점 선택 ────────────────────────────────────────────
 let _currentStore = null;
+let _storeUnsub = null;
+
+function _attachStoreListener(id) {
+  if(_storeUnsub) { _storeUnsub(); _storeUnsub = null; }
+  _storeUnsub = Auth.DB.on('hq_franchises/' + id, f => {
+    if(!f) return;
+    _currentStore = {..._currentStore, ...f};
+    const unpaid = Number(f.unpaidAmt || 0);
+    const limit  = Number(f.orderLimit) || Infinity;
+    const el = document.getElementById('fr-unpaid');
+    if(el) el.textContent = unpaid.toLocaleString() + '원';
+    const sub = document.getElementById('fr-unpaid-sub');
+    if(sub) sub.textContent = limit < Infinity
+      ? `한도 ${limit.toLocaleString()}원 · 잔여 ${(limit - unpaid).toLocaleString()}원`
+      : '한도 제한없음';
+  });
+}
 
 async function openStoreSelect() {
   document.getElementById('storeSelectModal').classList.add('show');
@@ -1004,6 +1021,7 @@ async function selectStore(s) {
   }
   loadStockStatus();
   loadNotices();
+  _attachStoreListener(_currentStore.id);
 }
 
 // 세션 자동 복원 (UI 즉시 반영 — Firebase 불필요 항목만)
@@ -1042,6 +1060,7 @@ async function init(){
           frData: fr,
         };
         document.getElementById('storeNameText').textContent = fr.name;
+        _attachStoreListener(fr.id);
       }
     }
   }
