@@ -464,7 +464,13 @@ async function confirmIssue(){
 }
 
 // 초기 데이터 로드
+let _initDone = false;
+let _initTimer = null;
+
 async function init(){
+  if(_initDone) return;
+  _initDone = true;
+  clearTimeout(_initTimer);
   let list = [];
   await ensureStorePool();
   if(targetDeliveryId){
@@ -505,7 +511,7 @@ async function init(){
 
 document.addEventListener('firebaseReady', init);
 if(Auth.isFirebaseReady) init();
-else setTimeout(init, 2000);
+else _initTimer = setTimeout(init, 2000);
 </script>
 </body>
 </html>

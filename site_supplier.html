@@ -1351,7 +1351,14 @@ function subscribeAutoConvert(){
 }
 
 // ── 초기화 ────────────────────────────────────────────────
+let _initDone = false;
+let _initTimer = null;
+
 async function init(){
+  if(_initDone) return;
+  _initDone = true;
+  clearTimeout(_initTimer);
+
   await Promise.all([loadDrivers(),loadStores(),loadHqData()]);
   await loadDeliveries();
   // 세션 복원
@@ -1363,7 +1370,7 @@ async function init(){
 }
 document.addEventListener('firebaseReady',init);
 if(Auth.isFirebaseReady)init();
-else setTimeout(init,2000);
+else _initTimer=setTimeout(init,2000);
 </script>
 </body>
 </html>

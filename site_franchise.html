@@ -1008,17 +1008,23 @@ function selectStore(f) {
   const session = Auth.getSession();
   if(session && session.role === 'franchise') {
     document.getElementById('storeNameText').textContent = session.businessName || session.name || '가맹점';
-    if(session.brandId) loadHqProducts(session.brandId);
   }
 })();
 
+let _initDone = false;
+let _initTimer = null;
+
 async function init(){
-  await loadHqProducts();
+  if(_initDone) return;
+  _initDone = true;
+  clearTimeout(_initTimer);
+
+  const session = Auth.getSession();
+  await loadHqProducts(session?.brandId || '');
   await loadOsiList();
 
   // 세션 로그인 후 _currentStore 미설정 → hq_franchises에서 okposShopCd 포함해 복원
   if(!_currentStore){
-    const session = Auth.getSession();
     if(session && session.role === 'franchise'){
       const frData = await Auth.DB.get('hq_franchises') || {};
       const list = Object.values(frData);
@@ -1049,7 +1055,7 @@ async function init(){
 }
 document.addEventListener('firebaseReady', init);
 if(Auth.isFirebaseReady) init();
-else setTimeout(init, 2000);
+else _initTimer = setTimeout(init, 2000);
 
 // ── 공지 열람 ──────────────────────────────────────────────
 let _stockAlertOpen = false;
