@@ -462,7 +462,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
         <div style="background:var(--amber-bg);border-radius:10px;padding:10px 12px;font-size:12px;color:var(--amber);font-weight:700;margin-top:4px">주문 한도 설정</div>
         <div class="two-col">
           <div class="fl"><div class="flb">주문 한도 (원)</div><input class="fi" id="frLimit" type="number" placeholder="2000000" value="2000000"></div>
-          <div class="fl"><div class="flb">현재 미수금 (원)</div><input class="fi" id="frUnpaid" type="number" placeholder="0" value="0"></div>
+          <div class="fl"><div class="flb">현재 미수금 (원)</div><input class="fi" id="frUnpaid" type="number" placeholder="0" value="0" readonly style="background:var(--surface2);color:var(--muted);cursor:not-allowed"></div>
         </div>
         <button class="rb green" id="frSaveBtn" onclick="saveFranchise()"><i class="ti ti-plus"></i>가맹점 등록</button>
       </div>
@@ -1416,22 +1416,35 @@ function clearFrForm(){ ['frName','frBiz','frAddr','frPhone','frOwner','frLoginI
 
 async function saveFranchise(){
   if(!frName.value.trim()||!frAddr.value.trim()){ showToast('상호명과 주소를 입력하세요'); return; }
-  const id=_editFrId||'fr_'+Date.now();
   const loginId=document.getElementById('frLoginId').value.trim();
   const loginPw=document.getElementById('frLoginPw').value.trim();
   const orderLimit=Number(document.getElementById('frLimit').value)||2000000;
-  const unpaidAmt=Number(document.getElementById('frUnpaid').value)||0;
-  const shopCd = document.getElementById('frShopCd').value.trim();
-  await Auth.DB.set('hq_franchises/'+id,{
-    id, name:frName.value, businessNumber:frBiz.value,
-    address:frAddr.value, phone:frPhone.value, owner:frOwner.value,
-    ...(loginId&&{loginId}), ...(loginPw&&{loginPw}),
-    okposShopCd: shopCd,
-    orderLimit, unpaidAmt,
-    orderEnabled: unpaidAmt < orderLimit,
-    brandId:_myBrandId, brandName:_myBrandName,
-    status:'active', createdAt:new Date().toISOString()
-  });
+  const shopCd=document.getElementById('frShopCd').value.trim();
+  if(_editFrId){
+    // 수정: 변경 가능한 필드만 update — unpaidAmt·createdAt·orderEnabled는 건드리지 않음
+    const upd={
+      name:frName.value, businessNumber:frBiz.value,
+      address:frAddr.value, phone:frPhone.value, owner:frOwner.value,
+      okposShopCd:shopCd, orderLimit,
+      brandId:_myBrandId, brandName:_myBrandName,
+    };
+    if(loginId) upd.loginId=loginId;
+    if(loginPw) upd.loginPw=loginPw;
+    await Auth.DB.update('hq_franchises/'+_editFrId, upd);
+  } else {
+    // 신규: 전체 set
+    const id='fr_'+Date.now();
+    const unpaidAmt=0;
+    await Auth.DB.set('hq_franchises/'+id,{
+      id, name:frName.value, businessNumber:frBiz.value,
+      address:frAddr.value, phone:frPhone.value, owner:frOwner.value,
+      ...(loginId&&{loginId}), ...(loginPw&&{loginPw}),
+      okposShopCd:shopCd, orderLimit,
+      unpaidAmt, orderEnabled:true,
+      brandId:_myBrandId, brandName:_myBrandName,
+      status:'active', createdAt:new Date().toISOString()
+    });
+  }
   clearFrForm(); closeFranchiseForm(); await loadFranchises();
   showToast(_editFrId?'가맹점 수정 완료':'가맹점 등록 완료');
 }
