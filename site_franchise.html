@@ -943,85 +943,39 @@ async function openStoreSelect() {
   const el = document.getElementById('storeSelectList');
   el.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;padding:30px;gap:8px;color:var(--muted)"><div class="spinner" style="width:16px;height:16px;border:2px solid var(--line);border-top-color:var(--blue);border-radius:50%;animation:spin .7s linear infinite"></div>불러오는 중...</div>';
 
-  const [users, stores] = await Promise.all([
-    Auth.loadUsers(),
-    Auth.loadSupplierFranchises()
-  ]);
-  // 가맹점 계정 + 납품업체에 등록된 배송지
-  const franchiseUsers = users.filter(u => u.role === 'franchise' && u.status === 'active');
+  const fr = await Auth.DB.get('hq_franchises');
+  const brandId = Auth.getSession()?.brandId || '';
+  const stores = Object.values(fr || {}).filter(f =>
+    f && f.status === 'active' && (!brandId || f.brandId === brandId)
+  );
 
-  const list = [];
-  franchiseUsers.forEach(u => list.push({ id: u.uid, name: u.businessName || u.name || u.loginId, sub: u.businessNumber || u.phone || u.loginId, brandName: u.brandName || '', type: 'user', data: u }));
-  stores.forEach(s => {
-    if(!list.find(x => x.name === s.businessName)) {
-      list.push({ id: s.id, name: s.businessName, sub: s.address || s.phone || '', type: 'store', data: s });
-    }
-  });
-
-  if(!list.length) {
-    el.innerHTML = '<div style="text-align:center;padding:30px;color:var(--dim);font-size:13px">등록된 가맹점이 없습니다.<br>Master에서 가맹점 계정을 먼저 생성하세요.</div>';
+  if (!stores.length) {
+    el.innerHTML = '<div style="text-align:center;padding:30px;color:var(--dim);font-size:13px">등록된 가맹점이 없습니다.<br>Master에서 가맹점을 먼저 등록하세요.</div>';
     return;
   }
 
-  el.innerHTML = list.map(s => `
-    <div onclick='selectStore(${JSON.stringify(s).replace(/'/g,"&#39;")})' style="display:flex;align-items:center;gap:12px;padding:12px 14px;border:.5px solid var(--line);border-radius:12px;cursor:pointer;background:var(--surface)">
+  el.innerHTML = stores.map(f => `
+    <div onclick='selectStore(${JSON.stringify(f).replace(/'/g,"&#39;")})' style="display:flex;align-items:center;gap:12px;padding:12px 14px;border:.5px solid var(--line);border-radius:12px;cursor:pointer;background:var(--surface)">
       <div style="width:38px;height:38px;border-radius:10px;background:var(--green-bg);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">
         <i class="ti ti-building-store" style="color:var(--green)"></i>
       </div>
       <div style="flex:1;min-width:0">
-        <div style="font-size:14px;font-weight:700;color:var(--text)">${s.name}</div>
-        <div style="font-size:11px;color:var(--muted);margin-top:2px">${s.sub}${s.brandName?' · '+s.brandName:''}</div>
+        <div style="font-size:14px;font-weight:700;color:var(--text)">${f.name}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px">${f.address || f.phone || ''}${f.brandName ? ' · ' + f.brandName : ''}</div>
       </div>
       <i class="ti ti-chevron-right" style="color:var(--dim);font-size:16px"></i>
     </div>`).join('');
 }
 
-async function selectStore(s) {
-  // hq_franchises에서 정확한 매칭을 동기적으로 끝낸 뒤 _currentStore 확정
-  const data = await Auth.DB.get('hq_franchises') || {};
-  const list = Object.values(data);
-
-  // 매칭 우선순위: storeId(연결고리) > id > 사업자번호 > 정확한 이름 > 정규화된 이름(공백 제거)
-  const normalize = (s) => (s||'').replace(/\s+/g, '');
-  const targetNormName = normalize(s.name);
-  let fr = (s.data?.storeId && list.find(f => f.id === s.data.storeId))
-        || list.find(f => f.id === s.id)
-        || list.find(f => f.businessNumber && s.data?.businessNumber && f.businessNumber === s.data.businessNumber)
-        || list.find(f => f.name === s.name)
-        || list.find(f => normalize(f.name) === targetNormName);
-
-  // 가맹점 정보 전체를 최상위에 펼쳐서 _currentStore 구성
-  _currentStore = fr ? {
-    id: fr.id,
-    name: fr.name,
-    businessName: fr.name,
-    businessNumber: fr.businessNumber || '',
-    address: fr.address || '',
-    phone: fr.phone || '',
-    owner: fr.owner || '',
-    brandId: fr.brandId || s.data?.brandId || '',
-    brandName: fr.brandName || s.data?.brandName || '',
-    okposShopCd: fr.okposShopCd || '',
-    frData: fr,
-  } : {
-    id: s.id,
-    name: s.name,
-    businessName: s.name,
-    businessNumber: s.data?.businessNumber || '',
-    address: s.data?.address || '',
-    phone: s.data?.phone || '',
-    owner: s.data?.owner || '',
-    brandId: s.data?.brandId || '',
-    brandName: s.data?.brandName || '',
-    okposShopCd: s.data?.okposShopCd || '',
-  };
+function selectStore(f) {
+  _currentStore = f;
 
   document.getElementById('storeNameText').textContent = _currentStore.name;
-  document.getElementById('headerDate').textContent = _currentStore.address || s.sub || '';
+  document.getElementById('headerDate').textContent = _currentStore.address || '';
   document.getElementById('storeSelectModal').classList.remove('show');
   showToast(_currentStore.name + ' 선택됨');
 
-  if(_currentStore.brandId) {
+  if (_currentStore.brandId) {
     loadHqProducts(_currentStore.brandId);
   } else {
     loadHqProducts();
