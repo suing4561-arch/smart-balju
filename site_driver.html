@@ -148,7 +148,13 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
     <button class="bulk-btn" onclick="bulkDone()"><i class="ti ti-circle-check" style="font-size:16px"></i>선택 완료</button>
   </div>
 
-  <div class="section-label">배송 목록</div>
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 20px 8px">
+    <span style="font-size:11px;font-weight:700;color:var(--dim);letter-spacing:.4px;text-transform:uppercase">배송 목록</span>
+    <label id="selectAllWrap" style="display:none;align-items:center;gap:7px;font-size:12px;font-weight:700;color:var(--muted);cursor:pointer">
+      <input type="checkbox" id="selectAllChk" onchange="toggleSelectAll(this.checked)" style="width:18px;height:18px;cursor:pointer;accent-color:var(--blue-mid)">
+      전체선택
+    </label>
+  </div>
   <div class="dlv-list" id="dlvList">
     <div class="loading-wrap"><div class="spinner"></div>불러오는 중...</div>
   </div>
@@ -347,12 +353,19 @@ function render(){
   if(!deliveries.length){
     el.innerHTML = '<div class="empty-state"><i class="ti ti-mood-smile" style="font-size:40px;display:block;margin-bottom:10px;opacity:.4"></i>오늘 배송이 없습니다</div>';
     document.getElementById('doneSection').style.display = 'none';
+    const saw=document.getElementById('selectAllWrap'); if(saw) saw.style.display='none';
     return;
   }
 
   const active = deliveries.filter(d=>d.status!=='done');
   const done   = deliveries.filter(d=>d.status==='done');
   const activeIdx = deliveries.findIndex(d=>d.status==='shipping'||d.status==='assigned');
+
+  // 미완료가 있을 때만 전체선택 표시, 재렌더 시 체크 해제
+  const saw = document.getElementById('selectAllWrap');
+  const sac = document.getElementById('selectAllChk');
+  if(saw){ saw.style.display = active.length ? 'flex' : 'none'; }
+  if(sac){ sac.checked = false; }
 
   // 메인 목록: 미완료만
   el.innerHTML = active.length
@@ -373,6 +386,15 @@ function render(){
 
 function toggleCheck(id, val){
   val ? checked.add(id) : checked.delete(id);
+  updateBulkBar();
+  if(!val){ const a=document.getElementById('selectAllChk'); if(a) a.checked=false; }
+}
+
+function toggleSelectAll(isChecked){
+  document.querySelectorAll('#dlvList .dlv-check:not(:disabled)').forEach(chk=>{
+    chk.checked = isChecked;
+    isChecked ? checked.add(chk.value) : checked.delete(chk.value);
+  });
   updateBulkBar();
 }
 
