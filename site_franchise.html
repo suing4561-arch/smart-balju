@@ -534,6 +534,8 @@ async function loadHqProducts(filterBrandId = ''){
     // 카테고리 탭 구성
     const usedCats=[...new Set(PRODUCTS.map(p=>p.cat))];
     CATEGORIES=[{id:'all',label:'전체',icon:'ti-layout-grid'},...usedCats.map(c=>({id:c,label:labelMap[c]||c,icon:iconMap[c]||'ti-package'}))];
+    currentCat = 'all';
+    searchQuery = '';
 
     document.getElementById('orderSubTitle').textContent='품목 '+PRODUCTS.length+'개';
     renderCats(); renderProducts();
