@@ -191,6 +191,9 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);display:flex
           <button onclick="openStoreSelect()" style="display:flex;align-items:center;gap:5px;padding:6px 12px;border-radius:9px;border:.5px solid var(--line);background:var(--surface2);font-size:12px;font-weight:700;color:var(--text);cursor:pointer;font-family:var(--sans)">
             <i class="ti ti-building-store" style="font-size:14px"></i>업체선택
           </button>
+          <button onclick="Auth.logout()" style="display:flex;align-items:center;gap:5px;padding:6px 12px;border-radius:9px;border:.5px solid var(--line);background:rgba(220,38,38,.08);font-size:12px;font-weight:700;color:#dc2626;cursor:pointer;font-family:var(--sans)">
+            <i class="ti ti-logout" style="font-size:14px"></i>로그아웃
+          </button>
         </div>
         <div class="store-name" id="storeName" style="cursor:pointer;display:flex;align-items:center;gap:6px" onclick="openStoreSelect()">
           <span id="storeNameText">가맹점을 선택하세요</span>
@@ -404,6 +407,7 @@ function fmtKSTDate(iso){ const d=toKST(iso); if(!d) return ''; const p=n=>Strin
 function fmtKSTTime(iso){ const d=toKST(iso); if(!d) return ''; const p=n=>String(n).padStart(2,'0'); return `${p(d.getUTCHours())}:${p(d.getUTCMinutes())}`; }
 
 const Auth = window.SmartBaljuAuth;
+Auth.requireLogin(['franchise']);
 
 // ── 상태 ───────────────────────────────────────────────────
 let PRODUCTS = [];  // 본사 Firebase에서 로드

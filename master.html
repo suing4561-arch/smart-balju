@@ -261,6 +261,7 @@ th{color:var(--muted);font-size:11px;text-transform:uppercase}
 <script src="auth.js"></script>
 <script>
 const Auth = window.SmartBaljuAuth;
+Auth.requireLogin(['master']);
 
 // ── 상태 ───────────────────────────────────────────────────
 let _users = [], _brands = [];

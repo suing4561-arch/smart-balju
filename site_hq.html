@@ -158,6 +158,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
       </button>
       <div class="tbar-btn" onclick="showToast('새로고침')"><i class="ti ti-refresh"></i></div>
       <div class="tbar-btn"><i class="ti ti-bell"></i></div>
+      <div class="tbar-btn" onclick="Auth.logout()" title="로그아웃" style="color:var(--red,#dc2626)"><i class="ti ti-logout"></i></div>
     </div>
   </div>
 
@@ -777,6 +778,7 @@ function fmtKSTDate(iso){ const d=toKST(iso); if(!d) return ''; const p=n=>Strin
 function fmtKSTTime(iso){ const d=toKST(iso); if(!d) return ''; const p=n=>String(n).padStart(2,'0'); return `${p(d.getUTCHours())}:${p(d.getUTCMinutes())}`; }
 
 const Auth = window.SmartBaljuAuth;
+Auth.requireLogin(['hq']);
 
 // ── 세션에서 브랜드 정보 읽기 ──────────────────────────────
 const _session = Auth.getSession();

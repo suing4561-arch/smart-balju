@@ -290,7 +290,7 @@ async function login(loginId, password) {
 
 function logout() {
   clearSession();
-  location.href = '/login.html';
+  location.href = '/';
 }
 
 // ── 역할별 리다이렉트 ────────────────────────────────────────
@@ -302,16 +302,16 @@ function redirectByRole(user) {
     supplier:  '/site_supplier.html',
     driver:    '/site_driver.html',
   };
-  location.href = map[user.role] || '/login.html';
+  location.href = map[user.role] || '/';
 }
 
 // ── 페이지 보호 (각 페이지 상단에서 호출) ──────────────────
 function requireLogin(allowedRoles) {
   const session = getSession();
-  if (!session) { location.href = '/login.html'; return null; }
+  if (!session) { location.href = '/'; return null; }
   if (allowedRoles && !allowedRoles.includes(session.role)) {
     alert('접근 권한이 없습니다.');
-    location.href = '/login.html';
+    location.href = '/';
     return null;
   }
   return session;
