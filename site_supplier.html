@@ -380,6 +380,11 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <script src="auth.js"></script>
 <script>
+function toKST(iso){ if(!iso) return ''; const d=new Date(iso); if(isNaN(d)) return ''; return new Date(d.getTime()+9*60*60*1000); }
+function fmtKSTDateTime(iso){ const d=toKST(iso); if(!d) return ''; const p=n=>String(n).padStart(2,'0'); return `${d.getUTCFullYear()}-${p(d.getUTCMonth()+1)}-${p(d.getUTCDate())} ${p(d.getUTCHours())}:${p(d.getUTCMinutes())}`; }
+function fmtKSTDate(iso){ const d=toKST(iso); if(!d) return ''; const p=n=>String(n).padStart(2,'0'); return `${d.getUTCFullYear()}-${p(d.getUTCMonth()+1)}-${p(d.getUTCDate())}`; }
+function fmtKSTTime(iso){ const d=toKST(iso); if(!d) return ''; const p=n=>String(n).padStart(2,'0'); return `${p(d.getUTCHours())}:${p(d.getUTCMinutes())}`; }
+
 const Auth = window.SmartBaljuAuth;
 const _mySession = Auth.getSession();
 const _mySupplierName = _mySession?.businessName || _mySession?.name || '';
@@ -720,9 +725,9 @@ async function renderDeliveries(){
     const chkd=_selectedIds.has(item.id);
 
     // 날짜 포맷
-    const d=new Date(item.createdAt||'');
+    const d=toKST(item.createdAt);
     const dayNames=['일','월','화','수','목','금','토'];
-    const dateStr=item.createdAt?`${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}(${dayNames[d.getDay()]})`:'';
+    const dateStr=d?`${String(d.getUTCMonth()+1).padStart(2,'0')}/${String(d.getUTCDate()).padStart(2,'0')}(${dayNames[d.getUTCDay()]})`:'';
 
     // 품목 요약
     const itemArr=item.itemDetails||[];
@@ -770,7 +775,7 @@ function renderDetail(item){
     <div class="detail-row"><span class="detail-lbl">가맹점</span><span class="detail-val">${item.storeName||'-'}${phone?` · ${phone}`:''}</span></div>
     ${bizNum?`<div class="detail-row"><span class="detail-lbl">사업자번호</span><span class="detail-val" style="font-family:var(--mono);font-size:12px">${bizNum}</span></div>`:''}
     <div class="detail-row"><span class="detail-lbl">주소</span><span class="detail-val" style="text-align:right;font-size:11px">${address}</span></div>
-    <div class="detail-row"><span class="detail-lbl">일시</span><span class="detail-val">${(item.createdAt||'').slice(0,16).replace('T',' ')}</span></div>
+    <div class="detail-row"><span class="detail-lbl">일시</span><span class="detail-val">${fmtKSTDateTime(item.createdAt)}</span></div>
     <div class="detail-row"><span class="detail-lbl">품목</span><span class="detail-val" style="text-align:right;max-width:220px">${item.items||'-'}</span></div>
     ${!isOrder&&item.driverName?`<div class="detail-row"><span class="detail-lbl">배송기사</span><span class="detail-val">${item.driverName} ${item.driverPhone||''}</span></div>`:''}
     ${!isOrder&&!item.driverId?`<div>
@@ -1095,9 +1100,9 @@ async function loadDriverDeliveries(){
   viewList.map(d=>{
     const stColor=ST_COLOR[d.status]||'var(--muted)';
     const isOpen=_openDetailId===('drv_'+d.id);
-    const dd=new Date(d.createdAt||'');
+    const dd=toKST(d.createdAt);
     const dayNames=['일','월','화','수','목','금','토'];
-    const dateStr=d.createdAt?`${String(dd.getMonth()+1).padStart(2,'0')}/${String(dd.getDate()).padStart(2,'0')}(${dayNames[dd.getDay()]})`:'';
+    const dateStr=dd?`${String(dd.getUTCMonth()+1).padStart(2,'0')}/${String(dd.getUTCDate()).padStart(2,'0')}(${dayNames[dd.getUTCDay()]})`:'';
     const itemArr=d.itemDetails||[];
     const itemSummary=itemArr.length>0?`${itemArr[0].name}${itemArr.length>1?' 외 '+(itemArr.length-1)+'건':''}`:(d.items||'').slice(0,20)||'배송';
     return `<div style="display:flex;flex-direction:column;gap:4px;margin-bottom:6px">
@@ -1214,7 +1219,7 @@ async function loadSettle(){
   el.innerHTML=deliveries.slice(0,20).map(d=>`<div class="settle-row">
     <div>
       <div style="font-size:13px;font-weight:700">${d.storeName||'-'}</div>
-      <div style="font-size:11px;color:var(--muted)">${(d.createdAt||'').slice(0,10)} · ${d.items?.slice(0,20)||''}</div>
+      <div style="font-size:11px;color:var(--muted)">${fmtKSTDate(d.createdAt)} · ${d.items?.slice(0,20)||''}</div>
     </div>
     <div class="settle-amt ${d.status==='done'?'pos':''}">${Number(d.amount||0).toLocaleString()}원</div>
   </div>`).join('');

@@ -203,6 +203,11 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <script src="auth.js"></script>
 <script>
+function toKST(iso){ if(!iso) return ''; const d=new Date(iso); if(isNaN(d)) return ''; return new Date(d.getTime()+9*60*60*1000); }
+function fmtKSTDateTime(iso){ const d=toKST(iso); if(!d) return ''; const p=n=>String(n).padStart(2,'0'); return `${d.getUTCFullYear()}-${p(d.getUTCMonth()+1)}-${p(d.getUTCDate())} ${p(d.getUTCHours())}:${p(d.getUTCMinutes())}`; }
+function fmtKSTDate(iso){ const d=toKST(iso); if(!d) return ''; const p=n=>String(n).padStart(2,'0'); return `${d.getUTCFullYear()}-${p(d.getUTCMonth()+1)}-${p(d.getUTCDate())}`; }
+function fmtKSTTime(iso){ const d=toKST(iso); if(!d) return ''; const p=n=>String(n).padStart(2,'0'); return `${p(d.getUTCHours())}:${p(d.getUTCMinutes())}`; }
+
 const Auth = window.SmartBaljuAuth;
 
 // URL 파라미터에서 deliveryId 또는 driverId 추출
@@ -306,7 +311,7 @@ function buildCard(d, i, activeIdx){
     body += `<div class="items-box">${d.items||'품목 없음'}${d.amount?'<br><span style="color:var(--text);font-weight:700;font-family:var(--mono)">'+(Number(d.amount)||0).toLocaleString()+'원</span>':''}</div>`;
   }
   if(isShipping){
-    body += `<div style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--muted)"><i class="ti ti-clock" style="font-size:13px"></i>출발: ${d.startedAt?.slice(11,16)||'-'}</div>`;
+    body += `<div style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--muted)"><i class="ti ti-clock" style="font-size:13px"></i>출발: ${fmtKSTTime(d.startedAt)||'-'}</div>`;
     body += `<button class="big-btn btn-done" onclick="openDone('${d.id}')"><i class="ti ti-circle-check"></i>도착 완료</button>`;
     body += `<button class="big-btn btn-issue" style="padding:11px" onclick="openIssue('${d.id}')"><i class="ti ti-alert-triangle" style="font-size:17px"></i>이슈 보고</button>`;
   }
@@ -318,7 +323,7 @@ function buildCard(d, i, activeIdx){
     body += `<button class="big-btn btn-done" onclick="openDone('${d.id}')"><i class="ti ti-circle-check"></i>도착 완료</button>`;
   }
   if(isDone){
-    body = `<div class="done-stamp"><i class="ti ti-circle-check"></i><div><div class="done-stamp-title">납품 완료</div><div class="done-stamp-time">${d.doneAt?.slice(11,16)||''} 도착 확인</div></div></div>`;
+    body = `<div class="done-stamp"><i class="ti ti-circle-check"></i><div><div class="done-stamp-title">납품 완료</div><div class="done-stamp-time">${fmtKSTTime(d.doneAt)||''} 도착 확인</div></div></div>`;
   }
   return `<div class="dlv-card${isShipping?' is-active':''}${isDone?' is-done':''}">
     <div class="dlv-header">

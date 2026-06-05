@@ -394,6 +394,11 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);display:flex
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <script src="auth.js"></script>
 <script>
+function toKST(iso){ if(!iso) return ''; const d=new Date(iso); if(isNaN(d)) return ''; return new Date(d.getTime()+9*60*60*1000); }
+function fmtKSTDateTime(iso){ const d=toKST(iso); if(!d) return ''; const p=n=>String(n).padStart(2,'0'); return `${d.getUTCFullYear()}-${p(d.getUTCMonth()+1)}-${p(d.getUTCDate())} ${p(d.getUTCHours())}:${p(d.getUTCMinutes())}`; }
+function fmtKSTDate(iso){ const d=toKST(iso); if(!d) return ''; const p=n=>String(n).padStart(2,'0'); return `${d.getUTCFullYear()}-${p(d.getUTCMonth()+1)}-${p(d.getUTCDate())}`; }
+function fmtKSTTime(iso){ const d=toKST(iso); if(!d) return ''; const p=n=>String(n).padStart(2,'0'); return `${p(d.getUTCHours())}:${p(d.getUTCMinutes())}`; }
+
 const Auth = window.SmartBaljuAuth;
 
 // ── 상태 ───────────────────────────────────────────────────
@@ -668,7 +673,7 @@ async function loadOsiList(){
   if(!deliveries.length){ el.innerHTML='<div class="empty-state">진행중인 수발주 없음</div>'; return; }
   const recent = deliveries.slice(-3).reverse();
   const ST={assigned:{icon:'ti-clock',bg:'var(--surface2)',color:'var(--muted)',chip:'sc-p',label:'준비중'},shipping:{icon:'ti-truck-delivery',bg:'var(--blue-bg)',color:'var(--blue)',chip:'sc-s',label:'배송중'},done:{icon:'ti-circle-check',bg:'var(--green-bg)',color:'var(--green)',chip:'sc-d',label:'완료'},issue:{icon:'ti-alert-triangle',bg:'var(--red-bg)',color:'var(--red)',chip:'sc-p',label:'이슈'}};
-  el.innerHTML=recent.map(d=>{ const s=ST[d.status]||ST.assigned; return `<div class="osi"><div class="osi-icon" style="background:${s.bg}"><i class="ti ${s.icon}" style="color:${s.color}"></i></div><div style="flex:1"><div class="osi-title">${d.items?.slice(0,20)||'품목 없음'}</div><div class="osi-sub">${d.storeName||''} · ${(d.createdAt||'').slice(0,10)}</div><span class="osi-chip ${s.chip}">${s.label}</span></div><div style="font-family:var(--mono);font-size:13px;font-weight:700">${(d.amount||0).toLocaleString()}원</div></div>`; }).join('');
+  el.innerHTML=recent.map(d=>{ const s=ST[d.status]||ST.assigned; return `<div class="osi"><div class="osi-icon" style="background:${s.bg}"><i class="ti ${s.icon}" style="color:${s.color}"></i></div><div style="flex:1"><div class="osi-title">${d.items?.slice(0,20)||'품목 없음'}</div><div class="osi-sub">${d.storeName||''} · ${fmtKSTDate(d.createdAt)}</div><span class="osi-chip ${s.chip}">${s.label}</span></div><div style="font-family:var(--mono);font-size:13px;font-weight:700">${(d.amount||0).toLocaleString()}원</div></div>`; }).join('');
 }
 
 // ── 카테고리 탭 ────────────────────────────────────────────
@@ -874,7 +879,7 @@ async function loadDeliveryPage(){
           <div style="flex:1">
             <div class="dlv-title">${(o.items||'').slice(0,30)||'품목 없음'}</div>
             <div class="dlv-sub" style="font-family:var(--mono)">${Number(o.amount||0).toLocaleString()}원</div>
-            <div class="dlv-sub">${(o.createdAt||'').slice(0,16).replace('T',' ')}</div>
+            <div class="dlv-sub">${fmtKSTDateTime(o.createdAt)}</div>
           </div>
           <span class="sc" style="background:${st.bg};color:${st.c}">${st.l}</span>
         </div>
@@ -901,11 +906,11 @@ async function loadDeliveryPage(){
             <div class="dlv-title">${(d.items||'').slice(0,30)||'품목 없음'}</div>
             <div class="dlv-sub">${d.driverName||'기사 미배정'} ${d.driverPhone?'· '+d.driverPhone:''}</div>
             <div class="dlv-sub" style="font-family:var(--mono)">${Number(d.amount||0).toLocaleString()}원</div>
-            <div class="dlv-sub">${(d.createdAt||'').slice(0,10)}</div>
+            <div class="dlv-sub">${fmtKSTDate(d.createdAt)}</div>
           </div>
           <span class="sc ${s.cls}" style="background:${s.bg};color:${s.c}">${s.l}</span>
         </div>
-        ${d.status==='done'?`<div style="padding:10px 14px;font-size:12px;color:var(--green);border-top:.5px solid var(--line)">✓ ${(d.doneAt||'').slice(11,16)} 배송 완료</div>`:''}
+        ${d.status==='done'?`<div style="padding:10px 14px;font-size:12px;color:var(--green);border-top:.5px solid var(--line)">✓ ${fmtKSTTime(d.doneAt)} 배송 완료</div>`:''}
       </div>`;
     }).join('');
   }
@@ -1101,7 +1106,7 @@ async function loadNotices(){
       <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
         ${n.important?'<span style="font-size:10px;font-weight:700;padding:1px 7px;border-radius:999px;background:var(--amber);color:#fff">중요</span>':''}
         <strong style="font-size:13px">${n.title||''}</strong>
-        <span style="margin-left:auto;font-size:10px;color:var(--dim)">${(n.updatedAt||n.createdAt||'').slice(0,10)}</span>
+        <span style="margin-left:auto;font-size:10px;color:var(--dim)">${fmtKSTDate(n.updatedAt||n.createdAt)}</span>
       </div>
       <div style="font-size:12px;color:var(--muted);line-height:1.6;white-space:pre-wrap">${n.content||''}</div>
     </div>`).join('');

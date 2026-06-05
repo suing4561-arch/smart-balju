@@ -771,6 +771,11 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <script src="auth.js"></script>
 <script>
+function toKST(iso){ if(!iso) return ''; const d=new Date(iso); if(isNaN(d)) return ''; return new Date(d.getTime()+9*60*60*1000); }
+function fmtKSTDateTime(iso){ const d=toKST(iso); if(!d) return ''; const p=n=>String(n).padStart(2,'0'); return `${d.getUTCFullYear()}-${p(d.getUTCMonth()+1)}-${p(d.getUTCDate())} ${p(d.getUTCHours())}:${p(d.getUTCMinutes())}`; }
+function fmtKSTDate(iso){ const d=toKST(iso); if(!d) return ''; const p=n=>String(n).padStart(2,'0'); return `${d.getUTCFullYear()}-${p(d.getUTCMonth()+1)}-${p(d.getUTCDate())}`; }
+function fmtKSTTime(iso){ const d=toKST(iso); if(!d) return ''; const p=n=>String(n).padStart(2,'0'); return `${p(d.getUTCHours())}:${p(d.getUTCMinutes())}`; }
+
 const Auth = window.SmartBaljuAuth;
 
 // ── 세션에서 브랜드 정보 읽기 ──────────────────────────────
@@ -949,7 +954,7 @@ async function loadOkposDashboard(){
             <div class="oa" style="background:var(--blue-bg);color:var(--blue)">${initials}</div>
             <div style="flex:1;min-width:0">
               <div style="font-size:13px;font-weight:700">${nm}</div>
-              <div style="font-size:11px;color:var(--muted)">${(o.createdAt||'').slice(0,10)}</div>
+              <div style="font-size:11px;color:var(--muted)">${fmtKSTDate(o.createdAt)}</div>
             </div>
             <div style="font-family:var(--mono);font-size:13px;font-weight:700">${(o.amount||0).toLocaleString()}원</div>
           </div>`;}).join('')
@@ -1368,7 +1373,7 @@ async function loadDelivery(){
       <td style="font-family:var(--mono)">${Number(o.amount||0).toLocaleString()}원</td>
       <td><span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:${st.bg};color:${st.c}">${st.l}</span></td>
       <td style="color:var(--muted);font-size:12px">-</td>
-      <td style="font-size:11px;color:var(--muted)">${(o.createdAt||'').slice(0,16).replace('T',' ')}</td>
+      <td style="font-size:11px;color:var(--muted)">${fmtKSTDateTime(o.createdAt)}</td>
       <td><div style="display:flex;gap:4px;flex-wrap:wrap">
         ${o.status==='waiting'?`
           <button class="delbtn" style="background:var(--green-bg);color:var(--green);border-color:rgba(26,122,74,.3)" onclick="approveOrder('${o.id}')">승인</button>
@@ -1386,7 +1391,7 @@ async function loadDelivery(){
       <td style="font-family:var(--mono)">${Number(d.amount||0).toLocaleString()}원</td>
       <td><span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:${st.bg};color:${st.c}">${st.l}</span></td>
       <td style="font-size:12px">${d.driverName||'미배정'}</td>
-      <td style="font-size:11px;color:var(--muted)">${(d.startedAt||d.createdAt||'').slice(0,16).replace('T',' ')}</td>
+      <td style="font-size:11px;color:var(--muted)">${fmtKSTDateTime(d.startedAt||d.createdAt)}</td>
       <td></td>
     </tr>`;
   })].join('')+'</tbody></table>';
@@ -1815,7 +1820,7 @@ async function loadOrders(){
         <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;color:var(--muted)">${o.items||'-'}</td>
         <td style="font-family:var(--mono);font-weight:700">${Number(o.amount||0).toLocaleString()}원</td>
         <td><span style="font-size:11px;font-weight:700;padding:3px 8px;border-radius:999px;background:${st.bg};color:${st.c}">${st.l}</span></td>
-        <td style="font-size:11px;color:var(--muted)">${(o.createdAt||'').slice(0,16).replace('T',' ')}</td>
+        <td style="font-size:11px;color:var(--muted)">${fmtKSTDateTime(o.createdAt)}</td>
         <td><div style="display:flex;gap:4px;flex-wrap:wrap">
           ${o.status==='waiting'?`
             <button class="delbtn" style="background:var(--green-bg);color:var(--green);border-color:rgba(26,122,74,.3)" onclick="updateOrderStatus('${o.id}','confirmed')">승인</button>
@@ -1950,7 +1955,7 @@ async function loadSettle(){
         <td style="font-family:var(--mono);text-align:right;color:${unpaid>0?'var(--red)':'var(--green)'};font-weight:700">${unpaid.toLocaleString()}원</td>
         <td style="font-family:var(--mono);text-align:right;color:${remain<0?'var(--red)':'var(--text)'}">${remain.toLocaleString()}원</td>
         <td><span style="font-size:11px;font-weight:700;padding:3px 8px;border-radius:999px;background:${enabled?'var(--green-bg)':'var(--red-bg)'};color:${enabled?'var(--green)':'var(--red)'}">${enabled?'가능':'불가'}</span></td>
-        <td style="font-size:11px;color:var(--muted)">${f.lastPaymentAt?(f.lastPaymentAt.slice(0,10)+' '+f.lastPaymentAmt?.toLocaleString()+'원'):'-'}</td>
+        <td style="font-size:11px;color:var(--muted)">${f.lastPaymentAt?(fmtKSTDate(f.lastPaymentAt)+' '+f.lastPaymentAmt?.toLocaleString()+'원'):'-'}</td>
         <td><div style="display:flex;flex-direction:column;gap:4px">
           <button class="delbtn" style="background:var(--green-bg);color:var(--green);border-color:rgba(26,122,74,.3)" onclick="confirmPayment('${f.id}')">입금확인</button>
           <button class="delbtn" style="background:${enabled?'var(--red-bg)':'var(--green-bg)'};color:${enabled?'var(--red)':'var(--green)'}" onclick="toggleOrderEnabled('${f.id}',${!enabled})">${enabled?'주문중지':'주문허용'}</button>
@@ -2061,7 +2066,7 @@ async function loadSupplierSettle(){
       ${payableCell}
       <td style="text-align:right;color:var(--muted)">${r.deliveryCount}건</td>
       <td>${typeBadge}</td>
-      <td style="font-size:11px;color:var(--muted)">${r.lastPaidAt?r.lastPaidAt.slice(0,10):'-'}</td>
+      <td style="font-size:11px;color:var(--muted)">${r.lastPaidAt?fmtKSTDate(r.lastPaidAt):'-'}</td>
       <td><button class="delbtn" style="background:var(--green-bg);color:var(--green);border-color:rgba(26,122,74,.3)" onclick="confirmSupplierPayment('${r.id}')">지급확인</button></td>
     </tr>`;
   }).join('')+'</tbody></table>';
@@ -2128,7 +2133,7 @@ async function loadNotices(){
   el.innerHTML = '<table class="lt"><thead><tr><th>제목</th><th>작성일</th><th>상태</th><th>관리</th></tr></thead><tbody>'+
     list.map(n=>`<tr style="${n.important?'background:var(--amber-bg)':''}">
       <td><strong>${n.title||''}</strong>${n.important?'<span style="margin-left:6px;font-size:10px;font-weight:700;padding:2px 7px;border-radius:999px;background:var(--amber);color:#fff">중요</span>':''}</td>
-      <td style="font-size:11px;color:var(--muted)">${(n.updatedAt||n.createdAt||'').slice(0,10)}</td>
+      <td style="font-size:11px;color:var(--muted)">${fmtKSTDate(n.updatedAt||n.createdAt)}</td>
       <td>${n.important?'<span style="font-size:11px;color:var(--amber);font-weight:700">고정</span>':'<span style="font-size:11px;color:var(--dim)">일반</span>'}</td>
       <td><div style="display:flex;gap:4px">
         <button class="delbtn" style="background:var(--blue-bg);color:var(--blue-mid);border-color:rgba(26,95,168,.3)" onclick="editNotice('${n.id}')">수정</button>
