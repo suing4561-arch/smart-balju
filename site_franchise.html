@@ -210,10 +210,14 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);display:flex
           </div>
         </div>
         <div class="notice-sheet" id="noticeSheet"></div>
-        <div class="alert-banner" id="stockAlertBanner" style="display:none">
-          <i class="ti ti-alert-triangle alert-icon"></i>
-          <span class="alert-text" id="stockAlertText">재고 알림</span>
-          <button class="alert-action" onclick="goTo('order')">발주</button>
+        <div id="stockAlertBanner" style="display:none;background:var(--amber-bg);border:.5px solid rgba(184,92,0,.25);border-radius:12px;overflow:hidden">
+          <div id="stockAlertHeader" onclick="toggleStockAlert()" style="padding:11px 14px;display:flex;align-items:center;gap:10px;cursor:pointer">
+            <i class="ti ti-alert-triangle" style="font-size:16px;color:var(--amber);flex-shrink:0"></i>
+            <span id="stockAlertText" style="font-size:12px;color:var(--amber);font-weight:700;line-height:1.55;flex:1">재고 알림</span>
+            <span id="stockAlertArrow" style="font-size:11px;color:var(--amber);font-weight:700;white-space:nowrap;margin-right:4px">▼ 펼치기</span>
+            <button class="alert-action" onclick="event.stopPropagation();goTo('order')">발주</button>
+          </div>
+          <div id="stockAlertBody" style="display:none;border-top:.5px solid rgba(184,92,0,.2);padding:4px 14px 12px"></div>
         </div>
 
         <!-- 수발주 탭 -->
@@ -639,12 +643,24 @@ function renderDefaultStock(){
 function renderStockItems(items){
   const alerts = items.filter(x => x.pct >= x.threshold);
   const alertEl = document.getElementById('stockAlertBanner');
-  const alertText = document.getElementById('stockAlertText');
   if(alerts.length){
     alertEl.style.display = '';
-    const top = alerts[0];
-    const extra = alerts.length > 1 ? ', 외 '+(alerts.length-1)+'건' : '';
-    alertText.textContent = top.name+' '+Number(top.pct).toFixed(1)+'% 소진'+extra+' — 발주가 필요합니다';
+    document.getElementById('stockAlertText').textContent = '재고 부족 '+alerts.length+'건 — 발주가 필요합니다';
+    // 접이식 바디: 소진율 높은 순(이미 정렬됨)
+    document.getElementById('stockAlertBody').innerHTML = alerts.map((a,idx) => {
+      const pct = Number(a.pct);
+      const pctColor = pct >= 100 ? 'var(--red)' : 'var(--amber)';
+      const border = idx < alerts.length-1 ? 'border-bottom:.5px solid rgba(184,92,0,.15)' : '';
+      return `<div style="display:flex;align-items:center;gap:8px;padding:8px 0;${border}">
+        <span style="flex:1;font-size:13px;font-weight:700;color:var(--text)">${a.name}</span>
+        <span style="font-family:var(--mono);font-size:12px;font-weight:700;color:${pctColor}">${pct.toFixed(0)}% 소진</span>
+        <span style="font-size:11px;color:var(--muted);max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${a.menus.join(', ')||'-'}</span>
+      </div>`;
+    }).join('');
+    // 재렌더 시 항상 접힌 상태로 초기화
+    _stockAlertOpen = false;
+    document.getElementById('stockAlertBody').style.display = 'none';
+    document.getElementById('stockAlertArrow').textContent = '▼ 펼치기';
   } else {
     alertEl.style.display = 'none';
   }
@@ -1036,6 +1052,13 @@ if(Auth.isFirebaseReady) init();
 else setTimeout(init, 2000);
 
 // ── 공지 열람 ──────────────────────────────────────────────
+let _stockAlertOpen = false;
+function toggleStockAlert(){
+  _stockAlertOpen = !_stockAlertOpen;
+  document.getElementById('stockAlertBody').style.display = _stockAlertOpen ? 'block' : 'none';
+  document.getElementById('stockAlertArrow').textContent  = _stockAlertOpen ? '▲ 접기' : '▼ 펼치기';
+}
+
 let _noticeSheetOpen = false;
 
 async function loadNotices(){
