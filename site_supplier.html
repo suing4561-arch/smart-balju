@@ -576,7 +576,6 @@ async function createDelivery(){
 async function autoConvertConfirmedOrders(){
   if(!_drivers||!_drivers.length){ _drivers = await Auth.loadSupplierDrivers(); }
   const map = await Auth.DB.get('driver_store_map') || {};
-  console.log('[자동전환 시작] map 키:', Object.keys(map).length, '| _drivers:', (_drivers||[]).length, '| _storePool:', (_storePool||[]).length);
   if(!Object.keys(map).length) return 0;
 
   const [ordData, dlvData] = await Promise.all([
@@ -590,18 +589,15 @@ async function autoConvertConfirmedOrders(){
     Object.values(deliveries).map(d => d && d.fromOrderId).filter(Boolean)
   );
 
-  console.log('[autoConvert] orders:', Object.keys(orders).length, '| deliveries:', Object.keys(deliveries).length, '| convertedIds:', convertedIds.size);
   await ensureStorePool();
   let count = 0;
 
   for(const [orderId, ord] of Object.entries(orders)){
     if(!ord) continue;
-    console.log('  발주', orderId, '| 상태', ord.status, '| 전환됨?', convertedIds.has(orderId));
-    if(!['waiting','confirmed'].includes(ord.status)){ console.log('[skip:상태]', orderId, ord.status); continue; }
-    if(convertedIds.has(orderId)){ console.log('[skip:이미전환]', orderId, ord.storeName); continue; }
+    if(!['waiting','confirmed'].includes(ord.status)) continue;
+    if(convertedIds.has(orderId)) continue;
 
     const pre = await getPreassignedDriver(ord.storeId, ord.storeName, ord.storeBusinessNumber);
-    console.log('[조회]', orderId, '| storeName:', ord.storeName, '| storeId:', ord.storeId, '| 사업자:', ord.storeBusinessNumber, '→ 결과:', pre ? pre.driverName : 'null');
     if(!pre) continue;
 
     const store = _storePool.find(f =>
@@ -629,7 +625,6 @@ async function autoConvertConfirmedOrders(){
       fromOrderId:         orderId,
     });
     await Auth.DB.update('franchise_orders/'+orderId, {status:'shipping'});
-    console.log('[자동전환] 발주', orderId, ord.storeName, '→ 배송생성+기사배정:', pre.driverName);
     count++;
   }
   return count;
@@ -1315,22 +1310,18 @@ let _convertPending = false;
 let _convertStartAt = 0;
 
 async function runAutoConvertSafely(){
-  console.log('[safely 진입] isConverting=', _isConverting);
   if(_isConverting && _convertStartAt && (Date.now() - _convertStartAt > 30000)){
     console.warn('[자동전환] 플래그 박제 감지 → 강제 해제');
     _isConverting = false;
   }
-  if(_isConverting){ console.log('[safely 대기표시] pending=true'); _convertPending = true; return; }
+  if(_isConverting){ _convertPending = true; return; }
   _isConverting = true;
   _convertStartAt = Date.now();
   try{
     do{
       _convertPending = false;
-      console.log('[safely 실행 루프 시작]');
       const n = await autoConvertConfirmedOrders();
-      console.log('[safely 결과]', n, '건');
       if(n > 0){
-        console.log('[실시간 자동전환]', n, '건 처리됨');
         const assignPage = document.getElementById('page-assign');
         if(assignPage && assignPage.classList.contains('active')){
           await renderDeliveries();
@@ -1345,15 +1336,11 @@ async function runAutoConvertSafely(){
   }
 }
 
-window._debugConvert = runAutoConvertSafely;
-window._debugFlags = ()=>({isConverting:_isConverting, pending:_convertPending});
-
 function subscribeAutoConvert(){
   if(_autoConvertSubscribed) return;
   if(!Auth.isFirebaseReady || !Auth.db) return;
   _autoConvertSubscribed = true;
-  Auth.db.ref('franchise_orders').on('value', (snap)=>{
-    console.log('[구독 트리거됨] 발주수:', snap.numChildren?.() ?? '?', '| _isConverting:', _isConverting, '| _convertPending:', _convertPending);
+  Auth.db.ref('franchise_orders').on('value', ()=>{
     runAutoConvertSafely();
   });
 }
