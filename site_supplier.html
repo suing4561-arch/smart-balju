@@ -132,12 +132,12 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
   <div class="app-header">
     <div class="header-top">
       <div class="sup-badge"><i class="ti ti-building-factory" style="font-size:11px"></i>납품업체 SCM</div>
-      <button class="biz-select-btn" onclick="openBizSelect()"><i class="ti ti-building-store" style="font-size:12px"></i>업체선택</button>
+      <button class="biz-select-btn" id="btnBizSelect" onclick="openBizSelect()"><i class="ti ti-building-store" style="font-size:12px"></i>업체선택</button>
       <button onclick="Auth.logout()" style="display:flex;align-items:center;gap:4px;padding:6px 11px;border-radius:9px;border:.5px solid var(--line);background:rgba(220,38,38,.08);font-size:12px;font-weight:700;color:#dc2626;cursor:pointer;font-family:var(--sans)"><i class="ti ti-logout" style="font-size:12px"></i>로그아웃</button>
     </div>
-    <div class="sup-name" onclick="openBizSelect()">
+    <div class="sup-name" id="supName" onclick="openBizSelect()">
       <span id="supNameText">업체를 선택하세요</span>
-      <i class="ti ti-chevron-down" style="font-size:13px;color:var(--muted)"></i>
+      <i class="ti ti-chevron-down" id="supNameChevron" style="font-size:13px;color:var(--muted)"></i>
     </div>
     <div class="sup-sub" id="supDate"></div>
   </div>
@@ -431,23 +431,56 @@ function showToast(msg){const el=document.getElementById('toast');el.textContent
 function closeModal(id){document.getElementById(id).classList.remove('show');}
 
 // ── 업체 선택 ────────────────────────────────────────────
-async function openBizSelect(){
-  document.getElementById('bizSelectModal').classList.add('show');
-  const el=document.getElementById('bizSelectList');
-  el.innerHTML='<div class="loading-wrap"><div class="spinner"></div>불러오는 중...</div>';
+// partners(거래처) + 납품업체 로그인 계정(users) 통합 목록 — openBizSelect/init에서 공통 사용
+async function _loadBizList(){
   const [partners,users]=await Promise.all([Auth.loadPartners(),Auth.loadUsers()]);
   const supplierUsers=users.filter(u=>u.role==='supplier'&&u.status==='active');
   const list=[];
   partners.filter(p=>p.status==='active').forEach(p=>list.push({id:p.id,name:p.name,sub:p.businessNumber||p.phone||'',data:p}));
   supplierUsers.forEach(u=>{if(!list.find(b=>b.name===(u.businessName||u.name)))list.push({id:u.uid,name:u.businessName||u.name||u.loginId,sub:u.phone||u.loginId,data:u});});
-  if(!list.length){el.innerHTML='<div class="empty-state">등록된 납품업체가 없습니다</div>';return;}
-  el.innerHTML=list.map(b=>`<div onclick='selectBiz(${JSON.stringify(b).replace(/"/g,"&quot;")})' style="display:flex;align-items:center;gap:11px;padding:12px 0;border-bottom:.5px solid var(--line);cursor:pointer">
+  return list;
+}
+
+async function openBizSelect(){
+  document.getElementById('bizSelectModal').classList.add('show');
+  const el=document.getElementById('bizSelectList');
+  el.innerHTML='<div class="loading-wrap"><div class="spinner"></div>불러오는 중...</div>';
+  const list = await _loadBizList();
+
+  // 납품업체 로그인은 자기 업체 1개만 — 다른 업체 노출 금지(권한 위반 방지)
+  const myList = _mySession?.role==='supplier' ? _filterToMyBiz(list) : list;
+
+  if(!myList.length){el.innerHTML='<div class="empty-state">등록된 납품업체가 없습니다</div>';return;}
+  el.innerHTML=myList.map(b=>`<div onclick='selectBiz(${JSON.stringify(b).replace(/"/g,"&quot;")})' style="display:flex;align-items:center;gap:11px;padding:12px 0;border-bottom:.5px solid var(--line);cursor:pointer">
     <div style="width:36px;height:36px;border-radius:9px;background:var(--purple-bg);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0"><i class="ti ti-building-factory" style="color:var(--purple)"></i></div>
     <div style="flex:1"><div style="font-size:13px;font-weight:700">${b.name}</div><div style="font-size:11px;color:var(--muted)">${b.sub}</div></div>
     <i class="ti ti-chevron-right" style="color:var(--dim)"></i>
   </div>`).join('');
 }
 function selectBiz(b){_currentBiz=b;document.getElementById('supNameText').textContent=b.name;document.getElementById('supDate').textContent=b.sub||'';closeModal('bizSelectModal');showToast(b.name+' 선택됨');}
+
+// partners(거래처)+납품업체 로그인 계정(users) 통합 목록에서 "내 업체"만 추려낸다.
+// 두 테이블이 id로 연결돼 있지 않아 매칭 우선순위로 식별: uid 일치 → 사업자번호 일치 → 상호명 일치
+// (franchise 쪽 storeId 직접조회와 달리, 이 화면의 목록은 partners 기반이라 동일한 단서 체계가 없음)
+function _filterToMyBiz(list){
+  const myUid  = _mySession?.uid || '';
+  const myBiz  = _mySession?.businessNumber || '';
+  const myName = (_mySession?.businessName || _mySession?.name || '').trim();
+  const mine = list.find(b=>b.data?.uid===myUid)
+            || (myBiz  && list.find(b=>b.data?.businessNumber===myBiz))
+            || (myName && list.find(b=>b.name===myName));
+  return mine ? [mine] : [];
+}
+
+// 자기 업체가 하나로 확정된 경우 — 선택할 다른 업체가 없으므로 업체선택 화살표/드롭다운을 숨김
+function _lockBizSelectUI(){
+  const btn = document.getElementById('btnBizSelect');
+  if(btn) btn.style.display = 'none';
+  const chevron = document.getElementById('supNameChevron');
+  if(chevron) chevron.style.display = 'none';
+  const nameRow = document.getElementById('supName');
+  if(nameRow){ nameRow.style.cursor = 'default'; nameRow.onclick = null; }
+}
 
 // ── 품목 선택 ─────────────────────────────────────────────
 async function loadHqData(){
@@ -1363,10 +1396,20 @@ async function init(){
 
   await Promise.all([loadDrivers(),loadStores(),loadHqData()]);
   await loadDeliveries();
-  // 세션 복원
+  // 세션 복원 — 납품업체 로그인은 자기 업체로 고정(다른 업체 노출 금지)
   const session=Auth.getSession();
   if(session&&session.role==='supplier'){
     document.getElementById('supNameText').textContent=session.businessName||session.name||'납품업체';
+    if(!_currentBiz){
+      const mine = _filterToMyBiz(await _loadBizList())[0];
+      if(mine){
+        _currentBiz = mine;
+        document.getElementById('supNameText').textContent = mine.name;
+        document.getElementById('supDate').textContent = mine.sub || '';
+        // 자기 업체가 하나로 확정된 경우 — 선택할 게 없으므로 업체선택 UI 숨김
+        _lockBizSelectUI();
+      }
+    }
   }
   subscribeAutoConvert();
 }

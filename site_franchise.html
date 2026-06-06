@@ -188,7 +188,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);display:flex
       <div class="app-header">
         <div class="header-top">
           <div class="store-badge"><span class="badge-dot"></span><span id="storeStatus">영업중</span></div>
-          <button onclick="openStoreSelect()" style="display:flex;align-items:center;gap:5px;padding:6px 12px;border-radius:9px;border:.5px solid var(--line);background:var(--surface2);font-size:12px;font-weight:700;color:var(--text);cursor:pointer;font-family:var(--sans)">
+          <button id="btnStoreSelect" onclick="openStoreSelect()" style="display:flex;align-items:center;gap:5px;padding:6px 12px;border-radius:9px;border:.5px solid var(--line);background:var(--surface2);font-size:12px;font-weight:700;color:var(--text);cursor:pointer;font-family:var(--sans)">
             <i class="ti ti-building-store" style="font-size:14px"></i>업체선택
           </button>
           <button onclick="Auth.logout()" style="display:flex;align-items:center;gap:5px;padding:6px 12px;border-radius:9px;border:.5px solid var(--line);background:rgba(220,38,38,.08);font-size:12px;font-weight:700;color:#dc2626;cursor:pointer;font-family:var(--sans)">
@@ -197,7 +197,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);display:flex
         </div>
         <div class="store-name" id="storeName" style="cursor:pointer;display:flex;align-items:center;gap:6px" onclick="openStoreSelect()">
           <span id="storeNameText">가맹점을 선택하세요</span>
-          <i class="ti ti-chevron-down" style="font-size:14px;color:var(--muted)"></i>
+          <i class="ti ti-chevron-down" id="storeNameChevron" style="font-size:14px;color:var(--muted)"></i>
         </div>
         <div class="store-sub" id="headerDate">로딩 중...</div>
       </div>
@@ -965,10 +965,16 @@ async function openStoreSelect() {
   el.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;padding:30px;gap:8px;color:var(--muted)"><div class="spinner" style="width:16px;height:16px;border:2px solid var(--line);border-top-color:var(--blue);border-radius:50%;animation:spin .7s linear infinite"></div>불러오는 중...</div>';
 
   const fr = await Auth.DB.get('hq_franchises');
-  const brandId = Auth.getSession()?.brandId || '';
-  const stores = Object.values(fr || {}).filter(f =>
-    f && f.status === 'active' && (!brandId || f.brandId === brandId)
-  );
+  const session = Auth.getSession();
+  const brandId = session?.brandId || '';
+  const sid = session?.storeId || '';
+  const all = Object.values(fr || {}).filter(f => f && f.status === 'active');
+
+  // 가맹점 로그인은 자기 매장 1개만 — storeId로 한정(다른 매장 노출 금지, 권한 위반 방지)
+  // storeId 없는 예외 상황에서만 기존처럼 brandId 전체 표시로 fallback
+  const stores = (session?.role === 'franchise' && sid)
+    ? all.filter(f => f.id === sid)
+    : all.filter(f => !brandId || f.brandId === brandId);
 
   if (!stores.length) {
     el.innerHTML = '<div style="text-align:center;padding:30px;color:var(--dim);font-size:13px">등록된 가맹점이 없습니다.<br>Master에서 가맹점을 먼저 등록하세요.</div>';
@@ -1006,6 +1012,16 @@ function selectStore(f) {
   _attachStoreListener(_currentStore.id);
 }
 
+// 자기 매장이 하나로 확정된 경우 — 선택할 다른 매장이 없으므로 업체선택 화살표/드롭다운을 숨김
+function _lockStoreSelectUI(){
+  const btn = document.getElementById('btnStoreSelect');
+  if(btn) btn.style.display = 'none';
+  const chevron = document.getElementById('storeNameChevron');
+  if(chevron) chevron.style.display = 'none';
+  const nameRow = document.getElementById('storeName');
+  if(nameRow){ nameRow.style.cursor = 'default'; nameRow.onclick = null; }
+}
+
 // 세션 자동 복원 (UI 즉시 반영 — Firebase 불필요 항목만)
 (function() {
   const session = Auth.getSession();
@@ -1029,14 +1045,22 @@ async function init(){
   // 세션 로그인 후 _currentStore 미설정 → hq_franchises에서 okposShopCd 포함해 복원
   if(!_currentStore){
     if(session && session.role === 'franchise'){
-      const frData = await Auth.DB.get('hq_franchises') || {};
-      const list = Object.values(frData);
-      const normalize = v => (v||'').replace(/\s+/g,'');
-      const sessName = session.businessName || session.name || '';
-      const sessBiz  = session.businessNumber || '';
-      const fr = (sessBiz && list.find(f => f.businessNumber === sessBiz))
-              || list.find(f => f.name === sessName)
-              || list.find(f => normalize(f.name) === normalize(sessName));
+      const sid = session.storeId || '';
+      let fr = null;
+      if(sid){
+        // 세션의 storeId로 자기 매장 1개만 직접 조회 — 가장 신뢰할 수 있는 연결 단서
+        fr = await Auth.DB.get('hq_franchises/' + sid);
+      } else {
+        // storeId 없는 예외 상황에서만 기존 이름/사업자번호 매칭으로 fallback
+        const frData = await Auth.DB.get('hq_franchises') || {};
+        const list = Object.values(frData);
+        const normalize = v => (v||'').replace(/\s+/g,'');
+        const sessName = session.businessName || session.name || '';
+        const sessBiz  = session.businessNumber || '';
+        fr = (sessBiz && list.find(f => f.businessNumber === sessBiz))
+          || list.find(f => f.name === sessName)
+          || list.find(f => normalize(f.name) === normalize(sessName));
+      }
       if(fr){
         _currentStore = {
           id: fr.id, name: fr.name, businessName: fr.name,
@@ -1049,6 +1073,8 @@ async function init(){
         };
         document.getElementById('storeNameText').textContent = fr.name;
         _attachStoreListener(fr.id);
+        // storeId로 자기 매장이 확정된 경우 — 선택할 다른 매장이 없으므로 업체선택 UI 숨김
+        if(sid) _lockStoreSelectUI();
       }
     }
   }
