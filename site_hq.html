@@ -723,6 +723,34 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
       </div>
     </div>
 
+    <!-- 평문 비밀번호 필드 정리 (1회용) -->
+    <div style="background:linear-gradient(135deg,#fef3e2 0%,#fff7ed 100%);border:1px solid rgba(184,92,0,.25);border-radius:14px;padding:18px 22px;margin:22px 0 16px">
+      <div style="font-size:18px;font-weight:700;color:var(--amber);margin-bottom:6px">🔑 가맹점·납품업체 평문 비밀번호 정리 (1회용)</div>
+      <div style="font-size:13px;color:var(--muted);line-height:1.6">
+        과거 코드가 hq_franchises / hq_suppliers 에 비밀번호를 평문(loginPw)으로 저장했습니다. 이제 로그인 비밀번호는 users.passwordHash(해시)로만 관리되므로 남아있는 평문 필드를 제거합니다.<br>
+        <strong style="color:var(--amber)">반드시 먼저 [드라이런(미리보기)]으로 대상을 확인한 후 [평문 비밀번호 필드 제거]를 실행하세요.</strong>
+      </div>
+    </div>
+    <div class="card" style="margin-bottom:16px">
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <button onclick="cleanupPlaintextLoginPw(true)" class="rb blue" style="width:auto;padding:10px 18px;margin-top:0">
+          <i class="ti ti-eye"></i>🔍 드라이런 (미리보기)
+        </button>
+        <button onclick="cleanupPlaintextLoginPw(false)" class="rb amber" style="width:auto;padding:10px 18px;margin-top:0">
+          <i class="ti ti-database-cog"></i>▶ 평문 비밀번호 필드 제거
+        </button>
+        <div style="margin-left:auto;font-size:12px;color:var(--muted)">
+          💡 드라이런으로 먼저 확인 후 실제 제거하세요
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="ch"><span class="ct">정리 로그</span></div>
+      <div id="pwclean-log" style="font-family:var(--mono);font-size:12px;line-height:1.7;background:#0f0e0c;color:#d4d4d4;padding:14px 18px;border-radius:10px;max-height:400px;overflow-y:auto;white-space:pre-wrap">
+[🔍 드라이런 (미리보기)] 버튼을 클릭해 정리 대상을 먼저 확인하세요.
+      </div>
+    </div>
+
   </div></div>
 
   <!-- ── 재고 소진 현황 ─────────────────────────────── -->
@@ -1421,13 +1449,46 @@ function openFranchiseForm(reset=true){
 function closeFranchiseForm(){ document.getElementById('franchiseForm').style.display='none'; _editFrId=''; }
 function clearFrForm(){ ['frName','frBiz','frAddr','frPhone','frOwner','frLoginId','frLoginPw','frShopCd'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';}); }
 
+// ── 로그인 계정(users) 동기화 ─────────────────────────────
+// 가맹점/납품업체 저장 시 대응하는 users 계정을 함께 생성/갱신한다.
+// 기존 계정 탐색 순서: link필드(storeId/supplierId) 일치 → 이전 loginId 일치
+// (※ 신규 loginId로는 탐색하지 않음 — 아래 함수 본문 주석 참고)
+// 비밀번호 해시는 Auth.upsertUser(내부적으로 Auth.hashPw 사용)에 위임 — Auth.login과 동일 해시 보장
+async function syncBizUser({role, linkField, bizId, oldLoginId, loginId, password, businessName, ownerName, brandId, brandName}){
+  if(!loginId && !oldLoginId) return; // 로그인 정보가 없으면 동기화할 대상이 없음
+  const users = await Auth.loadUsers();
+  // 주의: 신규 loginId로는 탐색하지 않음 — loginId 중복이 허용되는 시스템이라
+  // 다른 사업체의 계정을 잘못 가로챌 수 있음(연결id/이전loginId만 신뢰할 수 있는 단서)
+  const existing = users.find(u=>u.role===role && u[linkField]===bizId)
+                || (oldLoginId && users.find(u=>u.role===role && u.loginId===oldLoginId));
+  const fields = {
+    uid: existing?.uid,
+    role,
+    loginId: loginId || existing?.loginId || '',
+    name: ownerName || existing?.name || '',
+    businessName, brandId, brandName,
+    [linkField]: bizId,
+  };
+  if(!existing){
+    fields.status = 'active';
+    fields.password = password || '1234'; // 신규 계정, 비번 미입력 시 기본 비번
+  } else if(password){
+    fields.password = password; // 비번 입력 시에만 갱신 — 미입력 시 upsertUser가 기존 passwordHash 유지
+  }
+  await Auth.upsertUser(fields);
+}
+
 async function saveFranchise(){
   if(!frName.value.trim()||!frAddr.value.trim()){ showToast('상호명과 주소를 입력하세요'); return; }
   const loginId=document.getElementById('frLoginId').value.trim();
   const loginPw=document.getElementById('frLoginPw').value.trim();
   const orderLimit=Number(document.getElementById('frLimit').value)||2000000;
   const shopCd=document.getElementById('frShopCd').value.trim();
+  let storeId=_editFrId;
+  let oldLoginId='';
   if(_editFrId){
+    const prev=await Auth.DB.get('hq_franchises/'+_editFrId);
+    oldLoginId=prev?.loginId||'';
     // 수정: 변경 가능한 필드만 update — unpaidAmt·createdAt·orderEnabled는 건드리지 않음
     const upd={
       name:frName.value, businessNumber:frBiz.value,
@@ -1436,22 +1497,34 @@ async function saveFranchise(){
       brandId:_myBrandId, brandName:_myBrandName,
     };
     if(loginId) upd.loginId=loginId;
-    if(loginPw) upd.loginPw=loginPw;
     await Auth.DB.update('hq_franchises/'+_editFrId, upd);
   } else {
     // 신규: 전체 set
-    const id='fr_'+Date.now();
+    storeId='fr_'+Date.now();
     const unpaidAmt=0;
-    await Auth.DB.set('hq_franchises/'+id,{
-      id, name:frName.value, businessNumber:frBiz.value,
+    await Auth.DB.set('hq_franchises/'+storeId,{
+      id:storeId, name:frName.value, businessNumber:frBiz.value,
       address:frAddr.value, phone:frPhone.value, owner:frOwner.value,
-      ...(loginId&&{loginId}), ...(loginPw&&{loginPw}),
+      ...(loginId&&{loginId}),
       okposShopCd:shopCd, orderLimit,
       unpaidAmt, orderEnabled:true,
       brandId:_myBrandId, brandName:_myBrandName,
       status:'active', createdAt:new Date().toISOString()
     });
   }
+
+  // 로그인 계정(users) 동기화 — hq_franchises 저장은 이미 끝났으므로 실패해도 사업데이터는 보존됨
+  try{
+    await syncBizUser({
+      role:'franchise', linkField:'storeId', bizId:storeId,
+      oldLoginId, loginId, password:loginPw,
+      businessName:frName.value.trim(), ownerName:frOwner.value.trim(),
+      brandId:_myBrandId, brandName:_myBrandName,
+    });
+  }catch(e){
+    showToast('로그인 계정 동기화 실패: '+e.message);
+  }
+
   clearFrForm(); closeFranchiseForm(); await loadFranchises();
   showToast(_editFrId?'가맹점 수정 완료':'가맹점 등록 완료');
 }
@@ -1544,9 +1617,27 @@ async function saveSupplier(){
   const id=_editSupId||'sup_'+Date.now();
   const loginId=document.getElementById('supLoginId').value.trim();
   const loginPw=document.getElementById('supLoginPw').value.trim();
+  let oldLoginId='';
+  if(_editSupId){
+    const prev=await Auth.DB.get('hq_suppliers/'+_editSupId);
+    oldLoginId=prev?.loginId||'';
+  }
   await Auth.DB.set('hq_suppliers/'+id,{id,name:supName.value,businessNumber:supBiz.value,phone:supPhone.value,contactPerson:supContact.value,category:supCategory.value,
-    ...(loginId&&{loginId}), ...(loginPw&&{loginPw}),
+    ...(loginId&&{loginId}),
     brandId:_myBrandId,brandName:_myBrandName,status:'active',createdAt:new Date().toISOString()});
+
+  // 로그인 계정(users) 동기화 — hq_suppliers 저장은 이미 끝났으므로 실패해도 사업데이터는 보존됨
+  try{
+    await syncBizUser({
+      role:'supplier', linkField:'supplierId', bizId:id,
+      oldLoginId, loginId, password:loginPw,
+      businessName:supName.value.trim(), ownerName:supContact.value.trim(),
+      brandId:_myBrandId, brandName:_myBrandName,
+    });
+  }catch(e){
+    showToast('로그인 계정 동기화 실패: '+e.message);
+  }
+
   clearSupForm(); closeSupplierForm(); await loadSuppliers();
   showToast(_editSupId?'납품업체 수정 완료':'납품업체 등록 완료');
 }
@@ -2216,6 +2307,57 @@ function migLog(msg, type='info'){
 function migClear(){
   const el = document.getElementById('mig-log');
   if(el) el.innerHTML = '';
+}
+
+// ── 평문 비밀번호(loginPw) 필드 정리 (1회용 도구) ──────────
+// 과거 saveFranchise/saveSupplier가 hq_franchises/hq_suppliers에 평문 비밀번호를 저장했음.
+// 이제 비밀번호는 users.passwordHash(해시)로만 관리되므로 남은 평문 필드를 제거한다.
+function pwCleanLog(msg, type='info'){
+  const el = document.getElementById('pwclean-log');
+  if(!el) return;
+  const colors = {info:'#d4d4d4', success:'#34d399', warn:'#fbbf24', error:'#f87171', header:'#60a5fa', dim:'#737373'};
+  const prefix = {info:'  ', success:'✅', warn:'⚠️ ', error:'❌', header:'━━', dim:'  '};
+  const time = new Date().toTimeString().slice(0,8);
+  el.innerHTML += `<span style="color:${colors[type]}">[${time}] ${prefix[type]} ${msg}</span>\n`;
+  el.scrollTop = el.scrollHeight;
+}
+
+async function cleanupPlaintextLoginPw(dryRun){
+  if(!dryRun && !confirm('⚠️ hq_franchises / hq_suppliers 의 평문 비밀번호(loginPw) 필드를 영구히 제거합니다.\n\n반드시 먼저 드라이런으로 대상을 확인하셨나요?\n계속 진행할까요?')){
+    return;
+  }
+  const logEl = document.getElementById('pwclean-log');
+  if(logEl) logEl.innerHTML = '';
+  pwCleanLog(dryRun ? '🔍 드라이런 모드 (실제 변경 없음)' : '▶ 실제 실행 모드 — 평문 비밀번호 필드 제거', 'header');
+
+  try{
+    const [hqData, supData] = await Promise.all([
+      Auth.DB.get('hq_franchises'),
+      Auth.DB.get('hq_suppliers'),
+    ]);
+    pwCleanLog(`검사 대상: 가맹점 ${Object.keys(hqData||{}).length}개, 납품업체 ${Object.keys(supData||{}).length}개`, 'info');
+
+    const hits = [
+      ...Object.entries(hqData||{}).filter(([,f])=>'loginPw' in f).map(([rid,f])=>({path:'hq_franchises/'+rid, label:f.name||rid})),
+      ...Object.entries(supData||{}).filter(([,s])=>'loginPw' in s).map(([rid,s])=>({path:'hq_suppliers/'+rid, label:s.name||rid})),
+    ];
+
+    if(!hits.length){
+      pwCleanLog('평문 비밀번호 필드가 없습니다. 이미 깨끗합니다.', 'success');
+      return;
+    }
+    pwCleanLog(`평문 비밀번호 필드 발견: ${hits.length}건`, 'warn');
+    for(const t of hits){
+      pwCleanLog(`  ${t.path} (${t.label}) → loginPw 제거${dryRun?' 예정':''}`, 'dim');
+      if(!dryRun) await Auth.DB.update(t.path, {loginPw: null});
+    }
+    pwCleanLog(dryRun
+      ? '드라이런 완료 — [▶ 평문 비밀번호 필드 제거] 버튼으로 실제 적용하세요.'
+      : `완료: ${hits.length}건의 평문 비밀번호 필드를 제거했습니다.`, 'success');
+  }catch(e){
+    pwCleanLog(`오류: ${e.message}`, 'error');
+    console.error(e);
+  }
 }
 
 function findMatchingStore(item, hqList, supList){
