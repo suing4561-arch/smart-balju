@@ -775,7 +775,7 @@ async function renderDeliveries(){
     // 품목 요약
     const itemArr=item.itemDetails||[];
     const itemSummary=itemArr.length>0
-      ?`${itemArr[0].name}${itemArr.length>1?' 외 '+(itemArr.length-1)+'건':''}`
+      ?itemArr.slice(0,2).map(it=>it.name+' '+it.qty+(it.unit||'')).join(' · ')+(itemArr.length>2?' 외 '+(itemArr.length-2)+'건':'')
       :(item.items||'').slice(0,20)||(isOrder?'발주':'배송');
 
     // 기사 정보
@@ -1147,7 +1147,7 @@ async function loadDriverDeliveries(){
     const dayNames=['일','월','화','수','목','금','토'];
     const dateStr=dd?`${String(dd.getUTCMonth()+1).padStart(2,'0')}/${String(dd.getUTCDate()).padStart(2,'0')}(${dayNames[dd.getUTCDay()]})`:'';
     const itemArr=d.itemDetails||[];
-    const itemSummary=itemArr.length>0?`${itemArr[0].name}${itemArr.length>1?' 외 '+(itemArr.length-1)+'건':''}`:(d.items||'').slice(0,20)||'배송';
+    const itemSummary=itemArr.length>0?itemArr.slice(0,2).map(it=>it.name+' '+it.qty+(it.unit||'')).join(' · ')+(itemArr.length>2?' 외 '+(itemArr.length-2)+'건':''):(d.items||'').slice(0,20)||'배송';
     return `<div style="display:flex;flex-direction:column;gap:4px;margin-bottom:6px">
       <div class="dlv-row" onclick="toggleDriverDetail('${d.id}')">
         <div class="dlv-dot" style="background:${stColor}"></div>
