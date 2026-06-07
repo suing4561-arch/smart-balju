@@ -317,7 +317,7 @@ function requireLogin(allowedRoles) {
   return session;
 }
 
-// ── 거래처 (납품업체 계정 첫 로그인 시 본사에 표시) ────────
+// ── 납품처 ──────────────────────────────────────────────────
 async function registerPartner(fields) {
   const id = genId();
   const partner = {
@@ -597,7 +597,7 @@ window.SmartBaljuAuth = {
   setPermissions,
   getPermissions,
 
-  // 거래처 (납품업체)
+  // 납품처
   registerPartner,
   loadPartners,
   updatePartner,

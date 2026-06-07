@@ -137,7 +137,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
   <button class="ni" onclick="goto('delivery')"><i class="ti ti-truck-delivery"></i><span>배송 관리</span></button>
   <div class="slabel">기준정보</div>
   <button class="ni" onclick="goto('register')"><i class="ti ti-database-plus"></i><span>기준정보 등록</span></button>
-  <button class="ni" onclick="goto('partners')"><i class="ti ti-building-factory"></i><span>거래처·납품업체</span></button>
+  <button class="ni" onclick="goto('partners')"><i class="ti ti-building-factory"></i><span>납품처 관리</span></button>
   <button class="ni" onclick="goto('franchises')"><i class="ti ti-building-store"></i><span>가맹점 관리</span></button>
   <div class="slabel">경영</div>
   <button class="ni" onclick="goto('stock')"><i class="ti ti-chart-pie"></i><span>재고 소진 현황</span></button>
@@ -368,58 +368,43 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 
   </div></div>
 
-  <!-- ── 거래처 관리 ── -->
-  <!-- ── 거래처·납품업체 통합 관리 ── -->
+  <!-- ── 납품처 관리 ── -->
   <div class="hqp" id="hqp-partners"><div class="content">
 
-    <!-- 탭 -->
-    <div style="display:flex;gap:0;border-bottom:.5px solid var(--line);margin-bottom:16px;background:var(--surface);border-radius:12px 12px 0 0;overflow:hidden">
-      <button class="reg-tab active" id="ptab-partner" onclick="switchPartnerTab('partner')">거래처 (공급업체)</button>
-      <button class="reg-tab" id="ptab-supplier" onclick="switchPartnerTab('supplier')">납품·배송업체</button>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <div style="font-size:18px;font-weight:700">납품처 관리</div>
+      <button onclick="openPartnerForm()" class="rb purple" style="width:auto;padding:9px 16px">+ 납품처 등록</button>
     </div>
 
-    <!-- 거래처 탭 -->
-    <div id="ppanel-partner">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-        <div style="font-size:14px;color:var(--muted)">품목 코드에 연결되는 공급업체 목록</div>
-        <button onclick="goto('register');switchRegTab('code')" class="rb blue" style="width:auto;padding:8px 14px;font-size:12px">+ 거래처 등록 →</button>
+    <!-- 등록/수정 폼 -->
+    <div class="rc" id="partnerForm" style="display:none;margin-bottom:16px">
+      <div class="rch"><div class="rci" style="background:var(--purple-bg)"><i class="ti ti-building-factory" style="color:var(--purple)"></i></div>
+        <div><div class="rct">납품처 등록</div></div>
+        <button onclick="closePartnerForm()" style="margin-left:auto;border:none;background:none;font-size:20px;color:var(--muted);cursor:pointer">✕</button>
       </div>
-      <div class="card" style="padding:0;overflow:hidden">
-        <div id="partnersFull"><div style="text-align:center;padding:40px;color:var(--dim)">불러오는 중...</div></div>
+      <div class="rcb">
+        <div class="two-col">
+          <div class="fl"><div class="flb">코드 (2자리) *</div><input class="fi" id="ptCode" placeholder="01" maxlength="2"></div>
+          <div class="fl"><div class="flb">상호명 *</div><input class="fi" id="ptName" placeholder="(주)밀면식품"></div>
+        </div>
+        <div class="two-col">
+          <div class="fl"><div class="flb">사업자번호</div><input class="fi" id="ptBiz" placeholder="000-00-00000"></div>
+          <div class="fl"><div class="flb">연락처</div><input class="fi" id="ptPhone" placeholder="051-000-0000"></div>
+        </div>
+        <div class="two-col">
+          <div class="fl"><div class="flb">담당자명</div><input class="fi" id="ptContact" placeholder="김철수"></div>
+          <div class="fl"><div class="flb">납품 품목</div><input class="fi" id="ptCategory" placeholder="면류, 소스류 등"></div>
+        </div>
+        <div class="two-col">
+          <div class="fl"><div class="flb">로그인 ID</div><input class="fi" id="ptLoginId" placeholder="납품처 로그인 아이디"></div>
+          <div class="fl"><div class="flb">비밀번호</div><input class="fi" id="ptLoginPw" type="password" placeholder="미입력 시 기본 1234"></div>
+        </div>
+        <button class="rb purple" id="partnerSaveBtn" onclick="savePartner()"><i class="ti ti-plus"></i>납품처 등록</button>
       </div>
     </div>
 
-    <!-- 납품·배송업체 탭 -->
-    <div id="ppanel-supplier" style="display:none">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-        <div style="font-size:14px;color:var(--muted)">배송 담당 업체 · site_supplier.html 로그인 계정</div>
-        <button onclick="openSupplierForm()" class="rb purple" style="width:auto;padding:8px 14px;font-size:12px">+ 납품업체 등록</button>
-      </div>
-      <div class="rc" id="supplierForm" style="display:none;margin-bottom:12px">
-        <div class="rch"><div class="rci" style="background:var(--purple-bg)"><i class="ti ti-truck" style="color:var(--purple)"></i></div>
-          <div><div class="rct">납품업체 등록</div></div>
-          <button onclick="closeSupplierForm()" style="margin-left:auto;border:none;background:none;font-size:20px;color:var(--muted);cursor:pointer">✕</button>
-        </div>
-        <div class="rcb">
-          <div class="two-col">
-            <div class="fl"><div class="flb">업체명 *</div><input class="fi" id="supName" placeholder="(주)한국식품"></div>
-            <div class="fl"><div class="flb">사업자번호</div><input class="fi" id="supBiz" placeholder="000-00-00000"></div>
-          </div>
-          <div class="two-col">
-            <div class="fl"><div class="flb">연락처</div><input class="fi" id="supPhone" placeholder="051-000-0000"></div>
-            <div class="fl"><div class="flb">담당자명</div><input class="fi" id="supContact" placeholder="김철수"></div>
-          </div>
-          <div class="fl"><div class="flb">납품 품목</div><input class="fi" id="supCategory" placeholder="면류, 소스류, 육류 등"></div>
-          <div class="two-col">
-            <div class="fl"><div class="flb">로그인 ID</div><input class="fi" id="supLoginId" placeholder="납품업체 로그인 아이디"></div>
-            <div class="fl"><div class="flb">비밀번호</div><input class="fi" id="supLoginPw" type="password" placeholder="비밀번호"></div>
-          </div>
-          <button class="rb purple" id="supSaveBtn" onclick="saveSupplier()"><i class="ti ti-plus"></i>납품업체 등록</button>
-        </div>
-      </div>
-      <div class="card" style="padding:0;overflow:hidden">
-        <div id="supplierList"><div style="text-align:center;padding:40px;color:var(--dim)">불러오는 중...</div></div>
-      </div>
+    <div class="card" style="padding:0;overflow:hidden">
+      <div id="partnersFull"><div style="text-align:center;padding:40px;color:var(--dim)">불러오는 중...</div></div>
     </div>
 
   </div></div>
@@ -725,9 +710,9 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 
     <!-- 평문 비밀번호 필드 정리 (1회용) -->
     <div style="background:linear-gradient(135deg,#fef3e2 0%,#fff7ed 100%);border:1px solid rgba(184,92,0,.25);border-radius:14px;padding:18px 22px;margin:22px 0 16px">
-      <div style="font-size:18px;font-weight:700;color:var(--amber);margin-bottom:6px">🔑 가맹점·납품업체 평문 비밀번호 정리 (1회용)</div>
+      <div style="font-size:18px;font-weight:700;color:var(--amber);margin-bottom:6px">🔑 가맹점 평문 비밀번호 정리 (1회용)</div>
       <div style="font-size:13px;color:var(--muted);line-height:1.6">
-        과거 코드가 hq_franchises / hq_suppliers 에 비밀번호를 평문(loginPw)으로 저장했습니다. 이제 로그인 비밀번호는 users.passwordHash(해시)로만 관리되므로 남아있는 평문 필드를 제거합니다.<br>
+        과거 코드가 hq_franchises 에 비밀번호를 평문(loginPw)으로 저장했습니다. 이제 로그인 비밀번호는 users.passwordHash(해시)로만 관리되므로 남아있는 평문 필드를 제거합니다.<br>
         <strong style="color:var(--amber)">반드시 먼저 [드라이런(미리보기)]으로 대상을 확인한 후 [평문 비밀번호 필드 제거]를 실행하세요.</strong>
       </div>
     </div>
@@ -823,7 +808,7 @@ if(_myBrandId){
 // 사이드바 아바타
 const _myName = _session?.name || _session?.businessName || '관리자';
 document.querySelector('.sfooter').innerHTML = `<div style="display:flex;align-items:center;gap:10px"><div style="width:32px;height:32px;border-radius:50%;background:var(--blue-mid);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;flex-shrink:0">${_myName.slice(0,1)}</div><div><div style="font-size:12px;font-weight:500;color:#fff">${_myName}</div><div style="font-size:11px;color:rgba(255,255,255,.4)">${_myBrandName||'본사 관리자'}</div></div></div>`;
-const PAGES = {orders:'주문 통합 관리',register:'기준정보 등록',partners:'거래처·납품업체 관리',franchises:'가맹점 관리',delivery:'배송 관리',stock:'재고 소진 현황',stats:'매출·통계',settle:'정산 관리',notice:'공지·레시피',settings:'설정',migration:'🔧 데이터 마이그레이션'};
+const PAGES = {orders:'주문 통합 관리',register:'기준정보 등록',partners:'납품처 관리',franchises:'가맹점 관리',delivery:'배송 관리',stock:'재고 소진 현황',stats:'매출·통계',settle:'정산 관리',notice:'공지·레시피',settings:'설정',migration:'🔧 데이터 마이그레이션'};
 
 function goto(p){
   Object.keys(PAGES).forEach(k=>{ const el=document.getElementById('hqp-'+k); if(el) el.classList.toggle('active',k===p); });
@@ -1324,42 +1309,100 @@ async function loadOkposMenuNames(){
   hint.innerHTML = parts.join('&nbsp;&nbsp;|&nbsp;&nbsp;');
 }
 
-// ── 거래처·납품업체 탭 전환 ──────────────────────────────
-function switchPartnerTab(tab){
-  ['partner','supplier'].forEach(t=>{
-    document.getElementById('ptab-'+t).classList.toggle('active',t===tab);
-    document.getElementById('ppanel-'+t).style.display=t===tab?'':'none';
-  });
-  if(tab==='supplier') loadSuppliers();
-  else loadPartnersFull();
+// ── 납품처 관리 ───────────────────────────────────────────
+let _editPartnerId = '';
+
+function openPartnerForm(reset=true){
+  if(reset){ _editPartnerId=''; clearPartnerForm(); document.getElementById('partnerSaveBtn').innerHTML='<i class="ti ti-plus"></i>납품처 등록'; }
+  document.getElementById('partnerForm').style.display='';
 }
+function closePartnerForm(){ document.getElementById('partnerForm').style.display='none'; _editPartnerId=''; }
+function clearPartnerForm(){ ['ptCode','ptName','ptBiz','ptPhone','ptContact','ptCategory','ptLoginId','ptLoginPw'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';}); }
+
+async function savePartner(){
+  const code = document.getElementById('ptCode').value.trim().padStart(2,'0');
+  const name = document.getElementById('ptName').value.trim();
+  if(!code||code==='00'||!name){ showToast('코드(2자리)와 상호명을 입력하세요'); return; }
+  const loginId = document.getElementById('ptLoginId').value.trim();
+  const loginPw = document.getElementById('ptLoginPw').value.trim();
+  const isEdit = !!_editPartnerId;
+  let partnerId = _editPartnerId;
+  let oldLoginId = '';
+  if(isEdit){
+    const prev = await Auth.DB.get('partners/'+partnerId);
+    oldLoginId = prev?.loginId || '';
+    await Auth.updatePartner(partnerId, {
+      code, name,
+      businessNumber: document.getElementById('ptBiz').value.trim(),
+      phone: document.getElementById('ptPhone').value.trim(),
+      contactPerson: document.getElementById('ptContact').value.trim(),
+      category: document.getElementById('ptCategory').value.trim(),
+      ...(loginId && {loginId}),
+      brandId:_myBrandId, brandName:_myBrandName,
+    });
+  } else {
+    const list = await Auth.loadPartners();
+    if(list.find(p=>p.code===code)){ showToast('코드 '+code+' 는 이미 사용 중입니다'); return; }
+    const p = await Auth.registerPartner({
+      code, name,
+      businessNumber: document.getElementById('ptBiz').value.trim(),
+      phone: document.getElementById('ptPhone').value.trim(),
+      contactPerson: document.getElementById('ptContact').value.trim(),
+      category: document.getElementById('ptCategory').value.trim(),
+      ...(loginId && {loginId}),
+      brandId:_myBrandId, brandName:_myBrandName,
+      status:'active',
+    });
+    partnerId = p.id;
+  }
+  try{
+    await syncBizUser({
+      role:'supplier', linkField:'supplierId', bizId:partnerId,
+      oldLoginId, loginId, password:loginPw,
+      businessName:name, ownerName:document.getElementById('ptContact').value.trim(),
+      brandId:_myBrandId, brandName:_myBrandName,
+    });
+  }catch(e){
+    showToast('로그인 계정 동기화 실패: '+e.message);
+  }
+  _editPartnerId='';
+  clearPartnerForm(); closePartnerForm(); await loadPartnersFull(); await refreshMenuSelects();
+  showToast(isEdit ? '납품처 수정 완료' : '납품처 등록 완료');
+}
+
 async function loadPartnersFull(){
   const list=await Auth.loadPartners();
   const el=document.getElementById('partnersFull');
-  if(!list.length){ el.innerHTML='<div style="text-align:center;padding:40px;color:var(--dim)">등록된 거래처가 없습니다.</div>'; return; }
-  el.innerHTML=`<table class="lt"><thead><tr><th>코드</th><th>상호명</th><th>사업자번호</th><th>담당자</th><th>연락처</th><th>상태</th><th>관리</th></tr></thead><tbody>${list.map(p=>`<tr>
+  if(!list.length){ el.innerHTML='<div style="text-align:center;padding:40px;color:var(--dim)">등록된 납품처가 없습니다.</div>'; return; }
+  el.innerHTML=`<table class="lt"><thead><tr><th>코드</th><th>상호명</th><th>사업자번호</th><th>담당자</th><th>연락처</th><th>로그인ID</th><th>관리</th></tr></thead><tbody>${list.map(p=>`<tr>
     <td><span class="code-chip">${p.code||'-'}</span></td>
     <td><strong>${p.name||'-'}</strong></td><td>${p.businessNumber||'-'}</td>
     <td>${p.contactPerson||'-'}</td><td>${p.phone||'-'}</td>
-    <td><span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:${p.status==='active'?'var(--green-bg)':'var(--surface2)'};color:${p.status==='active'?'var(--green)':'var(--muted)'}">${p.status==='active'?'활성':'비활성'}</span></td>
+    <td style="font-family:var(--mono);font-size:12px">${p.loginId||'-'}</td>
     <td style="display:flex;gap:4px">
       <button class="delbtn" style="background:var(--blue-bg);color:var(--blue);border-color:rgba(40,116,204,.3)" onclick="editPartnerFull('${p.id}')">수정</button>
       <button class="delbtn" onclick="delPFull('${p.id}')">삭제</button>
     </td>
   </tr>`).join('')}</tbody></table>`;
 }
+
 async function editPartnerFull(id){
   const list=await Auth.loadPartners(); const p=list.find(x=>x.id===id); if(!p)return;
-  pCode.value=p.code||''; pName.value=p.name||''; pBiz.value=p.businessNumber||'';
-  pPhone.value=p.phone||''; pContact.value=p.contactPerson||'';
-  switchRegTab('code');
-  // 저장 버튼을 수정모드로
-  const btn=document.querySelector('#regp-code .rb.blue');
-  btn.innerHTML='<i class="ti ti-pencil"></i>거래처 수정 저장';
-  btn.dataset.editId=id;
+  _editPartnerId=id;
+  document.getElementById('ptCode').value=p.code||'';
+  document.getElementById('ptName').value=p.name||'';
+  document.getElementById('ptBiz').value=p.businessNumber||'';
+  document.getElementById('ptPhone').value=p.phone||'';
+  document.getElementById('ptContact').value=p.contactPerson||'';
+  document.getElementById('ptCategory').value=p.category||'';
+  document.getElementById('ptLoginId').value=p.loginId||'';
+  document.getElementById('ptLoginPw').value='';
+  document.getElementById('partnerSaveBtn').innerHTML='<i class="ti ti-pencil"></i>납품처 수정 저장';
+  openPartnerForm(false);
   showToast('['+p.name+'] 수정 모드');
 }
-async function delPFull(id){ if(!confirm('삭제할까요?')) return; await Auth.deletePartner(id); await loadPartnersFull(); showToast('삭제'); }
+
+async function delPFull(id){ if(!confirm('삭제할까요?')) return; await Auth.deletePartner(id); await loadPartnersFull(); await refreshMenuSelects(); showToast('삭제'); }
 
 // ── 배송 관리 ─────────────────────────────────────────────
 async function loadDelivery(){
@@ -1603,77 +1646,6 @@ async function confirmPayment(id){
   showToast(`[${f.name}] ${pay.toLocaleString()}원 입금 확인 완료! 미수금: ${newUnpaid.toLocaleString()}원`);
 }
 
-// ── 납품업체 관리 ─────────────────────────────────────────
-let _editSupId='';
-function openSupplierForm(reset=true){
-  if(reset){ _editSupId=''; clearSupForm(); document.getElementById('supSaveBtn').innerHTML='<i class="ti ti-plus"></i>납품업체 등록'; }
-  document.getElementById('supplierForm').style.display='';
-}
-function closeSupplierForm(){ document.getElementById('supplierForm').style.display='none'; _editSupId=''; }
-function clearSupForm(){ ['supName','supBiz','supPhone','supContact','supCategory','supLoginId','supLoginPw'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';}); }
-
-async function saveSupplier(){
-  if(!supName.value.trim()){ showToast('업체명을 입력하세요'); return; }
-  const id=_editSupId||'sup_'+Date.now();
-  const loginId=document.getElementById('supLoginId').value.trim();
-  const loginPw=document.getElementById('supLoginPw').value.trim();
-  let oldLoginId='';
-  if(_editSupId){
-    const prev=await Auth.DB.get('hq_suppliers/'+_editSupId);
-    oldLoginId=prev?.loginId||'';
-  }
-  await Auth.DB.set('hq_suppliers/'+id,{id,name:supName.value,businessNumber:supBiz.value,phone:supPhone.value,contactPerson:supContact.value,category:supCategory.value,
-    ...(loginId&&{loginId}),
-    brandId:_myBrandId,brandName:_myBrandName,status:'active',createdAt:new Date().toISOString()});
-
-  // 로그인 계정(users) 동기화 — hq_suppliers 저장은 이미 끝났으므로 실패해도 사업데이터는 보존됨
-  try{
-    await syncBizUser({
-      role:'supplier', linkField:'supplierId', bizId:id,
-      oldLoginId, loginId, password:loginPw,
-      businessName:supName.value.trim(), ownerName:supContact.value.trim(),
-      brandId:_myBrandId, brandName:_myBrandName,
-    });
-  }catch(e){
-    showToast('로그인 계정 동기화 실패: '+e.message);
-  }
-
-  clearSupForm(); closeSupplierForm(); await loadSuppliers();
-  showToast(_editSupId?'납품업체 수정 완료':'납품업체 등록 완료');
-}
-
-async function loadSuppliers(){
-  const data=await Auth.DB.get('hq_suppliers')||{};
-  const list=Object.values(data).filter(s=>!_myBrandId||s.brandId===_myBrandId);
-  const el=document.getElementById('supplierList');
-  if(!list.length){ el.innerHTML='<div style="text-align:center;padding:40px;color:var(--dim)">등록된 납품업체가 없습니다</div>'; return; }
-  el.innerHTML=`<table class="lt"><thead><tr><th>업체명</th><th>납품품목</th><th>담당자</th><th>연락처</th><th>로그인ID</th><th>상태</th><th></th></tr></thead><tbody>`+
-    list.map(s=>`<tr>
-      <td><strong>${s.name}</strong>${s.businessNumber?`<div style="font-size:11px;color:var(--muted)">${s.businessNumber}</div>`:''}</td>
-      <td style="font-size:12px;color:var(--muted)">${s.category||'-'}</td>
-      <td>${s.contactPerson||'-'}</td><td>${s.phone||'-'}</td>
-      <td style="font-family:var(--mono);font-size:12px">${s.loginId||'-'}</td>
-      <td><span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:var(--green-bg);color:var(--green)">활성</span></td>
-      <td style="display:flex;gap:4px">
-        <button class="delbtn" style="background:var(--blue-bg);color:var(--blue);border-color:rgba(40,116,204,.3)" onclick="editSupplier('${s.id}')">수정</button>
-        <button class="delbtn" onclick="delSupplier('${s.id}')">삭제</button>
-      </td>
-    </tr>`).join('')+'</tbody></table>';
-}
-
-async function editSupplier(id){
-  const data=await Auth.DB.get('hq_suppliers')||{};
-  const s=Object.values(data).find(x=>x.id===id); if(!s)return;
-  _editSupId=id;
-  supName.value=s.name||''; supBiz.value=s.businessNumber||''; supPhone.value=s.phone||'';
-  supContact.value=s.contactPerson||''; supCategory.value=s.category||'';
-  document.getElementById('supLoginId').value=s.loginId||'';
-  document.getElementById('supLoginPw').value='';
-  document.getElementById('supSaveBtn').innerHTML='<i class="ti ti-pencil"></i>납품업체 수정 저장';
-  openSupplierForm(false); showToast('['+s.name+'] 수정 모드');
-}
-async function delSupplier(id){ if(!confirm('삭제할까요?'))return; await Auth.DB.remove('hq_suppliers/'+id); await loadSuppliers(); showToast('삭제'); }
-
 // ── OKPos 설정 ────────────────────────────────────────────
 async function loadSettings(){
   // 브랜드명 자동입력
@@ -1804,17 +1776,7 @@ async function seedIbaguData(){
     await Auth.DB.set('hq_franchises/'+id,{id,...f,brandId,brandName:'이바구밀면',status:'active',createdAt:new Date().toISOString()});
   }
 
-  // 5. 납품업체 예시
-  const supData=[
-    {name:'(주)밀면식품',businessNumber:'111-22-33333',phone:'051-123-4567',contactPerson:'박민준',category:'면류, 육수'},
-    {name:'부산소스공방',businessNumber:'222-33-44444',phone:'051-234-5678',contactPerson:'김소연',category:'소스류, 만두, 육류'},
-  ];
-  for(const s of supData){
-    const id='sup_'+Date.now()+'_'+Math.random().toString(36).slice(2,6);
-    await Auth.DB.set('hq_suppliers/'+id,{id,...s,brandId,brandName:'이바구밀면',status:'active',createdAt:new Date().toISOString()});
-  }
-
-  // 6. 소요량 예시 (물밀면 기준)
+  // 5. 소요량 예시 (물밀면 기준)
   const menus=await Auth.loadMenus();
   const findMenuId=(name)=>menus.find(m=>m.name===name)?.id||'';
   const recipes=[
@@ -1827,8 +1789,8 @@ async function seedIbaguData(){
     await Auth.DB.set('recipes/'+id,{id,...r,brandId,createdAt:new Date().toISOString()});
   }
 
-  await Promise.all([rMenu(),loadFranchises(),loadSuppliers(),loadRecipes()]);
-  showToast('이바구밀면 예시 데이터 등록 완료! 품목 '+menuItems.length+'개·가맹점 '+frData.length+'개·납품업체 '+supData.length+'개');
+  await Promise.all([rMenu(),loadFranchises(),loadPartnersFull(),loadRecipes()]);
+  showToast('이바구밀면 예시 데이터 등록 완료! 품목 '+menuItems.length+'개·가맹점 '+frData.length+'개');
 }
 // ── 자동승인 토글 ─────────────────────────────────────────
 let _autoApprove = false;
@@ -2310,7 +2272,7 @@ function migClear(){
 }
 
 // ── 평문 비밀번호(loginPw) 필드 정리 (1회용 도구) ──────────
-// 과거 saveFranchise/saveSupplier가 hq_franchises/hq_suppliers에 평문 비밀번호를 저장했음.
+// 과거 saveFranchise가 hq_franchises에 평문 비밀번호를 저장했음.
 // 이제 비밀번호는 users.passwordHash(해시)로만 관리되므로 남은 평문 필드를 제거한다.
 function pwCleanLog(msg, type='info'){
   const el = document.getElementById('pwclean-log');
@@ -2323,7 +2285,7 @@ function pwCleanLog(msg, type='info'){
 }
 
 async function cleanupPlaintextLoginPw(dryRun){
-  if(!dryRun && !confirm('⚠️ hq_franchises / hq_suppliers 의 평문 비밀번호(loginPw) 필드를 영구히 제거합니다.\n\n반드시 먼저 드라이런으로 대상을 확인하셨나요?\n계속 진행할까요?')){
+  if(!dryRun && !confirm('⚠️ hq_franchises 의 평문 비밀번호(loginPw) 필드를 영구히 제거합니다.\n\n반드시 먼저 드라이런으로 대상을 확인하셨나요?\n계속 진행할까요?')){
     return;
   }
   const logEl = document.getElementById('pwclean-log');
@@ -2331,16 +2293,10 @@ async function cleanupPlaintextLoginPw(dryRun){
   pwCleanLog(dryRun ? '🔍 드라이런 모드 (실제 변경 없음)' : '▶ 실제 실행 모드 — 평문 비밀번호 필드 제거', 'header');
 
   try{
-    const [hqData, supData] = await Promise.all([
-      Auth.DB.get('hq_franchises'),
-      Auth.DB.get('hq_suppliers'),
-    ]);
-    pwCleanLog(`검사 대상: 가맹점 ${Object.keys(hqData||{}).length}개, 납품업체 ${Object.keys(supData||{}).length}개`, 'info');
+    const hqData = await Auth.DB.get('hq_franchises');
+    pwCleanLog(`검사 대상: 가맹점 ${Object.keys(hqData||{}).length}개`, 'info');
 
-    const hits = [
-      ...Object.entries(hqData||{}).filter(([,f])=>'loginPw' in f).map(([rid,f])=>({path:'hq_franchises/'+rid, label:f.name||rid})),
-      ...Object.entries(supData||{}).filter(([,s])=>'loginPw' in s).map(([rid,s])=>({path:'hq_suppliers/'+rid, label:s.name||rid})),
-    ];
+    const hits = Object.entries(hqData||{}).filter(([,f])=>'loginPw' in f).map(([rid,f])=>({path:'hq_franchises/'+rid, label:f.name||rid}));
 
     if(!hits.length){
       pwCleanLog('평문 비밀번호 필드가 없습니다. 이미 깨끗합니다.', 'success');

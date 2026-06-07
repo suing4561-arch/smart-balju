@@ -431,14 +431,12 @@ function showToast(msg){const el=document.getElementById('toast');el.textContent
 function closeModal(id){document.getElementById(id).classList.remove('show');}
 
 // ── 업체 선택 ────────────────────────────────────────────
-// partners(거래처) + 납품업체 로그인 계정(users) 통합 목록 — openBizSelect/init에서 공통 사용
+// partners(납품처) 목록 — openBizSelect/init에서 공통 사용
 async function _loadBizList(){
-  const [partners,users]=await Promise.all([Auth.loadPartners(),Auth.loadUsers()]);
-  const supplierUsers=users.filter(u=>u.role==='supplier'&&u.status==='active');
-  const list=[];
-  partners.filter(p=>p.status==='active').forEach(p=>list.push({id:p.id,name:p.name,sub:p.businessNumber||p.phone||'',data:p}));
-  supplierUsers.forEach(u=>{if(!list.find(b=>b.name===(u.businessName||u.name)))list.push({id:u.uid,name:u.businessName||u.name||u.loginId,sub:u.phone||u.loginId,data:u});});
-  return list;
+  const partners = await Auth.loadPartners();
+  return partners
+    .filter(p=>p.status==='active')
+    .map(p=>({id:p.id, name:p.name, sub:p.businessNumber||p.phone||'', data:p}));
 }
 
 async function openBizSelect(){
@@ -459,16 +457,11 @@ async function openBizSelect(){
 }
 function selectBiz(b){_currentBiz=b;document.getElementById('supNameText').textContent=b.name;document.getElementById('supDate').textContent=b.sub||'';closeModal('bizSelectModal');showToast(b.name+' 선택됨');}
 
-// partners(거래처)+납품업체 로그인 계정(users) 통합 목록에서 "내 업체"만 추려낸다.
-// 두 테이블이 id로 연결돼 있지 않아 매칭 우선순위로 식별: uid 일치 → 사업자번호 일치 → 상호명 일치
-// (franchise 쪽 storeId 직접조회와 달리, 이 화면의 목록은 partners 기반이라 동일한 단서 체계가 없음)
+// users.supplierId === partners.id 로 정확히 매칭
 function _filterToMyBiz(list){
-  const myUid  = _mySession?.uid || '';
-  const myBiz  = _mySession?.businessNumber || '';
-  const myName = (_mySession?.businessName || _mySession?.name || '').trim();
-  const mine = list.find(b=>b.data?.uid===myUid)
-            || (myBiz  && list.find(b=>b.data?.businessNumber===myBiz))
-            || (myName && list.find(b=>b.name===myName));
+  const mySupplierId = _mySession?.supplierId || '';
+  if(!mySupplierId) return [];
+  const mine = list.find(b=>b.id===mySupplierId);
   return mine ? [mine] : [];
 }
 
@@ -709,7 +702,7 @@ async function renderDeliveries(){
   ].sort((a,b)=>(b.createdAt||'').localeCompare(a.createdAt||''));
 
   // ── 납품업체별 필터링 ──
-  const myPartnerId = _currentBiz?.data?.partnerId || _currentBiz?.id || '';
+  const myPartnerId = _currentBiz?.id || '';
 
   let viewItems = allItems;
   if(myPartnerId){
