@@ -963,7 +963,7 @@ async function loadOkposDashboard(){
     const orderList = Object.values(orders).sort((a,b)=>(b.createdAt||'').localeCompare(a.createdAt||'')).slice(0,5);
     document.getElementById('orderList').innerHTML = orderList.length
       ? orderList.map(o=>{
-          const _ia=o.itemDetails||[]; const nm=_ia.length>0?_ia.slice(0,2).map(it=>it.name+' '+it.qty+(it.unit||'')).join(' · ')+(_ia.length>2?' 외 '+(_ia.length-2)+'건':''):(o.items||'').slice(0,15)||'품목';
+          const _ia=o.itemDetails||[]; const nm=_ia.length>0?(_ia.length===1?_ia[0].name+' '+_ia[0].qty+(_ia[0].unit||''):_ia[0].name+' 외 '+(_ia.length-1)+'건'):(o.items||'').slice(0,15)||'품목';
           const initials = o.id?.slice(-4)||'발주';
           return `<div class="oi">
             <div class="oa" style="background:var(--blue-bg);color:var(--blue)">${initials}</div>

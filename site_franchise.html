@@ -169,6 +169,13 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);display:flex
 .dlv-title{font-size:14px;font-weight:700}.dlv-sub{font-size:12px;color:var(--muted);margin-top:2px}
 .sc{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;flex-shrink:0}
 .sc-s{background:var(--blue-bg);color:var(--blue)}.sc-d{background:var(--green-bg);color:var(--green)}.sc-p{background:var(--surface2);color:var(--muted)}
+/* 발주카드 품목 펼침 */
+.dlv-card details>summary{list-style:none;cursor:pointer;padding:8px 14px;font-size:11px;font-weight:700;color:var(--blue);border-top:.5px solid var(--line);display:flex;align-items:center;justify-content:space-between}
+.dlv-card details>summary::-webkit-details-marker{display:none}
+.itoggle-arrow{font-size:12px;transition:transform .2s}
+.dlv-card details[open]>summary .itoggle-arrow{transform:rotate(180deg)}
+.item-row{display:flex;justify-content:space-between;font-size:12px;padding:5px 0;border-bottom:.5px solid var(--line)}
+.item-row:last-child{border-bottom:none}
 /* 토스트 */
 .toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%) translateY(12px);background:var(--text);color:#fff;font-size:13px;font-weight:700;padding:10px 20px;border-radius:999px;opacity:0;transition:all .25s;pointer-events:none;white-space:nowrap;z-index:200}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
@@ -694,7 +701,7 @@ async function loadOsiList(){
   if(!deliveries.length){ el.innerHTML='<div class="empty-state">진행중인 수발주 없음</div>'; return; }
   const recent = deliveries.slice(-3).reverse();
   const ST={assigned:{icon:'ti-clock',bg:'var(--surface2)',color:'var(--muted)',chip:'sc-p',label:'준비중'},shipping:{icon:'ti-truck-delivery',bg:'var(--blue-bg)',color:'var(--blue)',chip:'sc-s',label:'배송중'},done:{icon:'ti-circle-check',bg:'var(--green-bg)',color:'var(--green)',chip:'sc-d',label:'완료'},issue:{icon:'ti-alert-triangle',bg:'var(--red-bg)',color:'var(--red)',chip:'sc-p',label:'이슈'}};
-  el.innerHTML=recent.map(d=>{ const s=ST[d.status]||ST.assigned; const _ia=d.itemDetails||[]; const _is=_ia.length>0?_ia.slice(0,2).map(it=>it.name+' '+it.qty+(it.unit||'')).join(' · ')+(_ia.length>2?' 외 '+(_ia.length-2)+'건':''):(d.items||'').slice(0,20)||'품목 없음'; return `<div class="osi"><div class="osi-icon" style="background:${s.bg}"><i class="ti ${s.icon}" style="color:${s.color}"></i></div><div style="flex:1"><div class="osi-title">${_is}</div><div class="osi-sub">${d.storeName||''} · ${fmtKSTDate(d.createdAt)}</div><span class="osi-chip ${s.chip}">${s.label}</span></div><div style="font-family:var(--mono);font-size:13px;font-weight:700">${(d.amount||0).toLocaleString()}원</div></div>`; }).join('');
+  el.innerHTML=recent.map(d=>{ const s=ST[d.status]||ST.assigned; const _ia=d.itemDetails||[]; const _is=_ia.length>0?(_ia.length===1?_ia[0].name+' '+_ia[0].qty+(_ia[0].unit||''):_ia[0].name+' 외 '+(_ia.length-1)+'건'):(d.items||'').slice(0,20)||'품목 없음'; return `<div class="osi"><div class="osi-icon" style="background:${s.bg}"><i class="ti ${s.icon}" style="color:${s.color}"></i></div><div style="flex:1"><div class="osi-title">${_is}</div><div class="osi-sub">${d.storeName||''} · ${fmtKSTDate(d.createdAt)}</div><span class="osi-chip ${s.chip}">${s.label}</span></div><div style="font-family:var(--mono);font-size:13px;font-weight:700">${(d.amount||0).toLocaleString()}원</div></div>`; }).join('');
 }
 
 // ── 카테고리 탭 ────────────────────────────────────────────
@@ -894,17 +901,20 @@ async function loadDeliveryPage(){
     html += `<div style="font-size:11px;font-weight:700;color:var(--dim);letter-spacing:.4px;text-transform:uppercase;padding:4px 0 10px">발주 현황</div>`;
     html += myOrders.map(o=>{
       const st = ORD_ST[o.status] || ORD_ST.waiting;
-      const _ia=o.itemDetails||[]; const _is=_ia.length>0?_ia.slice(0,2).map(it=>it.name+' '+it.qty+(it.unit||'')).join(' · ')+(_ia.length>2?' 외 '+(_ia.length-2)+'건':''):(o.items||'').slice(0,30)||'품목 없음';
+      const _ia=o.itemDetails||[];
+      const _title=_ia.length>0?(_ia.length===1?_ia[0].name+' '+_ia[0].qty+(_ia[0].unit||''):_ia[0].name+' 외 '+(_ia.length-1)+'건'):(o.items||'').slice(0,20)||'품목 없음';
+      const _expand=_ia.length>1?`<details><summary>전체 ${_ia.length}품목<i class="ti ti-chevron-down itoggle-arrow"></i></summary><div style="padding:4px 14px 8px">${_ia.map(it=>`<div class="item-row"><span>${it.name}</span><span style="color:var(--muted);font-family:var(--mono)">${it.qty}${it.unit||''}${it.price?' · '+Number((it.price||0)*(it.qty||1)).toLocaleString()+'원':''}</span></div>`).join('')}</div></details>`:'';
       return `<div class="dlv-card">
         <div class="dlv-hdr">
           <div class="dlv-icon" style="background:${st.bg}"><i class="ti ${st.icon}" style="color:${st.c}"></i></div>
           <div style="flex:1">
-            <div class="dlv-title">${_is}</div>
+            <div class="dlv-title">${_title}</div>
             <div class="dlv-sub" style="font-family:var(--mono)">${Number(o.amount||0).toLocaleString()}원</div>
             <div class="dlv-sub">${fmtKSTDateTime(o.createdAt)}</div>
           </div>
           <span class="sc" style="background:${st.bg};color:${st.c}">${st.l}</span>
         </div>
+        ${_expand}
         ${o.status==='rejected'?`<div style="padding:10px 14px;font-size:12px;color:var(--red);border-top:.5px solid var(--line)">반려됨 - 본사에 문의하세요</div>`:''}
       </div>`;
     }).join('');
@@ -921,18 +931,21 @@ async function loadDeliveryPage(){
     };
     html += myDeliveries.map(d=>{
       const s=DLV_ST[d.status]||DLV_ST.assigned;
-      const _ia=d.itemDetails||[]; const _is=_ia.length>0?_ia.slice(0,2).map(it=>it.name+' '+it.qty+(it.unit||'')).join(' · ')+(_ia.length>2?' 외 '+(_ia.length-2)+'건':''):(d.items||'').slice(0,30)||'품목 없음';
+      const _ia=d.itemDetails||[];
+      const _title=_ia.length>0?(_ia.length===1?_ia[0].name+' '+_ia[0].qty+(_ia[0].unit||''):_ia[0].name+' 외 '+(_ia.length-1)+'건'):(d.items||'').slice(0,20)||'품목 없음';
+      const _expand=_ia.length>1?`<details><summary>전체 ${_ia.length}품목<i class="ti ti-chevron-down itoggle-arrow"></i></summary><div style="padding:4px 14px 8px">${_ia.map(it=>`<div class="item-row"><span>${it.name}</span><span style="color:var(--muted);font-family:var(--mono)">${it.qty}${it.unit||''}${it.price?' · '+Number((it.price||0)*(it.qty||1)).toLocaleString()+'원':''}</span></div>`).join('')}</div></details>`:'';
       return `<div class="dlv-card">
         <div class="dlv-hdr">
           <div class="dlv-icon" style="background:${s.bg}"><i class="ti ti-truck-delivery" style="color:${s.c}"></i></div>
           <div style="flex:1">
-            <div class="dlv-title">${_is}</div>
+            <div class="dlv-title">${_title}</div>
             <div class="dlv-sub">${d.driverName||'기사 미배정'} ${d.driverPhone?'· '+d.driverPhone:''}</div>
             <div class="dlv-sub" style="font-family:var(--mono)">${Number(d.amount||0).toLocaleString()}원</div>
             <div class="dlv-sub">${fmtKSTDate(d.createdAt)}</div>
           </div>
           <span class="sc ${s.cls}" style="background:${s.bg};color:${s.c}">${s.l}</span>
         </div>
+        ${_expand}
         ${d.status==='done'?`<div style="padding:10px 14px;font-size:12px;color:var(--green);border-top:.5px solid var(--line)">✓ ${fmtKSTTime(d.doneAt)} 배송 완료</div>`:''}
       </div>`;
     }).join('');

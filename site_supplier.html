@@ -775,7 +775,7 @@ async function renderDeliveries(){
     // 품목 요약
     const itemArr=item.itemDetails||[];
     const itemSummary=itemArr.length>0
-      ?itemArr.slice(0,2).map(it=>it.name+' '+it.qty+(it.unit||'')).join(' · ')+(itemArr.length>2?' 외 '+(itemArr.length-2)+'건':'')
+      ?(itemArr.length===1?itemArr[0].name+' '+itemArr[0].qty+(itemArr[0].unit||''):itemArr[0].name+' 외 '+(itemArr.length-1)+'건')
       :(item.items||'').slice(0,20)||(isOrder?'발주':'배송');
 
     // 기사 정보
@@ -819,7 +819,7 @@ function renderDetail(item){
     ${bizNum?`<div class="detail-row"><span class="detail-lbl">사업자번호</span><span class="detail-val" style="font-family:var(--mono);font-size:12px">${bizNum}</span></div>`:''}
     <div class="detail-row"><span class="detail-lbl">주소</span><span class="detail-val" style="text-align:right;font-size:11px">${address}</span></div>
     <div class="detail-row"><span class="detail-lbl">일시</span><span class="detail-val">${fmtKSTDateTime(item.createdAt)}</span></div>
-    <div class="detail-row"><span class="detail-lbl">품목</span><span class="detail-val" style="text-align:right;max-width:220px">${item.items||'-'}</span></div>
+    <div class="detail-row" style="align-items:flex-start"><span class="detail-lbl" style="margin-top:2px">품목</span><div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px">${(item.itemDetails||[]).length>0?(item.itemDetails||[]).map(it=>`<span style="font-size:12px;font-weight:700">${it.name}<span style="font-weight:400;color:var(--muted)"> ${it.qty}${it.unit||''}${it.price?' · '+Number((it.price||0)*(it.qty||1)).toLocaleString()+'원':''}</span></span>`).join(''):`<span style="font-size:12px;font-weight:700;text-align:right">${item.items||'-'}</span>`}</div></div>
     ${!isOrder&&item.driverName?`<div class="detail-row"><span class="detail-lbl">배송기사</span><span class="detail-val">${item.driverName} ${item.driverPhone||''}</span></div>`:''}
     ${!isOrder&&!item.driverId?`<div>
       <div style="display:flex;gap:6px;margin-top:2px">
@@ -1147,7 +1147,7 @@ async function loadDriverDeliveries(){
     const dayNames=['일','월','화','수','목','금','토'];
     const dateStr=dd?`${String(dd.getUTCMonth()+1).padStart(2,'0')}/${String(dd.getUTCDate()).padStart(2,'0')}(${dayNames[dd.getUTCDay()]})`:'';
     const itemArr=d.itemDetails||[];
-    const itemSummary=itemArr.length>0?itemArr.slice(0,2).map(it=>it.name+' '+it.qty+(it.unit||'')).join(' · ')+(itemArr.length>2?' 외 '+(itemArr.length-2)+'건':''):(d.items||'').slice(0,20)||'배송';
+    const itemSummary=itemArr.length>0?(itemArr.length===1?itemArr[0].name+' '+itemArr[0].qty+(itemArr[0].unit||''):itemArr[0].name+' 외 '+(itemArr.length-1)+'건'):(d.items||'').slice(0,20)||'배송';
     return `<div style="display:flex;flex-direction:column;gap:4px;margin-bottom:6px">
       <div class="dlv-row" onclick="toggleDriverDetail('${d.id}')">
         <div class="dlv-dot" style="background:${stColor}"></div>
