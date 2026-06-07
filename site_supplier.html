@@ -464,6 +464,19 @@ function _filterToMyBiz(list){
   const mine = list.find(b=>b.id===mySupplierId);
   return mine ? [mine] : [];
 }
+// 납품처 로그인 시 supplierId 기준으로 내 파트너ID 반환
+function _getMyPartnerId(){
+  return _mySession?.role==='supplier'
+    ? (_mySession?.supplierId || _currentBiz?.id || '')
+    : (_currentBiz?.id || '');
+}
+// supplier_drivers 목록을 내 소속(supplierId)으로 필터
+function _filterMyDrivers(list){
+  if(_mySession?.role!=='supplier') return list;
+  const myId=_mySession?.supplierId||'';
+  if(!myId) return list;
+  return list.filter(d=>d.supplierId===myId);
+}
 
 // 자기 업체가 하나로 확정된 경우 — 선택할 다른 업체가 없으므로 업체선택 화살표/드롭다운을 숨김
 function _lockBizSelectUI(){
@@ -477,7 +490,9 @@ function _lockBizSelectUI(){
 
 // ── 품목 선택 ─────────────────────────────────────────────
 async function loadHqData(){
-  [_hqMenus]=await Promise.all([Auth.loadMenus()]);
+  const allMenus=await Auth.loadMenus();
+  const myId=_getMyPartnerId();
+  _hqMenus=(myId&&_mySession?.role==='supplier')?allMenus.filter(m=>m.partnerId===myId):allMenus;
   const sel=document.getElementById('menuSelect');
   if(sel)sel.innerHTML='<option value="">품목 선택</option>'+_hqMenus.map(m=>`<option value="${m.id}" data-price="${m.price||0}" data-unit="${m.unit||''}" data-name="${m.name}">${m.code?'['+m.code+'] ':''}${m.name}${m.price?' — '+Number(m.price).toLocaleString()+'원':''}</option>`).join('');
 }
@@ -537,7 +552,7 @@ async function getPreassignedDriver(rawId, storeName, bizNumber){
 
   if(!entry || !entry.driverId){ console.log('  [매칭 실패] rawId:', rawId, 'storeName:', storeName, 'biz:', bizNumber); return null; }
 
-  if(!_drivers || !_drivers.length){ _drivers = await Auth.loadSupplierDrivers(); }
+  if(!_drivers || !_drivers.length){ const all=await Auth.loadSupplierDrivers(); _drivers=_filterMyDrivers(all); }
   const drv = (_drivers||[]).find(d => d.id === entry.driverId);
   console.log('[전속배정] 매칭:', entry.franchiseName, '→', entry.driverName);
   return {
@@ -549,17 +564,17 @@ async function getPreassignedDriver(rawId, storeName, bizNumber){
 
 // ── 배송 배정 ─────────────────────────────────────────────
 async function refreshAssignSelects(){
-  const [drivers,stores]=await Promise.all([Auth.loadSupplierDrivers(),Auth.loadSupplierFranchises()]);
-  _drivers=drivers;_stores=stores;
+  const [allDrivers,stores]=await Promise.all([Auth.loadSupplierDrivers(),Auth.loadSupplierFranchises()]);
+  _drivers=_filterMyDrivers(allDrivers);_stores=stores;
   document.getElementById('newStore').innerHTML='<option value="">배송지 선택</option>'+stores.map(s=>`<option value="${s.id}">${s.businessName}</option>`).join('');
-  document.getElementById('newDriver').innerHTML='<option value="">기사 선택 (나중에 배정 가능)</option>'+drivers.map(d=>`<option value="${d.id}">${d.name} (${d.phone})</option>`).join('');
+  document.getElementById('newDriver').innerHTML='<option value="">기사 선택 (나중에 배정 가능)</option>'+_drivers.map(d=>`<option value="${d.id}">${d.name} (${d.phone})</option>`).join('');
   await loadHqData();
 }
 
 async function ensureStorePool(){
   if(!_drivers.length || !_stores.length){
-    const [drivers, stores] = await Promise.all([Auth.loadSupplierDrivers(), Auth.loadSupplierFranchises()]);
-    _drivers = drivers;
+    const [allDrivers, stores] = await Promise.all([Auth.loadSupplierDrivers(), Auth.loadSupplierFranchises()]);
+    _drivers = _filterMyDrivers(allDrivers);
     _stores = stores;
   }
   const hqFrData = await Auth.DB.get('hq_franchises').catch(()=>({}));
@@ -701,8 +716,8 @@ async function renderDeliveries(){
     ...dlvList.map(d=>enrichStoreInfo({...d,_type:'delivery'}))
   ].sort((a,b)=>(b.createdAt||'').localeCompare(a.createdAt||''));
 
-  // ── 납품업체별 필터링 ──
-  const myPartnerId = _currentBiz?.id || '';
+  // ── 납품업체별 필터링 (supplierId 기준) ──
+  const myPartnerId = _getMyPartnerId();
 
   let viewItems = allItems;
   if(myPartnerId){
@@ -1192,12 +1207,13 @@ function copyDriverLink(){
 // ── 배송기사 등록 ─────────────────────────────────────────
 async function addDriver(){
   if(!drvName.value.trim()||!drvPhone.value.trim()){showToast('성함과 연락처를 입력하세요');return;}
-  await Auth.registerSupplierDriver({name:drvName.value.trim(),phone:drvPhone.value.trim(),car:drvCar.value.trim()});
+  await Auth.registerSupplierDriver({name:drvName.value.trim(),phone:drvPhone.value.trim(),car:drvCar.value.trim(),supplierId:_mySession?.supplierId||''});
   drvName.value=drvPhone.value=drvCar.value='';
   await loadDrivers();await refreshAssignSelects();showToast('배송기사 등록 완료');
 }
 async function loadDrivers(){
-  _drivers=await Auth.loadSupplierDrivers();
+  const all=await Auth.loadSupplierDrivers();
+  _drivers=_filterMyDrivers(all);
   const el=document.getElementById('driverList');
   el.innerHTML=_drivers.length?_drivers.map(d=>`<div class="list-item">
     <div class="li-icon" style="background:var(--blue-bg);color:var(--blue)"><i class="ti ti-user"></i></div>
@@ -1232,7 +1248,14 @@ async function delStore(id){if(!confirm('삭제할까요?'))return;await Auth.de
 
 // ── 정산관리 ──────────────────────────────────────────────
 async function loadSettle(){
-  const deliveries=await Auth.loadDeliveries();
+  const allDeliveries=await Auth.loadDeliveries();
+  const myId=_getMyPartnerId();
+  const deliveries=myId
+    ? allDeliveries.filter(d=>{
+        const ids=d.supplierIds?.length?d.supplierIds:(d.itemDetails||[]).map(it=>it.partnerId).filter(Boolean);
+        return ids.includes(myId);
+      })
+    : allDeliveries;
   const done=deliveries.filter(d=>d.status==='done');
   const now=new Date();const thisMonth=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
   const monthDone=done.filter(d=>(d.createdAt||'').startsWith(thisMonth));
@@ -1267,8 +1290,8 @@ async function loadPreAssign(){
   // 기사 select 채우기
   const sel=document.getElementById('preassignDriverSel');
   if(!_drivers.length){
-    const drivers=await Auth.loadSupplierDrivers();
-    _drivers=drivers;
+    const all=await Auth.loadSupplierDrivers();
+    _drivers=_filterMyDrivers(all);
   }
   const prevVal=sel.value;
   sel.innerHTML='<option value="">기사를 선택하세요</option>'+_drivers.map(d=>`<option value="${d.id}">${d.name} (${d.phone})</option>`).join('');
@@ -1387,23 +1410,21 @@ async function init(){
   _initDone = true;
   clearTimeout(_initTimer);
 
-  await Promise.all([loadDrivers(),loadStores(),loadHqData()]);
-  await loadDeliveries();
-  // 세션 복원 — 납품업체 로그인은 자기 업체로 고정(다른 업체 노출 금지)
+  // 납품업체 로그인은 자기 업체를 먼저 확정해야 이후 필터 기준이 정해짐
   const session=Auth.getSession();
   if(session&&session.role==='supplier'){
     document.getElementById('supNameText').textContent=session.businessName||session.name||'납품업체';
-    if(!_currentBiz){
-      const mine = _filterToMyBiz(await _loadBizList())[0];
-      if(mine){
-        _currentBiz = mine;
-        document.getElementById('supNameText').textContent = mine.name;
-        document.getElementById('supDate').textContent = mine.sub || '';
-        // 자기 업체가 하나로 확정된 경우 — 선택할 게 없으므로 업체선택 UI 숨김
-        _lockBizSelectUI();
-      }
+    const mine=_filterToMyBiz(await _loadBizList())[0];
+    if(mine){
+      _currentBiz=mine;
+      document.getElementById('supNameText').textContent=mine.name;
+      document.getElementById('supDate').textContent=mine.sub||'';
+      _lockBizSelectUI();
     }
   }
+
+  await Promise.all([loadDrivers(),loadStores(),loadHqData()]);
+  await loadDeliveries();
   subscribeAutoConvert();
 }
 document.addEventListener('firebaseReady',init);
