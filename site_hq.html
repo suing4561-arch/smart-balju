@@ -167,53 +167,34 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 
     <!-- 탭 바 -->
     <div class="reg-tabs">
-      <button class="reg-tab active" onclick="switchRegTab('code')">코드·거래처·브랜드</button>
+      <button class="reg-tab active" onclick="switchRegTab('code')">코드·납품처</button>
       <button class="reg-tab" onclick="switchRegTab('menu')">품목·가격 등록</button>
       <button class="reg-tab" onclick="switchRegTab('recipe')">메뉴별 소요량 등록</button>
     </div>
 
-    <!-- ┌ 탭1: 코드·거래처·브랜드 ┐ -->
+    <!-- ┌ 탭1: 코드·납품처 ┐ -->
     <div class="reg-panel active" id="regp-code">
       <div class="rg">
 
-        <!-- 거래처 등록 -->
+        <!-- 납품처 등록 -->
         <div class="rc">
           <div class="rch"><div class="rci" style="background:var(--blue-bg)"><i class="ti ti-building-factory" style="color:var(--blue)"></i></div>
-            <div><div class="rct">거래처 등록</div><div style="font-size:11px;color:var(--muted);margin-top:2px">코드 2자리 숫자</div></div>
+            <div><div class="rct">납품처 등록</div><div style="font-size:11px;color:var(--muted);margin-top:2px">코드 2자리 숫자</div></div>
           </div>
           <div class="rcb">
-            <div class="fl"><div class="flb">거래처 코드 * (2자리)</div>
+            <div class="fl"><div class="flb">납품처 코드 * (2자리)</div>
               <input class="fi code" id="pCode" placeholder="01" maxlength="2" oninput="this.value=this.value.replace(/\D/g,'');updateCodePreview()">
             </div>
-            <div class="fl"><div class="flb">거래처명 *</div><input class="fi" id="pName" placeholder="(주)한국식품"></div>
+            <div class="fl"><div class="flb">납품처명 *</div><input class="fi" id="pName" placeholder="(주)한국식품"></div>
             <div class="fl"><div class="flb">사업자번호</div><input class="fi" id="pBiz" placeholder="000-00-00000"></div>
             <div class="two-col">
               <div class="fl"><div class="flb">연락처</div><input class="fi" id="pPhone" placeholder="010-0000-0000"></div>
               <div class="fl"><div class="flb">담당자명</div><input class="fi" id="pContact" placeholder="김철수"></div>
             </div>
-            <button class="rb blue" onclick="addPartner()"><i class="ti ti-plus"></i>거래처 등록</button>
+            <button class="rb blue" onclick="addPartner()"><i class="ti ti-plus"></i>납품처 등록</button>
           </div>
-          <div style="padding:0 16px 14px"><div style="font-size:11px;font-weight:700;color:var(--dim);margin-bottom:6px">등록된 거래처</div>
+          <div style="padding:0 16px 14px"><div style="font-size:11px;font-weight:700;color:var(--dim);margin-bottom:6px">등록된 납품처</div>
             <div style="overflow:auto;max-height:200px"><table class="lt"><thead><tr><th>코드</th><th>상호명</th><th>연락처</th><th></th></tr></thead><tbody id="partnerList"></tbody></table></div>
-          </div>
-        </div>
-
-        <!-- 브랜드 등록 -->
-        <div class="rc">
-          <div class="rch"><div class="rci" style="background:var(--purple-bg)"><i class="ti ti-award" style="color:var(--purple)"></i></div>
-            <div><div class="rct">브랜드 등록</div><div style="font-size:11px;color:var(--muted);margin-top:2px">코드 2자리 숫자</div></div>
-          </div>
-          <div class="rcb">
-            <div class="fl"><div class="flb">브랜드 코드 * (2자리)</div>
-              <input class="fi code" id="bCode" placeholder="01" maxlength="2" oninput="this.value=this.value.replace(/\D/g,'');updateCodePreview()">
-            </div>
-            <div class="fl"><div class="flb">브랜드명 *</div><input class="fi" id="bName" placeholder="부막"></div>
-            <div class="fl"><div class="flb">대표자</div><input class="fi" id="bOwner" placeholder="대표자명"></div>
-            <div class="fl"><div class="flb">카테고리</div><input class="fi" id="bCategory" placeholder="치킨, 카페, 분식 등"></div>
-            <button class="rb purple" onclick="addBrand()"><i class="ti ti-plus"></i>브랜드 등록</button>
-          </div>
-          <div style="padding:0 16px 14px"><div style="font-size:11px;font-weight:700;color:var(--dim);margin-bottom:6px">등록된 브랜드</div>
-            <div style="overflow:auto;max-height:200px"><table class="lt"><thead><tr><th>코드</th><th>브랜드명</th><th>카테고리</th><th></th></tr></thead><tbody id="brandList"></tbody></table></div>
           </div>
         </div>
 
@@ -225,7 +206,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
       <div class="rg" style="grid-template-columns:1fr">
         <div class="rc">
           <div class="rch"><div class="rci" style="background:var(--green-bg)"><i class="ti ti-tools-kitchen-2" style="color:var(--green)"></i></div>
-            <div><div class="rct">품목 + 판매가격 통합 등록</div><div style="font-size:11px;color:var(--muted);margin-top:2px">코드 6자리 = 거래처2 + 브랜드2 + 일련번호2</div></div>
+            <div><div class="rct">품목 + 판매가격 통합 등록</div><div style="font-size:11px;color:var(--muted);margin-top:2px">납품처코드 + 일련번호</div></div>
           </div>
           <div class="rcb">
 
@@ -233,18 +214,18 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
             <div class="code-preview">
               <div>
                 <div class="code-big" id="codePreview">__  __  __</div>
-                <div class="code-seg">거래처코드 &nbsp;|&nbsp; 브랜드코드 &nbsp;|&nbsp; 일련번호</div>
+                <div class="code-seg">납품처코드 &nbsp;|&nbsp; 일련번호</div>
               </div>
               <div style="margin-left:auto;font-size:12px;color:var(--muted);text-align:right">
                 6자리 자동 생성<br><span id="codePreviewFull" style="font-family:var(--mono);font-weight:700;color:var(--blue-mid)">-</span>
               </div>
             </div>
 
-            <div class="three-col">
-              <div class="fl"><div class="flb">거래처 *</div>
+            <div class="two-col">
+              <div class="fl"><div class="flb">납품처 *</div>
                 <select class="fs" id="mPartner" onchange="updateCodePreview()"><option value="">선택</option></select>
               </div>
-              <div class="fl"><div class="flb">브랜드</div>
+              <div class="fl" style="display:none"><div class="flb">브랜드</div>
                 <select class="fs" id="mBrand" onchange="updateCodePreview()" disabled style="opacity:.6"><option value="">선택</option></select>
               </div>
               <div class="fl"><div class="flb">일련번호 (자동생성)</div>
@@ -293,7 +274,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
             </div>
             <div style="overflow:auto;max-height:300px">
               <table class="lt">
-                <thead><tr><th>코드</th><th>품목명</th><th>카테고리</th><th>거래처</th><th>단가</th><th>입고가</th><th>단위</th><th></th></tr></thead>
+                <thead><tr><th>코드</th><th>품목명</th><th>카테고리</th><th>납품처</th><th>단가</th><th>입고가</th><th>단위</th><th></th></tr></thead>
                 <tbody id="menuList"></tbody>
               </table>
             </div>
@@ -588,14 +569,14 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
   <!-- ── 정산 관리 ── -->
   <div class="hqp" id="hqp-settle"><div class="content">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-      <div><div style="font-size:18px;font-weight:700">정산 관리</div><div style="font-size:13px;color:var(--muted);margin-top:2px">가맹점 미수금 및 거래처 미지급 관리</div></div>
+      <div><div style="font-size:18px;font-weight:700">정산 관리</div><div style="font-size:13px;color:var(--muted);margin-top:2px">가맹점 미수금 및 납품처 미지급 관리</div></div>
       <button onclick="_currentSettleTab==='franchise'?loadSettle():loadSupplierSettle()" style="padding:8px 14px;border-radius:9px;border:.5px solid var(--line);background:var(--surface2);font-size:12px;font-weight:700;cursor:pointer"><i class="ti ti-refresh" style="font-size:13px"></i> 새로고침</button>
     </div>
 
     <!-- 서브탭 -->
     <div class="reg-tabs" style="margin-bottom:0">
       <button class="reg-tab active" id="stab-franchise" onclick="switchSettleTab('franchise')">가맹점 미수</button>
-      <button class="reg-tab" id="stab-supplier" onclick="switchSettleTab('supplier')">거래처 미지급</button>
+      <button class="reg-tab" id="stab-supplier" onclick="switchSettleTab('supplier')">납품처 미지급</button>
     </div>
 
     <!-- 서브패널1: 가맹점 미수 (기존) -->
@@ -845,7 +826,7 @@ function showToast(m){ const el=document.getElementById('toast'); el.textContent
 
 // ── 코드 프리뷰 ──────────────────────────────────────────
 function updateCodePreview() {
-  // 탭1: 거래처/브랜드 미리보기 (입력 중)
+  // 탭1: 납품처 미리보기 (입력 중)
   const pc = (document.getElementById('pCode')?.value||'__').padStart(2,'_');
   const bc = (document.getElementById('bCode')?.value||'__').padStart(2,'_');
   // 탭2: 품목코드 프리뷰
@@ -859,7 +840,7 @@ function updateCodePreview() {
   const full = (pCode!=='__'&&bCode!=='__') ? pCode+bCode+seq : '';
   const prev = document.getElementById('codePreview');
   const prevFull = document.getElementById('codePreviewFull');
-  if(prev) { prev.textContent = pCode+'  '+bCode+'  '+seq; }
+  if(prev) { prev.textContent = pCode+'  '+seq; }
   if(prevFull) { prevFull.textContent = full || '-'; }
 }
 
@@ -1038,49 +1019,32 @@ function renderEmptyChart(){
 }
 
 // ── 기준정보 로드 ─────────────────────────────────────────
-async function loadReg(){ await Promise.all([rPartner(), rBrand()]); }
+async function loadReg(){ await rPartner(); }
 
-// ── 거래처 ───────────────────────────────────────────────
+// ── 납품처 ───────────────────────────────────────────────
 async function addPartner(){
   const code = pCode.value.trim().padStart(2,'0');
-  if(!code||code==='00'||!pName.value.trim()){ showToast('코드(2자리)와 거래처명을 입력하세요'); return; }
+  if(!code||code==='00'||!pName.value.trim()){ showToast('코드(2자리)와 납품처명을 입력하세요'); return; }
   // 중복 코드 체크
   const list = await Auth.loadPartners();
   if(list.find(p=>p.code===code)){ showToast('코드 '+code+' 는 이미 사용 중입니다'); return; }
   await Auth.registerPartner({code,name:pName.value,businessNumber:pBiz.value,phone:pPhone.value,contactPerson:pContact.value,status:'active'});
   pCode.value=pName.value=pBiz.value=pPhone.value=pContact.value='';
-  await rPartner(); await refreshMenuSelects(); showToast('거래처 등록 완료 (코드: '+code+')');
+  await rPartner(); await refreshMenuSelects(); showToast('납품처 등록 완료 (코드: '+code+')');
 }
 async function rPartner(){
   const list=await Auth.loadPartners();
   document.getElementById('partnerList').innerHTML=list.length
     ?list.map(p=>`<tr><td><span class="code-chip">${p.code||'-'}</span></td><td><strong>${p.name}</strong></td><td>${p.phone||'-'}</td><td><button class="delbtn" onclick="delP('${p.id}')">삭제</button></td></tr>`).join('')
-    :`<tr><td colspan="4" class="empty">등록된 거래처 없음</td></tr>`;
+    :`<tr><td colspan="4" class="empty">등록된 납품처 없음</td></tr>`;
 }
 async function delP(id){ if(!confirm('삭제할까요?')) return; await Auth.deletePartner(id); await rPartner(); await refreshMenuSelects(); showToast('삭제'); }
 
-// ── 브랜드 ───────────────────────────────────────────────
-async function addBrand(){
-  const code = bCode.value.trim().padStart(2,'0');
-  if(!code||code==='00'||!bName.value.trim()){ showToast('코드(2자리)와 브랜드명을 입력하세요'); return; }
-  const list = await Auth.loadBrands();
-  if(list.find(b=>b.code===code)){ showToast('코드 '+code+' 는 이미 사용 중입니다'); return; }
-  await Auth.registerBrand({code,name:bName.value,owner:bOwner.value,category:bCategory.value});
-  bCode.value=bName.value=bOwner.value=bCategory.value='';
-  await rBrand(); await refreshMenuSelects(); showToast('브랜드 등록 완료 (코드: '+code+')');
-}
-async function rBrand(){
-  const list=await Auth.loadBrands();
-  document.getElementById('brandList').innerHTML=list.length
-    ?list.map(b=>`<tr><td><span class="code-chip">${b.code||'-'}</span></td><td><strong>${b.name}</strong></td><td>${b.category||'-'}</td><td><button class="delbtn" onclick="delB('${b.id}')">삭제</button></td></tr>`).join('')
-    :`<tr><td colspan="4" class="empty">등록된 브랜드 없음</td></tr>`;
-}
-async function delB(id){ if(!confirm('삭제할까요?')) return; await Auth.DB.remove('brands/'+id); await rBrand(); showToast('삭제'); }
 
 // ── 셀렉트 갱신 ──────────────────────────────────────────
 async function refreshMenuSelects(){
   const [partners, brands] = await Promise.all([Auth.loadPartners(), Auth.loadBrands()]);
-  document.getElementById('mPartner').innerHTML='<option value="">거래처 선택</option>'+partners.map(p=>`<option value="${p.id}" data-code="${p.code||'00'}">[${p.code||'??'}] ${p.name}</option>`).join('');
+  document.getElementById('mPartner').innerHTML='<option value="">납품처 선택</option>'+partners.map(p=>`<option value="${p.id}" data-code="${p.code||'00'}">[${p.code||'??'}] ${p.name}</option>`).join('');
   document.getElementById('mBrand').innerHTML='<option value="">브랜드 선택</option>'+brands.map(b=>`<option value="${b.id}" data-code="${b.code||'00'}">[${b.code||'??'}] ${b.name}</option>`).join('');
   // 세션 브랜드 자동선택 고정
   if(_myBrandId){
@@ -1121,7 +1085,7 @@ async function saveMenu(){
   const bSel = document.getElementById('mBrand');
   const pOpt = pSel.options[pSel.selectedIndex];
   const bOpt = bSel.options[bSel.selectedIndex];
-  if(!pSel.value||!bSel.value){ showToast('거래처와 브랜드를 선택하세요'); return; }
+  if(!pSel.value||!bSel.value){ showToast('납품처를 선택하세요'); return; }
   if(!mName.value.trim()){ showToast('품목명을 입력하세요'); return; }
   if(!mPrice.value){ showToast('공급단가를 입력하세요'); return; }
 
@@ -1180,7 +1144,7 @@ async function editMenu(id){
   document.getElementById('mBaseStock').value=m.baseStock||0;
   document.getElementById('mCostPrice').value=m.costPrice||0;
   if(m.code){ mSeq.value=m.code.slice(4)||'01'; }
-  // 거래처/브랜드 선택
+  // 납품처 선택
   if(m.partnerId){ mPartner.value=m.partnerId; }
   if(m.brandId){ mBrand.value=m.brandId; }
   updateCodePreview();
@@ -1722,7 +1686,7 @@ async function delOkposConfig(brandId){
   showToast('삭제 완료');
 }
 async function seedIbaguData(){
-  if(!confirm('이바구밀면 예시 데이터를 Firebase에 등록합니다.\n(브랜드·거래처·품목·가맹점·납품업체·소요량)')) return;
+  if(!confirm('이바구밀면 예시 데이터를 Firebase에 등록합니다.\n(브랜드·납품처·품목·가맹점·납품업체·소요량)')) return;
   showToast('등록 중...');
 
   // 1. 브랜드
@@ -1737,14 +1701,14 @@ async function seedIbaguData(){
     }
   }
 
-  // 2. 거래처
+  // 2. 납품처
   const partners=await Auth.loadPartners();
   let p1Id=partners.find(p=>p.name==='(주)밀면식품')?.id;
   let p2Id=partners.find(p=>p.name==='부산소스공방')?.id;
   if(!p1Id){ const p=await Auth.registerPartner({code:'01',name:'(주)밀면식품',phone:'051-123-4567',contactPerson:'박민준',status:'active'}); p1Id=p.id; }
   if(!p2Id){ const p=await Auth.registerPartner({code:'02',name:'부산소스공방',phone:'051-234-5678',contactPerson:'김소연',status:'active'}); p2Id=p.id; }
 
-  // 3. 품목 + 가격 (코드: 거래처2+브랜드2+일련번호2)
+  // 3. 품목 + 가격
   const menuItems=[
     {code:'010101',name:'물밀면',         category:'밀면',  price:10000,unit:'그릇',spec:'면180g+육수',  partnerId:p1Id,partnerName:'(주)밀면식품'},
     {code:'010102',name:'물밀면(곱빼기)',  category:'밀면',  price:11000,unit:'그릇',spec:'면270g+육수',  partnerId:p1Id,partnerName:'(주)밀면식품'},
@@ -2037,7 +2001,7 @@ function switchSettleTab(tab){
   else loadSupplierSettle();
 }
 
-// ── 거래처 미지급 집계 ─────────────────────────────────────
+// ── 납품처 미지급 집계 ─────────────────────────────────────
 async function calcSupplierPayables(fromDate, toDate){
   const [partData, menuData, dlvData] = await Promise.all([
     Auth.DB.get('partners'),
@@ -2094,10 +2058,10 @@ async function loadSupplierSettle(){
   document.getElementById('sset-supplier-cnt').textContent = rows.length+'개사';
   document.getElementById('sset-this-month').textContent = fmtAmt(monthTotal);
 
-  if(!rows.length){ el.innerHTML='<div style="text-align:center;padding:40px;color:var(--dim)">등록된 거래처 없음</div>'; return; }
+  if(!rows.length){ el.innerHTML='<div style="text-align:center;padding:40px;color:var(--dim)">등록된 납품처 없음</div>'; return; }
 
   el.innerHTML=`<table class="lt"><thead><tr>
-    <th>거래처</th>
+    <th>납품처</th>
     <th style="text-align:right">누적납품액</th>
     <th style="text-align:right">지급완료</th>
     <th style="text-align:right">미지급액</th>
@@ -2127,7 +2091,7 @@ async function loadSupplierSettle(){
   }).join('')+'</tbody></table>';
 }
 
-// ── 거래처 지급 확인 ───────────────────────────────────────
+// ── 납품처 지급 확인 ───────────────────────────────────────
 async function confirmSupplierPayment(id){
   const data = await Auth.DB.get('partners')||{};
   const s = Object.values(data).find(x=>x.id===id); if(!s) return;
@@ -2156,12 +2120,12 @@ async function exportSupplierSettleXlsx(){
   const to   = document.getElementById('sset-to').value;
   const rows = await calcSupplierPayables(from||undefined, to||undefined);
   const sheetData = [
-    ['거래처명','사업자번호','코드','납품건수','누적매입액(입고가)','지급완료','미지급액'],
+    ['납품처명','사업자번호','코드','납품건수','누적매입액(입고가)','지급완료','미지급액'],
     ...rows.map(r=>[ r.name, r.businessNumber, r.code, r.deliveryCount, r.totalSupplied, r.paidAmt, r.payable ])
   ];
   const ws = XLSX.utils.aoa_to_sheet(sheetData);
   const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, '거래처정산');
+  XLSX.utils.book_append_sheet(wb, ws, '납품처정산');
   const fname = `납품업체정산_${from||'전체'}_${to||'전체'}.xlsx`;
   XLSX.writeFile(wb, fname);
   showToast(`${fname} 저장 완료`);
