@@ -561,6 +561,10 @@ async function loadHqProducts(filterBrandId = ''){
   } catch(e) {
     document.getElementById('productList').innerHTML='<div class="empty-state">품목을 불러오지 못했습니다.<br>'+e.message+'</div>';
     console.error(e);
+  } finally {
+    // 어떤 경로로 종료되든 loading-state 스피너가 남지 않도록
+    const ls = document.getElementById('productList')?.querySelector('.loading-state');
+    if(ls) ls.style.display = 'none';
   }
 }
 
@@ -698,12 +702,19 @@ function renderStockItems(items){
 
 // ── 수발주 현황 ────────────────────────────────────────────
 async function loadOsiList(){
-  const deliveries = await Auth.loadDeliveries();
   const el = document.getElementById('osiList');
+  try {
+  const deliveries = await Auth.loadDeliveries();
   if(!deliveries.length){ el.innerHTML='<div class="empty-state">진행중인 수발주 없음</div>'; return; }
   const recent = deliveries.slice(-3).reverse();
   const ST={assigned:{icon:'ti-clock',bg:'var(--surface2)',color:'var(--muted)',chip:'sc-p',label:'준비중'},shipping:{icon:'ti-truck-delivery',bg:'var(--blue-bg)',color:'var(--blue)',chip:'sc-s',label:'배송중'},done:{icon:'ti-circle-check',bg:'var(--green-bg)',color:'var(--green)',chip:'sc-d',label:'완료'},issue:{icon:'ti-alert-triangle',bg:'var(--red-bg)',color:'var(--red)',chip:'sc-p',label:'이슈'}};
   el.innerHTML=recent.map(d=>{ const s=ST[d.status]||ST.assigned; const _ia=d.itemDetails||[]; const _is=_ia.length>0?(_ia.length===1?_ia[0].name+' '+_ia[0].qty+(_ia[0].unit||''):_ia[0].name+' 외 '+(_ia.length-1)+'건'):(d.items||'').slice(0,20)||'품목 없음'; return `<div class="osi"><div class="osi-icon" style="background:${s.bg}"><i class="ti ${s.icon}" style="color:${s.color}"></i></div><div style="flex:1"><div class="osi-title">${_is}</div><div class="osi-sub">${d.storeName||''} · ${fmtKSTDate(d.createdAt)}</div><span class="osi-chip ${s.chip}">${s.label}</span></div><div style="font-family:var(--mono);font-size:13px;font-weight:700">${(d.amount||0).toLocaleString()}원</div></div>`; }).join('');
+  } catch(e) {
+    console.warn('loadOsiList:', e);
+  } finally {
+    const ls = el?.querySelector('.loading-state');
+    if(ls) ls.style.display = 'none';
+  }
 }
 
 // ── 카테고리 탭 ────────────────────────────────────────────
@@ -719,7 +730,7 @@ function renderProducts(){
   const list=PRODUCTS.filter(p=>(currentCat==='all'||p.cat===currentCat)&&(!searchQuery||p.name.toLowerCase().includes(searchQuery)||p.code.toLowerCase().includes(searchQuery)));
   const label=(currentCat==='all'?'전체 품목':(CATEGORIES.find(c=>c.id===currentCat)?.label||'')+'품목')+` (${list.length})`;
   document.getElementById('sectionLabel').textContent=label;
-  if(!PRODUCTS.length){ document.getElementById('productList').innerHTML='<div class="loading-state"><div class="spinner"></div>품목 불러오는 중...</div>'; return; }
+  if(!PRODUCTS.length){ document.getElementById('productList').innerHTML='<div class="empty-state">등록된 품목이 없습니다.</div>'; return; }
   document.getElementById('productList').innerHTML=list.length
     ?list.map(p=>{
         const qty=cart[p.id]||0;
