@@ -500,12 +500,13 @@ async function getPreassignedDriver(rawId, storeName, bizNumber){
 
   const normalize = s => (s||'').replace(/\s+/g,'').toLowerCase();
 
-  // 1) rawId가 곧 driver_store_map 키(fr_xxx)인 경우
-  let entry = rawId ? map[rawId] : null;
+  const mySupId = _getMyPartnerId();
+
+  // 1) rawId가 곧 franchiseId → franchiseId_supplierId 키로 직접 조회
+  let entry = rawId ? map[rawId+'_'+mySupId] : null;
   if(entry) console.log('  [매칭 단계1:키]', rawId);
 
-  // 2) rawId가 hq_franchises.id가 아닐 수 있으므로
-  //    hq_franchises에서 사업자번호/이름으로 진짜 fr_xxx를 역추적
+  // 2) hq_franchises에서 사업자번호/이름으로 fr_xxx 역추적 후 복합키 조회
   if(!entry){
     const hq = await Auth.DB.get('hq_franchises') || {};
     const hqList = Object.values(hq);
@@ -513,13 +514,13 @@ async function getPreassignedDriver(rawId, storeName, bizNumber){
     if(rawId)            fr = hqList.find(f => f.id === rawId);
     if(!fr && bizNumber) fr = hqList.find(f => f.businessNumber && f.businessNumber === bizNumber);
     if(!fr && storeName) fr = hqList.find(f => f.name === storeName || normalize(f.name) === normalize(storeName));
-    if(fr && map[fr.id]){ entry = map[fr.id]; console.log('  [매칭 단계2:hq역추적]', fr?.id); }
+    if(fr && map[fr.id+'_'+mySupId]){ entry = map[fr.id+'_'+mySupId]; console.log('  [매칭 단계2:hq역추적]', fr?.id); }
   }
 
-  // 3) 그래도 못 찾으면 map 안의 franchiseName으로 직접 매칭(정규화 포함)
+  // 3) 내 납품처 항목 중 franchiseName으로 직접 매칭(정규화 포함)
   if(!entry && storeName){
     entry = Object.values(map).find(m =>
-      m && m.franchiseName &&
+      m && m.supplierId===mySupId && m.franchiseName &&
       (m.franchiseName === storeName || normalize(m.franchiseName) === normalize(storeName))
     );
     if(entry) console.log('  [매칭 단계3:이름]', storeName);
@@ -1274,13 +1275,14 @@ async function loadPreAssign(){
   const myBrandId=_currentBiz?.brandId||'';
   const allFranchises=Object.entries(hqFrData||{}).map(([id,v])=>({id,...v}))
     .filter(f=>f.status==='active'&&(!myBrandId||f.brandId===myBrandId));
-  const mapEntries=Object.entries(mapData||{});
-  const assignedIds=new Set(mapEntries.map(([fid])=>fid));
+  const mySupId=_getMyPartnerId();
+  const myMapEntries=Object.entries(mapData||{}).filter(([,v])=>v.supplierId===mySupId);
+  const myAssignedFrIds=new Set(myMapEntries.map(([,v])=>v.franchiseId||''));
 
-  // (A) 아직 배정 안 된 가맹점 (이 기사 + 다른 기사 모두)
-  const available=allFranchises.filter(f=>!assignedIds.has(f.id));
-  // (B) 이 기사에 배정된 가맹점
-  const myStores=mapEntries.filter(([,v])=>v.driverId===driverId).map(([fid,v])=>({id:fid,...v}));
+  // (A) 내 납품처가 아직 배정 안 한 가맹점 (다른 납품처 배정은 배정 가능으로 표시)
+  const available=allFranchises.filter(f=>!myAssignedFrIds.has(f.id));
+  // (B) 이 기사에 내 납품처가 배정한 가맹점
+  const myStores=myMapEntries.filter(([,v])=>v.driverId===driverId).map(([,v])=>({id:v.franchiseId,...v}));
 
   const driver=_drivers.find(d=>d.id===driverId);
 
@@ -1346,8 +1348,9 @@ async function assignStore(franchiseId, franchiseName){
   const driverId=document.getElementById('preassignDriverSel').value;
   if(!driverId){showToast('기사를 먼저 선택하세요');return;}
   const driver=_drivers.find(d=>d.id===driverId);
-  await Auth.DB.set('driver_store_map/'+franchiseId,{
-    driverId, driverName:driver?.name||'', franchiseName, assignedAt:new Date().toISOString()
+  const mySupId=_getMyPartnerId();
+  await Auth.DB.set('driver_store_map/'+franchiseId+'_'+mySupId,{
+    driverId, driverName:driver?.name||'', franchiseName, franchiseId, supplierId:mySupId, assignedAt:new Date().toISOString()
   });
   showToast(franchiseName+' → '+driver?.name+' 배정 완료');
   await loadPreAssign();
@@ -1355,7 +1358,8 @@ async function assignStore(franchiseId, franchiseName){
 
 async function unassignStore(franchiseId){
   if(!confirm('배정을 해제하시겠습니까?'))return;
-  await Auth.DB.remove('driver_store_map/'+franchiseId);
+  const mySupId=_getMyPartnerId();
+  await Auth.DB.remove('driver_store_map/'+franchiseId+'_'+mySupId);
   showToast('배정 해제 완료');
   await loadPreAssign();
 }
