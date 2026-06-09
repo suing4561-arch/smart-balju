@@ -377,6 +377,7 @@ Auth.requireLogin(['supplier']);
 const _mySession = Auth.getSession();
 const _mySupplierName = _mySession?.businessName || _mySession?.name || '';
 let _drivers=[], _stores=[], _storePool=[], _deliveries=[], _hqMenus=[], _selectedItems=[];
+let _paAvailable=[];
 let _dlvFilter='all', _currentBiz=null, _selectedIds=new Set();
 let _openDetailId='';
 
@@ -1295,7 +1296,11 @@ async function loadPreAssign(){
 
   const driver=_drivers.find(d=>d.id===driverId);
 
+  _paAvailable=available;
   content.innerHTML=`
+    <div style="display:flex;justify-content:flex-end;margin-bottom:8px">
+      <button class="act-sm" onclick="document.getElementById('preassignDriverSel').value='';loadPreAssign()"><i class="ti ti-arrow-left" style="font-size:13px"></i>기사 변경</button>
+    </div>
     <div class="section-label" style="margin-bottom:6px">이 기사의 담당 가맹점 (${myStores.length}곳)</div>
     <div style="display:flex;flex-direction:column;gap:7px" id="pa-assigned">
       ${myStores.length?myStores.map(s=>`<div class="list-item">
@@ -1308,14 +1313,45 @@ async function loadPreAssign(){
     </div>
     <div class="section-label" style="margin-top:14px;margin-bottom:6px">배정 가능한 가맹점 (${available.length}곳)</div>
     <div style="display:flex;flex-direction:column;gap:7px" id="pa-available">
-      ${available.length?available.map(f=>`<div class="list-item">
+      ${available.length?available.map(f=>`<div class="list-item pa-fr-row" id="pa-fr-${f.id}" onclick="selectFranchise('${f.id}')" style="cursor:pointer">
         <div class="li-icon" style="background:var(--surface2);color:var(--dim)"><i class="ti ti-building-store"></i></div>
         <div class="li-info"><div class="li-name">${f.businessName||f.name||f.id}</div><div class="li-sub">${f.address||f.phone||''}</div></div>
-        <div class="li-actions">
-          <button class="act-btn blue" onclick="assignStore('${f.id}','${(f.businessName||f.name||f.id).replace(/'/g,'&#39;')}')">배정</button>
-        </div>
+        <div style="flex-shrink:0;color:var(--muted)"><i class="ti ti-chevron-right" style="font-size:15px"></i></div>
       </div>`).join(''):'<div class="empty-state" style="padding:14px">배정 가능한 가맹점 없음</div>'}
     </div>`;
+}
+
+function selectFranchise(franchiseId){
+  const f=_paAvailable.find(x=>x.id===franchiseId);
+  if(!f) return;
+  document.querySelectorAll('.pa-confirm-panel').forEach(el=>el.remove());
+  document.querySelectorAll('.pa-fr-row').forEach(el=>{el.style.borderColor='';el.style.background='';});
+  const row=document.getElementById('pa-fr-'+franchiseId);
+  if(!row) return;
+  row.style.borderColor='var(--blue-mid)';
+  row.style.background='var(--blue-bg)';
+  const name=f.businessName||f.name||f.id;
+  const nameEsc=name.replace(/'/g,'&#39;');
+  const addr=f.address||'';
+  const phone=f.phone||'';
+  const panel=document.createElement('div');
+  panel.className='pa-confirm-panel';
+  panel.style.cssText='background:var(--surface);border:.5px solid var(--blue-mid);border-radius:12px;padding:14px;margin-top:4px;display:flex;flex-direction:column;gap:8px';
+  panel.innerHTML=`
+    <div style="font-size:13px;font-weight:700;color:var(--text)">${name}</div>
+    ${addr?`<div style="font-size:12px;color:var(--muted)"><i class="ti ti-map-pin" style="margin-right:4px"></i>${addr}</div>`:''}
+    ${phone?`<div style="font-size:12px;color:var(--muted)"><i class="ti ti-phone" style="margin-right:4px"></i>${phone}</div>`:''}
+    <div style="display:flex;gap:6px;margin-top:2px">
+      <button class="act-sm blue" style="flex:1;justify-content:center" onclick="assignStore('${franchiseId}','${nameEsc}')"><i class="ti ti-user-check" style="font-size:14px"></i>배정하기</button>
+      <button class="act-sm" style="flex:1;justify-content:center" onclick="cancelSelectFranchise('${franchiseId}')"><i class="ti ti-arrow-left" style="font-size:14px"></i>이전</button>
+    </div>`;
+  row.insertAdjacentElement('afterend',panel);
+}
+
+function cancelSelectFranchise(franchiseId){
+  document.querySelectorAll('.pa-confirm-panel').forEach(el=>el.remove());
+  const row=document.getElementById('pa-fr-'+franchiseId);
+  if(row){row.style.borderColor='';row.style.background='';}
 }
 
 async function assignStore(franchiseId, franchiseName){
