@@ -1285,7 +1285,9 @@ async function loadPreAssign(){
     Auth.DB.get('hq_franchises').catch(()=>({})),
     Auth.DB.get('driver_store_map').catch(()=>({}))
   ]);
-  const allFranchises=Object.entries(hqFrData||{}).map(([id,v])=>({id,...v}));
+  const myBrandId=_currentBiz?.brandId||'';
+  const allFranchises=Object.entries(hqFrData||{}).map(([id,v])=>({id,...v}))
+    .filter(f=>f.status==='active'&&(!myBrandId||f.brandId===myBrandId));
   const mapEntries=Object.entries(mapData||{});
   const assignedIds=new Set(mapEntries.map(([fid])=>fid));
 
