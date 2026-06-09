@@ -264,20 +264,15 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
   <div class="page" id="page-register">
     <div class="scroll-body">
       <!-- 배송기사 등록 -->
-      <div class="collapsible" id="drvCollapse">
-        <div class="collapsible-header" onclick="toggleCollapse('drvCollapse')">
-          <span><i class="ti ti-user-plus" style="font-size:13px;margin-right:6px"></i>배송기사 등록</span>
-          <i class="ti ti-chevron-down" id="drvCollapseArrow" style="font-size:16px;color:var(--muted)"></i>
-        </div>
-        <div class="collapsible-body" id="drvCollapseBody">
-          <div style="display:flex;flex-direction:column;gap:8px">
-            <div class="two-col">
-              <div class="form-field"><div class="form-label">기사 성함 *</div><input class="form-input" id="drvName" placeholder="홍길동"></div>
-              <div class="form-field"><div class="form-label">연락처 *</div><input class="form-input" id="drvPhone" placeholder="010-0000-0000" type="tel"></div>
-            </div>
-            <div class="form-field"><div class="form-label">차량 정보</div><input class="form-input" id="drvCar" placeholder="12가 3456 (1톤 탑차)"></div>
-            <button class="rb blue" onclick="addDriver()"><i class="ti ti-user-plus" style="font-size:14px"></i>배송기사 등록</button>
+      <div class="card">
+        <div style="font-size:13px;font-weight:700;margin-bottom:12px"><i class="ti ti-user-plus" style="font-size:13px;margin-right:6px"></i>배송기사 등록</div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <div class="two-col">
+            <div class="form-field"><div class="form-label">기사 성함 *</div><input class="form-input" id="drvName" placeholder="홍길동"></div>
+            <div class="form-field"><div class="form-label">연락처 *</div><input class="form-input" id="drvPhone" placeholder="010-0000-0000" type="tel"></div>
           </div>
+          <div class="form-field"><div class="form-label">차량 정보</div><input class="form-input" id="drvCar" placeholder="12가 3456 (1톤 탑차)"></div>
+          <button class="rb blue" onclick="addDriver()"><i class="ti ti-user-plus" style="font-size:14px"></i>배송기사 등록</button>
         </div>
       </div>
       <div style="display:flex;flex-direction:column;gap:7px" id="driverList">
@@ -1189,7 +1184,10 @@ async function addDriver(){
   if(!drvName.value.trim()||!drvPhone.value.trim()){showToast('성함과 연락처를 입력하세요');return;}
   await Auth.registerSupplierDriver({name:drvName.value.trim(),phone:drvPhone.value.trim(),car:drvCar.value.trim(),supplierId:_mySession?.supplierId||''});
   drvName.value=drvPhone.value=drvCar.value='';
-  await loadDrivers();await refreshAssignSelects();showToast('배송기사 등록 완료');
+  await loadDrivers();await refreshAssignSelects();
+  const pSel=document.getElementById('preassignDriverSel');
+  if(pSel) pSel.innerHTML='<option value="">기사를 선택하세요</option>'+_drivers.map(d=>`<option value="${d.id}">${d.name} (${d.phone})</option>`).join('');
+  showToast('배송기사 등록 완료');
 }
 async function loadDrivers(){
   const all=await Auth.loadSupplierDrivers();
