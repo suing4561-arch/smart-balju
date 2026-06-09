@@ -284,25 +284,11 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
         <div class="loading-wrap"><div class="spinner"></div>불러오는 중...</div>
       </div>
 
-      <!-- 가맹점(배송지) 등록 -->
-      <div class="collapsible" id="storeCollapse" style="margin-top:4px">
-        <div class="collapsible-header" onclick="toggleCollapse('storeCollapse')">
-          <span><i class="ti ti-map-pin" style="font-size:13px;margin-right:6px"></i>배송지(가맹점) 등록</span>
-          <i class="ti ti-chevron-down" id="storeCollapseArrow" style="font-size:16px;color:var(--muted)"></i>
-        </div>
-        <div class="collapsible-body" id="storeCollapseBody">
-          <div style="display:flex;flex-direction:column;gap:8px">
-            <div class="two-col">
-              <div class="form-field"><div class="form-label">상호명 *</div><input class="form-input" id="stName" placeholder="부산 1호점"></div>
-              <div class="form-field"><div class="form-label">사업자번호</div><input class="form-input" id="stBiz" placeholder="000-00-00000"></div>
-            </div>
-            <div class="form-field"><div class="form-label">주소 *</div><input class="form-input" id="stAddr" placeholder="부산시 수영구 광안해변로 263"></div>
-            <div class="form-field"><div class="form-label">연락처</div><input class="form-input" id="stPhone" placeholder="051-000-0000" type="tel"></div>
-            <button class="rb purple" onclick="addStore()"><i class="ti ti-map-pin" style="font-size:14px"></i>배송지 등록</button>
-          </div>
-        </div>
+      <!-- 배송지(가맹점) — 본사 등록 목록 읽기전용 -->
+      <div style="margin-top:4px;padding:10px 14px;background:var(--surface);border-radius:10px;font-size:12px;color:var(--muted)">
+        <i class="ti ti-info-circle" style="margin-right:4px"></i>배송지는 본사가 등록한 가맹점 목록에서 자동으로 불러옵니다.
       </div>
-      <div style="display:flex;flex-direction:column;gap:7px" id="storeList">
+      <div style="display:flex;flex-direction:column;gap:7px;margin-top:8px" id="storeList">
         <div class="loading-wrap"><div class="spinner"></div>불러오는 중...</div>
       </div>
     </div>
@@ -564,21 +550,21 @@ async function getPreassignedDriver(rawId, storeName, bizNumber){
 
 // ── 배송 배정 ─────────────────────────────────────────────
 async function refreshAssignSelects(){
-  const [allDrivers,stores]=await Promise.all([Auth.loadSupplierDrivers(),Auth.loadSupplierFranchises()]);
-  _drivers=_filterMyDrivers(allDrivers);_stores=stores;
-  document.getElementById('newStore').innerHTML='<option value="">배송지 선택</option>'+stores.map(s=>`<option value="${s.id}">${s.businessName}</option>`).join('');
+  const [allDrivers,hqFrData]=await Promise.all([Auth.loadSupplierDrivers(),Auth.DB.get('hq_franchises').catch(()=>({}))]);
+  _drivers=_filterMyDrivers(allDrivers);
+  _stores=Object.values(hqFrData||{}).filter(f=>f.status==='active');
+  document.getElementById('newStore').innerHTML='<option value="">배송지 선택</option>'+_stores.map(s=>`<option value="${s.id}">${s.businessName||s.name}</option>`).join('');
   document.getElementById('newDriver').innerHTML='<option value="">기사 선택 (나중에 배정 가능)</option>'+_drivers.map(d=>`<option value="${d.id}">${d.name} (${d.phone})</option>`).join('');
   await loadHqData();
 }
 
 async function ensureStorePool(){
   if(!_drivers.length || !_stores.length){
-    const [allDrivers, stores] = await Promise.all([Auth.loadSupplierDrivers(), Auth.loadSupplierFranchises()]);
+    const [allDrivers, hqFrData] = await Promise.all([Auth.loadSupplierDrivers(), Auth.DB.get('hq_franchises').catch(()=>({}))]);
     _drivers = _filterMyDrivers(allDrivers);
-    _stores = stores;
+    _stores = Object.values(hqFrData||{}).filter(f=>f.status==='active');
   }
-  const hqFrData = await Auth.DB.get('hq_franchises').catch(()=>({}));
-  _storePool = [..._stores, ...Object.values(hqFrData||{})];
+  _storePool = _stores;
   return _storePool;
 }
 
@@ -614,7 +600,7 @@ async function createDelivery(){
   if(!itemsText){showToast('품목을 추가하세요');return;}
   const amount=_selectedItems.reduce((s,x)=>s+x.price*x.qty,0);
   const autoMsg=driverId&&!newDriver.value?` (전속기사 자동배정: ${driver?.name||''})` :'';
-  await Auth.createDelivery({storeId,storeName:store?.businessName||'',storeBusinessNumber:store?.businessNumber||'',storeAddress:store?.address||'',storePhone:store?.phone||'',storeOwner:store?.owner||'',brandId:store?.brandId||'',brandName:store?.brandName||'',supplierName:_mySupplierName,address:store?.address||'',driverId:driverId||'',driverName:driver?.name||'',driverPhone:driver?.phone||'',items:itemsText,itemDetails:[..._selectedItems],amount,note:newNote.value.trim()});
+  await Auth.createDelivery({storeId,storeName:store?.businessName||store?.name||'',storeBusinessNumber:store?.businessNumber||'',storeAddress:store?.address||'',storePhone:store?.phone||'',storeOwner:store?.owner||'',brandId:store?.brandId||'',brandName:store?.brandName||'',supplierName:_mySupplierName,address:store?.address||'',driverId:driverId||'',driverName:driver?.name||'',driverPhone:driver?.phone||'',items:itemsText,itemDetails:[..._selectedItems],amount,note:newNote.value.trim()});
   newStore.value='';newDriver.value='';newNote.value='';_selectedItems=[];renderItemList();
   toggleCollapse('newDeliveryCollapse');
   await loadDeliveries();showToast('배송 생성 완료 · '+amount.toLocaleString()+'원'+autoMsg);
@@ -808,7 +794,7 @@ async function renderDeliveries(){
 
 function renderDetail(item){
   const isOrder=item._type==='order';
-  const storeInfo=_stores.find(s=>s.businessName===item.storeName||s.id===item.storeId)||{};
+  const storeInfo=_stores.find(s=>s.id===item.storeId||s.businessName===item.storeName||s.name===item.storeName)||{};
   const address=item.storeAddress||item.address||storeInfo.address||'-';
   const phone=item.storePhone||item.phone||storeInfo.phone||'';
   const bizNum=item.storeBusinessNumber||storeInfo.businessNumber||'';
@@ -1226,25 +1212,16 @@ async function loadDrivers(){
 }
 async function delDriver(id){if(!confirm('삭제할까요?'))return;await Auth.deleteSupplierDriver(id);await loadDrivers();showToast('삭제');}
 
-// ── 가맹점(배송지) 등록 ───────────────────────────────────
-async function addStore(){
-  if(!stName.value.trim()||!stAddr.value.trim()){showToast('상호명과 주소를 입력하세요');return;}
-  await Auth.registerSupplierFranchise({businessName:stName.value.trim(),businessNumber:stBiz.value.trim(),address:stAddr.value.trim(),phone:stPhone.value.trim()});
-  stName.value=stBiz.value=stAddr.value=stPhone.value='';
-  await loadStores();await refreshAssignSelects();showToast('배송지 등록 완료');
-}
+// ── 배송지(가맹점) — 본사 등록 목록 읽기전용 표시 ──────────
 async function loadStores(){
-  _stores=await Auth.loadSupplierFranchises();
+  const hqFrData=await Auth.DB.get('hq_franchises').catch(()=>({}));
+  _stores=Object.values(hqFrData||{}).filter(f=>f.status==='active');
   const el=document.getElementById('storeList');
   el.innerHTML=_stores.length?_stores.map(s=>`<div class="list-item">
     <div class="li-icon" style="background:var(--purple-bg);color:var(--purple)"><i class="ti ti-building-store"></i></div>
-    <div class="li-info"><div class="li-name">${s.businessName}</div><div class="li-sub">${s.address}${s.phone?' · '+s.phone:''}</div></div>
-    <div class="li-actions">
-      <button class="act-btn red" onclick="delStore('${s.id}')"><i class="ti ti-trash" style="font-size:12px"></i></button>
-    </div>
-  </div>`).join(''):'<div class="empty-state">등록된 배송지 없음</div>';
+    <div class="li-info"><div class="li-name">${s.businessName||s.name}</div><div class="li-sub">${s.address||''}${s.phone?' · '+s.phone:''}</div></div>
+  </div>`).join(''):'<div class="empty-state">등록된 가맹점 없음</div>';
 }
-async function delStore(id){if(!confirm('삭제할까요?'))return;await Auth.deleteSupplierFranchise(id);await loadStores();showToast('삭제');}
 
 // ── 정산관리 ──────────────────────────────────────────────
 async function loadSettle(){
