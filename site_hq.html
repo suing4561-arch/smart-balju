@@ -866,12 +866,17 @@ async function loadOkposDashboard(){
     const allSales = await Auth.DB.get('okpos_sales') || {};
     const monthKey = `${year}${month}`;
 
-    // 이번달 날짜별 데이터 필터링
-    // 새 구조: okpos_sales/{date}/{brandId}/{shopCd}
-    // 구 구조: okpos_sales/{date}/{shopCd}
+    // 이번달 날짜별 데이터 필터링 — okpos_sales/{date}/{shopCd} 구조
     const monthDays = Object.entries(allSales)
       .filter(([k]) => k.startsWith(monthKey))
       .sort(([a],[b]) => a.localeCompare(b));
+
+    // 내 브랜드 가맹점의 okposShopCd 목록 (없으면 master → 전체)
+    let myShopCds = null;
+    if(_myBrandId){
+      const frData = await Auth.DB.get('hq_franchises') || {};
+      myShopCds = new Set(Object.values(frData).filter(f=>f.brandId===_myBrandId&&f.okposShopCd).map(f=>f.okposShopCd));
+    }
 
     if(!monthDays.length){
       document.getElementById('kpi-sale').textContent = '데이터 없음';
@@ -884,23 +889,15 @@ async function loadOkposDashboard(){
       return;
     }
 
-    // 전체 집계 (새 구조 + 구 구조 모두 지원)
     let totalSale=0, totalCnt=0, totalGst=0;
     const shopMap = {};
     const dayMap  = {};
 
     monthDays.forEach(([dateKey, dayData]) => {
       const dayTotal = { sale:0, cnt:0 };
-      // dayData가 브랜드별로 중첩되어 있는지 확인
-      const firstVal = Object.values(dayData)[0];
-      const isNested = firstVal && typeof firstVal === 'object' && !firstVal.shop_nm;
-
-      const shops = isNested
-        ? Object.entries(_myBrandId ? (dayData[_myBrandId] || {}) : Object.values(dayData).reduce((a,b)=>Object.assign(a,b||{}),{}))
-        : Object.entries(dayData);
-
-      shops.forEach(([shopCd, d]) => {
+      Object.entries(dayData).forEach(([shopCd, d]) => {
         if(!d || !d.shop_nm) return;
+        if(myShopCds && !myShopCds.has(shopCd)) return;
         const sale = d.tot_sale_amt || 0;
         const cnt  = d.tot_sale_cnt || 0;
         const gst  = d.gst_cnt || 0;
@@ -1888,15 +1885,20 @@ async function loadStats(){
     return;
   }
 
+  // 내 브랜드 가맹점의 okposShopCd 목록 — okpos_sales는 brandId 레이어 없이 {date/shopCd} 구조
+  let myShopCds = null;
+  if(_myBrandId){
+    const frData = await Auth.DB.get('hq_franchises') || {};
+    myShopCds = new Set(Object.values(frData).filter(f=>f.brandId===_myBrandId&&f.okposShopCd).map(f=>f.okposShopCd));
+  }
+
   let totalSale=0,totalCnt=0,totalGst=0;
   const shopMap={},dayMap={};
   monthDays.forEach(([dateKey,dayData])=>{
     const dayTotal={sale:0};
-    const firstVal=Object.values(dayData)[0];
-    const isNested=firstVal&&typeof firstVal==='object'&&!firstVal.shop_nm;
-    const shops=isNested?Object.entries(_myBrandId?(dayData[_myBrandId]||{}):Object.values(dayData).reduce((a,b)=>Object.assign(a,b||{}),{})):Object.entries(dayData);
-    shops.forEach(([shopCd,d])=>{
+    Object.entries(dayData).forEach(([shopCd,d])=>{
       if(!d||!d.shop_nm) return;
+      if(myShopCds && !myShopCds.has(shopCd)) return;
       const sale=d.tot_sale_amt||0,cnt=d.tot_sale_cnt||0,gst=d.gst_cnt||0;
       totalSale+=sale;totalCnt+=cnt;totalGst+=gst;dayTotal.sale+=sale;
       if(!shopMap[shopCd])shopMap[shopCd]={name:d.shop_nm,sale:0,cnt:0,gst:0};
