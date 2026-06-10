@@ -936,7 +936,7 @@ async function loadOkposDashboard(){
 
     // 최근 발주 현황 (Firebase franchise_orders/)
     const orders = await Auth.DB.get('franchise_orders') || {};
-    const orderList = Object.values(orders).sort((a,b)=>(b.createdAt||'').localeCompare(a.createdAt||'')).slice(0,5);
+    const orderList = Object.values(orders).filter(o=>!_myBrandId||o.brandId===_myBrandId).sort((a,b)=>(b.createdAt||'').localeCompare(a.createdAt||'')).slice(0,5);
     document.getElementById('orderList').innerHTML = orderList.length
       ? orderList.map(o=>{
           const _ia=o.itemDetails||[]; const nm=_ia.length>0?(_ia.length===1?_ia[0].name+' '+_ia[0].qty+(_ia[0].unit||''):_ia[0].name+' 외 '+(_ia.length-1)+'건'):(o.items||'').slice(0,15)||'품목';
