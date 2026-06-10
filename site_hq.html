@@ -1028,12 +1028,12 @@ async function addPartner(){
   // 중복 코드 체크
   const list = await Auth.loadPartners();
   if(list.find(p=>p.code===code)){ showToast('코드 '+code+' 는 이미 사용 중입니다'); return; }
-  await Auth.registerPartner({code,name:pName.value,businessNumber:pBiz.value,phone:pPhone.value,contactPerson:pContact.value,status:'active'});
+  await Auth.registerPartner({code,name:pName.value,businessNumber:pBiz.value,phone:pPhone.value,contactPerson:pContact.value,brandId:_myBrandId,brandName:_myBrandName,status:'active'});
   pCode.value=pName.value=pBiz.value=pPhone.value=pContact.value='';
   await rPartner(); await refreshMenuSelects(); showToast('납품처 등록 완료 (코드: '+code+')');
 }
 async function rPartner(){
-  const list=await Auth.loadPartners();
+  const list=(await Auth.loadPartners()).filter(p=>!_myBrandId||p.brandId===_myBrandId);
   document.getElementById('partnerList').innerHTML=list.length
     ?list.map(p=>`<tr><td><span class="code-chip">${p.code||'-'}</span></td><td><strong>${p.name}</strong></td><td>${p.phone||'-'}</td><td><button class="delbtn" onclick="delP('${p.id}')">삭제</button></td></tr>`).join('')
     :`<tr><td colspan="4" class="empty">등록된 납품처 없음</td></tr>`;
@@ -1043,7 +1043,8 @@ async function delP(id){ if(!confirm('삭제할까요?')) return; await Auth.del
 
 // ── 셀렉트 갱신 ──────────────────────────────────────────
 async function refreshMenuSelects(){
-  const [partners, brands] = await Promise.all([Auth.loadPartners(), Auth.loadBrands()]);
+  const [allPartners, brands] = await Promise.all([Auth.loadPartners(), Auth.loadBrands()]);
+  const partners = _myBrandId ? allPartners.filter(p=>p.brandId===_myBrandId) : allPartners;
   document.getElementById('mPartner').innerHTML='<option value="">납품처 선택</option>'+partners.map(p=>`<option value="${p.id}" data-code="${p.code||'00'}">[${p.code||'??'}] ${p.name}</option>`).join('');
   document.getElementById('mBrand').innerHTML='<option value="">브랜드 선택</option>'+brands.map(b=>`<option value="${b.id}" data-code="${b.code||'00'}">[${b.code||'??'}] ${b.name}</option>`).join('');
   // 세션 브랜드 자동선택 고정
@@ -1335,7 +1336,7 @@ async function savePartner(){
 }
 
 async function loadPartnersFull(){
-  const list=await Auth.loadPartners();
+  const list=(await Auth.loadPartners()).filter(p=>!_myBrandId||p.brandId===_myBrandId);
   const el=document.getElementById('partnersFull');
   if(!list.length){ el.innerHTML='<div style="text-align:center;padding:40px;color:var(--dim)">등록된 납품처가 없습니다.</div>'; return; }
   el.innerHTML=`<table class="lt"><thead><tr><th>코드</th><th>상호명</th><th>사업자번호</th><th>담당자</th><th>연락처</th><th>로그인ID</th><th>관리</th></tr></thead><tbody>${list.map(p=>`<tr>
@@ -1370,12 +1371,13 @@ async function delPFull(id){ if(!confirm('삭제할까요?')) return; await Auth
 
 // ── 배송 관리 ─────────────────────────────────────────────
 async function loadDelivery(){
-  const [deliveries, ordData, frData] = await Promise.all([
+  const [allDeliveries, ordData, frData] = await Promise.all([
     Auth.loadDeliveries(),
     Auth.DB.get('franchise_orders'),
     Auth.DB.get('hq_franchises'),
   ]);
-  const orders = Object.values(ordData||{}).sort((a,b)=>(b.createdAt||'').localeCompare(a.createdAt||''));
+  const deliveries = allDeliveries.filter(d=>!_myBrandId||d.brandId===_myBrandId);
+  const orders = Object.values(ordData||{}).filter(o=>!_myBrandId||o.brandId===_myBrandId).sort((a,b)=>(b.createdAt||'').localeCompare(a.createdAt||''));
   const franchises = Object.values(frData||{});
   const el = document.getElementById('deliveryBody');
 
@@ -1786,7 +1788,7 @@ async function toggleAutoApprove(){
 
 async function autoApproveAllWaiting(){
   const data = await Auth.DB.get('franchise_orders') || {};
-  const waiting = Object.values(data).filter(o=>o.status==='waiting');
+  const waiting = Object.values(data).filter(o=>o.status==='waiting' && (!_myBrandId||o.brandId===_myBrandId));
   for(const o of waiting){
     await Auth.DB.update('franchise_orders/'+o.id, {status:'confirmed', confirmedAt:new Date().toISOString(), autoApproved:true});
   }
@@ -1806,7 +1808,7 @@ async function loadOrders(){
   // 자동승인 ON이면 대기중 발주 자동 처리
   if(_autoApprove) await autoApproveAllWaiting();
   const data = await Auth.DB.get('franchise_orders') || {};
-  const list = Object.values(data).sort((a,b)=>(b.createdAt||'').localeCompare(a.createdAt||''));
+  const list = Object.values(data).filter(o=>!_myBrandId||o.brandId===_myBrandId).sort((a,b)=>(b.createdAt||'').localeCompare(a.createdAt||''));
 
   // 요약
   const now = new Date();
@@ -2008,7 +2010,7 @@ async function calcSupplierPayables(fromDate, toDate){
     Auth.DB.get('menus'),
     Auth.DB.get('deliveries'),
   ]);
-  const partners = Object.values(partData||{}).filter(p=> p.status !== 'inactive');
+  const partners = Object.values(partData||{}).filter(p=> p.status !== 'inactive' && (!_myBrandId||p.brandId===_myBrandId));
   const menus = Object.values(menuData||{});
   const costById = {}, costByName = {};
   menus.forEach(m=>{ if(m.id) costById[m.id]=Number(m.costPrice)||0; if(m.name) costByName[m.name]=Number(m.costPrice)||0; });
