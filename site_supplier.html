@@ -453,12 +453,12 @@ function _getMyPartnerId(){
     : (_currentBiz?.id || '');
 }
 // supplier_drivers 목록을 내 소속(supplierId)으로 필터
-// 전체 fallback 금지 — 내 기사가 0명이면 빈 배열 반환
+// 전체 fallback 완전 금지 — 0명이면 빈 배열, 비 납품처 역할도 빈 배열
 function _filterMyDrivers(list){
-  if(_mySession?.role!=='supplier') return list;
+  if(_mySession?.role !== 'supplier') return [];
   const myId = _mySession?.supplierId || _currentBiz?.id || '';
   if(!myId) return [];
-  return list.filter(d=>d.supplierId===myId);
+  return list.filter(d => d.supplierId === myId);
 }
 
 // 자기 업체가 하나로 확정된 경우 — 선택할 다른 업체가 없으므로 업체선택 화살표/드롭다운을 숨김
