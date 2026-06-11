@@ -712,7 +712,12 @@ function renderStockItems(items){
 async function loadOsiList(){
   const el = document.getElementById('osiList');
   try {
-  const deliveries = await Auth.loadDeliveries();
+  const session = Auth.getSession();
+  const myBrandId = _currentStore?.brandId || session?.brandId || '';
+  const myStoreId = _currentStore?.id || session?.storeId || '';
+  let deliveries = await Auth.loadDeliveries();
+  if(myBrandId) deliveries = deliveries.filter(d => !d.brandId || d.brandId === myBrandId);
+  if(myStoreId) deliveries = deliveries.filter(d => !d.storeId || d.storeId === myStoreId);
   if(!deliveries.length){ el.innerHTML='<div class="empty-state">진행중인 수발주 없음</div>'; return; }
   const recent = deliveries.slice(-3).reverse();
   const ST={assigned:{icon:'ti-clock',bg:'var(--surface2)',color:'var(--muted)',chip:'sc-p',label:'준비중'},shipping:{icon:'ti-truck-delivery',bg:'var(--blue-bg)',color:'var(--blue)',chip:'sc-s',label:'배송중'},done:{icon:'ti-circle-check',bg:'var(--green-bg)',color:'var(--green)',chip:'sc-d',label:'완료'},issue:{icon:'ti-alert-triangle',bg:'var(--red-bg)',color:'var(--red)',chip:'sc-p',label:'이슈'}};
@@ -897,18 +902,27 @@ function closeSuccess(){ document.getElementById('successOverlay').classList.rem
 // ── 배송 현황 ──────────────────────────────────────────────
 async function loadDeliveryPage(){
   const el=document.getElementById('deliveryPage');
+  const session = Auth.getSession();
+  const myBrandId = _currentStore?.brandId || session?.brandId || '';
+  const myStoreId = _currentStore?.id || session?.storeId || '';
 
   // 내 가맹점 발주 내역 로드
   const ordData = await Auth.DB.get('franchise_orders') || {};
   const myOrders = Object.values(ordData)
-    .filter(o => !_currentStore || o.storeName === _currentStore.name || o.storeId === _currentStore.id)
+    .filter(o => {
+      if(myBrandId && o.brandId && o.brandId !== myBrandId) return false;
+      if(myStoreId) return o.storeId === myStoreId || o.storeName === (_currentStore?.name || '');
+      return true;
+    })
     .sort((a,b)=>(b.createdAt||'').localeCompare(a.createdAt||''));
 
   // 배송 내역도 로드
   const deliveries = await Auth.loadDeliveries();
-  const myDeliveries = deliveries.filter(d =>
-    !_currentStore || d.storeName === _currentStore.name || d.storeId === _currentStore.id
-  );
+  const myDeliveries = deliveries.filter(d => {
+    if(myBrandId && d.brandId && d.brandId !== myBrandId) return false;
+    if(myStoreId) return d.storeId === myStoreId || d.storeName === (_currentStore?.name || '');
+    return true;
+  });
 
   if(!myOrders.length && !myDeliveries.length){
     el.innerHTML='<div class="empty-state" style="padding:40px;text-align:center;color:var(--dim)">배송 내역이 없습니다</div>';
