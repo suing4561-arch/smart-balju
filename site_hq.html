@@ -717,6 +717,35 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
       </div>
     </div>
 
+    <!-- 납품처 brandId 소급 채우기 (1회용) -->
+    <div style="background:linear-gradient(135deg,#fef3e2 0%,#fff7ed 100%);border:1px solid rgba(184,92,0,.25);border-radius:14px;padding:18px 22px;margin:22px 0 16px">
+      <div style="font-size:18px;font-weight:700;color:var(--amber);margin-bottom:6px">🏭 납품처 brandId 소급 채우기 (1회용)</div>
+      <div style="font-size:13px;color:var(--muted);line-height:1.6">
+        seedIbaguData 이전 버전에서 등록된 납품처는 <code>brandId</code>가 없습니다.<br>
+        이 도구는 brandId 없는 납품처를 이름으로 찾아 올바른 brandId를 채워 넣습니다.<br>
+        <strong style="color:var(--amber)">드라이런으로 먼저 대상을 확인한 후 실제 실행하세요.</strong>
+      </div>
+    </div>
+    <div class="card" style="margin-bottom:16px">
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <button onclick="fixPartnerBrandIds(true)" class="rb blue" style="width:auto;padding:10px 18px;margin-top:0">
+          <i class="ti ti-eye"></i>🔍 드라이런 (미리보기)
+        </button>
+        <button onclick="fixPartnerBrandIds(false)" class="rb amber" style="width:auto;padding:10px 18px;margin-top:0">
+          <i class="ti ti-database-cog"></i>▶ brandId 채우기 실행
+        </button>
+        <div style="margin-left:auto;font-size:12px;color:var(--muted)">
+          💡 드라이런으로 먼저 확인 후 실제 실행하세요
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="ch"><span class="ct">brandId 채우기 로그</span></div>
+      <div id="brandfix-log" style="font-family:var(--mono);font-size:12px;line-height:1.7;background:#0f0e0c;color:#d4d4d4;padding:14px 18px;border-radius:10px;max-height:400px;overflow-y:auto;white-space:pre-wrap">
+[🔍 드라이런 (미리보기)] 버튼을 클릭해 대상을 먼저 확인하세요.
+      </div>
+    </div>
+
   </div></div>
 
   <!-- ── 재고 소진 현황 ─────────────────────────────── -->
@@ -1710,12 +1739,16 @@ async function seedIbaguData(){
     }
   }
 
-  // 2. 납품처
+  // 2. 납품처 — 없으면 생성, 있으면 brandId 누락 시 소급 패치
   const partners=await Auth.loadPartners();
-  let p1Id=partners.find(p=>p.name==='(주)밀면식품')?.id;
-  let p2Id=partners.find(p=>p.name==='부산소스공방')?.id;
-  if(!p1Id){ const p=await Auth.registerPartner({code:'01',name:'(주)밀면식품',phone:'051-123-4567',contactPerson:'박민준',status:'active'}); p1Id=p.id; }
-  if(!p2Id){ const p=await Auth.registerPartner({code:'02',name:'부산소스공방',phone:'051-234-5678',contactPerson:'김소연',status:'active'}); p2Id=p.id; }
+  let p1=partners.find(p=>p.name==='(주)밀면식품');
+  if(!p1){ p1=await Auth.registerPartner({code:'01',name:'(주)밀면식품',phone:'051-123-4567',contactPerson:'박민준',brandId,brandName:'이바구밀면',status:'active'}); }
+  else if(!p1.brandId){ await Auth.updatePartner(p1.id,{brandId,brandName:'이바구밀면'}); }
+  const p1Id=p1.id;
+  let p2=partners.find(p=>p.name==='부산소스공방');
+  if(!p2){ p2=await Auth.registerPartner({code:'02',name:'부산소스공방',phone:'051-234-5678',contactPerson:'김소연',brandId,brandName:'이바구밀면',status:'active'}); }
+  else if(!p2.brandId){ await Auth.updatePartner(p2.id,{brandId,brandName:'이바구밀면'}); }
+  const p2Id=p2.id;
 
   // 3. 품목 + 가격
   const menuItems=[
@@ -2289,6 +2322,66 @@ async function cleanupPlaintextLoginPw(dryRun){
       : `완료: ${hits.length}건의 평문 비밀번호 필드를 제거했습니다.`, 'success');
   }catch(e){
     pwCleanLog(`오류: ${e.message}`, 'error');
+    console.error(e);
+  }
+}
+
+// ── 납품처 brandId 소급 채우기 ─────────────────────────────
+// brandId 없는 납품처를 이름 기준으로 찾아 brandId 채우기
+// 규칙 목록은 실제 데이터에 맞게 확장 가능
+const PARTNER_BRAND_RULES = [
+  {nameIncludes:'부산식품',   brandId:'mpago2cqxtml1', brandName:'이바구밀면'},
+  {nameExact:'(주)밀면식품',  brandId:'mpago2cqxtml1', brandName:'이바구밀면'},
+  {nameExact:'부산소스공방',  brandId:'mpago2cqxtml1', brandName:'이바구밀면'},
+];
+
+function bfLog(msg, type='info'){
+  const el=document.getElementById('brandfix-log');
+  if(!el) return;
+  const colors={header:'#fbbf24',success:'#4ade80',warn:'#fb923c',error:'#f87171',info:'#d4d4d4',dim:'#6b7280'};
+  el.innerHTML+=`<span style="color:${colors[type]||colors.info}">${msg}</span>\n`;
+  el.scrollTop=el.scrollHeight;
+}
+
+async function fixPartnerBrandIds(dryRun){
+  if(!dryRun && !confirm('⚠️ partners의 brandId 필드를 영구히 변경합니다.\n\n반드시 먼저 드라이런으로 대상을 확인하셨나요?\n계속 진행할까요?')){
+    return;
+  }
+  const logEl=document.getElementById('brandfix-log');
+  if(logEl) logEl.innerHTML='';
+  bfLog(dryRun ? '🔍 드라이런 모드 (실제 변경 없음)' : '▶ 실제 실행 모드 — brandId 채우기', 'header');
+
+  try{
+    const partners = await Auth.loadPartners();
+    bfLog(`전체 납품처: ${partners.length}개`, 'info');
+
+    const targets = partners.filter(p => {
+      if(p.brandId) return false;
+      return PARTNER_BRAND_RULES.some(r =>
+        (r.nameExact    && p.name === r.nameExact) ||
+        (r.nameIncludes && (p.name||'').includes(r.nameIncludes))
+      );
+    });
+
+    if(!targets.length){
+      bfLog('brandId 누락된 납품처가 없습니다. 이미 완료 상태입니다.', 'success');
+      return;
+    }
+    bfLog(`brandId 누락 납품처: ${targets.length}개`, 'warn');
+
+    for(const p of targets){
+      const rule = PARTNER_BRAND_RULES.find(r =>
+        (r.nameExact    && p.name === r.nameExact) ||
+        (r.nameIncludes && (p.name||'').includes(r.nameIncludes))
+      );
+      bfLog(`  [${p.id}] ${p.name} → brandId=${rule.brandId} (${rule.brandName})${dryRun?' 예정':''}`, 'dim');
+      if(!dryRun) await Auth.updatePartner(p.id, {brandId:rule.brandId, brandName:rule.brandName});
+    }
+    bfLog(dryRun
+      ? `드라이런 완료 — [▶ brandId 채우기 실행] 버튼으로 실제 적용하세요. (${targets.length}개 대상)`
+      : `완료: ${targets.length}개 납품처에 brandId를 채웠습니다.`, 'success');
+  }catch(e){
+    bfLog(`오류: ${e.message}`, 'error');
     console.error(e);
   }
 }

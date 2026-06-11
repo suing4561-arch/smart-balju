@@ -515,9 +515,11 @@ async function getPreassignedDriver(rawId, storeName, bizNumber){
   if(entry) console.log('  [매칭 단계1:키]', rawId);
 
   // 2) hq_franchises에서 사업자번호/이름으로 fr_xxx 역추적 후 복합키 조회
+  // brandId가 있으면 내 브랜드 가맹점만 검색 — 동명 가맹점 오매칭 방지
   if(!entry){
     const hq = await Auth.DB.get('hq_franchises') || {};
-    const hqList = Object.values(hq);
+    const myBrandId = _currentBiz?.data?.brandId || '';
+    const hqList = Object.values(hq).filter(f => !myBrandId || !f.brandId || f.brandId === myBrandId);
     let fr = null;
     if(rawId)            fr = hqList.find(f => f.id === rawId);
     if(!fr && bizNumber) fr = hqList.find(f => f.businessNumber && f.businessNumber === bizNumber);
@@ -624,12 +626,14 @@ async function autoConvertConfirmedOrders(){
   );
 
   await ensureStorePool();
+  const myBrandId = _currentBiz?.data?.brandId || '';
   let count = 0;
 
   for(const [orderId, ord] of Object.entries(orders)){
     if(!ord) continue;
     if(!['waiting','confirmed'].includes(ord.status)) continue;
     if(convertedIds.has(orderId)) continue;
+    if(myBrandId && ord.brandId && ord.brandId !== myBrandId) continue;
 
     const pre = await getPreassignedDriver(ord.storeId, ord.storeName, ord.storeBusinessNumber);
     if(!pre) continue;
