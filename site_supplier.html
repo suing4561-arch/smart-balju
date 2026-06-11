@@ -600,7 +600,7 @@ async function createDelivery(){
 
 // ── 확정 발주 자동 배송전환 ───────────────────────────────
 async function autoConvertConfirmedOrders(){
-  if(!_drivers||!_drivers.length){ _drivers = await Auth.loadSupplierDrivers(); }
+  if(!_drivers||!_drivers.length){ const all = await Auth.loadSupplierDrivers(); _drivers = _filterMyDrivers(all); }
   const map = await Auth.DB.get('driver_store_map') || {};
   if(!Object.keys(map).length) return 0;
 
