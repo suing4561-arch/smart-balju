@@ -433,10 +433,17 @@ async function openBizSelect(){
 function selectBiz(b){_currentBiz=b;document.getElementById('supNameText').textContent=b.name;document.getElementById('supDate').textContent=b.sub||'';closeModal('bizSelectModal');showToast(b.name+' 선택됨');}
 
 // users.supplierId === partners.id 로 정확히 매칭
+// supplierId 세션에 없으면 businessName으로 보조 매칭
 function _filterToMyBiz(list){
   const mySupplierId = _mySession?.supplierId || '';
-  if(!mySupplierId) return [];
-  const mine = list.find(b=>b.id===mySupplierId);
+  if(mySupplierId){
+    const mine = list.find(b=>b.id===mySupplierId);
+    return mine ? [mine] : [];
+  }
+  // supplierId 누락 시 businessName 보조 매칭
+  const myBizName = (_mySession?.businessName || '').trim();
+  if(!myBizName) return [];
+  const mine = list.find(b=>b.name===myBizName);
   return mine ? [mine] : [];
 }
 // 납품처 로그인 시 supplierId 기준으로 내 파트너ID 반환
@@ -446,10 +453,11 @@ function _getMyPartnerId(){
     : (_currentBiz?.id || '');
 }
 // supplier_drivers 목록을 내 소속(supplierId)으로 필터
+// 전체 fallback 금지 — 내 기사가 0명이면 빈 배열 반환
 function _filterMyDrivers(list){
   if(_mySession?.role!=='supplier') return list;
-  const myId=_mySession?.supplierId||'';
-  if(!myId) return list;
+  const myId = _mySession?.supplierId || _currentBiz?.id || '';
+  if(!myId) return [];
   return list.filter(d=>d.supplierId===myId);
 }
 
