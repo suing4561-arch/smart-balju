@@ -576,6 +576,7 @@ async function calcMyStockUsage(){
   const shopCd = _currentStore?.okposShopCd;
   if(!shopCd) return [];
 
+  const myBrandId = _currentStore?.brandId || Auth.getSession()?.brandId || '';
   const now = new Date();
   const monthKey = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}`;
 
@@ -599,15 +600,17 @@ async function calcMyStockUsage(){
   }
   if(!Object.keys(saleByMenu).length) return [];
 
-  // 레시피 맵: menuName → {ingredients, threshold}
+  // 레시피 맵: menuName → {ingredients, threshold} — brandId 없는 기존 레시피도 포함
   const recipeMap = {};
   for(const r of Object.values(recipesRaw || {})){
+    if(myBrandId && r.brandId && r.brandId !== myBrandId) continue;
     if(r.menuName) recipeMap[r.menuName] = { ingredients: r.ingredients || [], threshold: Number(r.threshold) || 80 };
   }
 
-  // 품목 기준재고 맵
+  // 품목 기준재고 맵 — 내 브랜드 품목만
   const baseStockMap = {};
   for(const m of Object.values(menusRaw || {})){
+    if(myBrandId && m.brandId && m.brandId !== myBrandId) continue;
     if(m.name && m.baseStock > 0) baseStockMap[m.name] = { baseStock: m.baseStock, unit: m.unit || '' };
   }
   if(!Object.keys(baseStockMap).length) return [];

@@ -542,7 +542,8 @@ async function getPreassignedDriver(rawId, storeName, bizNumber){
 async function refreshAssignSelects(){
   const [allDrivers,hqFrData]=await Promise.all([Auth.loadSupplierDrivers(),Auth.DB.get('hq_franchises').catch(()=>({}))]);
   _drivers=_filterMyDrivers(allDrivers);
-  _stores=Object.values(hqFrData||{}).filter(f=>f.status==='active');
+  const _bizBrandId=_currentBiz?.data?.brandId||'';
+  _stores=Object.values(hqFrData||{}).filter(f=>f.status==='active'&&(!_bizBrandId||f.brandId===_bizBrandId));
   document.getElementById('newStore').innerHTML='<option value="">배송지 선택</option>'+_stores.map(s=>`<option value="${s.id}">${s.businessName||s.name}</option>`).join('');
   document.getElementById('newDriver').innerHTML='<option value="">기사 선택 (나중에 배정 가능)</option>'+_drivers.map(d=>`<option value="${d.id}">${d.name} (${d.phone})</option>`).join('');
   await loadHqData();
@@ -552,7 +553,8 @@ async function ensureStorePool(){
   if(!_drivers.length || !_stores.length){
     const [allDrivers, hqFrData] = await Promise.all([Auth.loadSupplierDrivers(), Auth.DB.get('hq_franchises').catch(()=>({}))]);
     _drivers = _filterMyDrivers(allDrivers);
-    _stores = Object.values(hqFrData||{}).filter(f=>f.status==='active');
+    const _bizBrandId=_currentBiz?.data?.brandId||'';
+    _stores = Object.values(hqFrData||{}).filter(f=>f.status==='active'&&(!_bizBrandId||f.brandId===_bizBrandId));
   }
   _storePool = _stores;
   return _storePool;
@@ -1208,7 +1210,8 @@ async function delDriver(id){if(!confirm('삭제할까요?'))return;await Auth.d
 // ── 배송지(가맹점) — 본사 등록 목록 읽기전용 표시 ──────────
 async function loadStores(){
   const hqFrData=await Auth.DB.get('hq_franchises').catch(()=>({}));
-  _stores=Object.values(hqFrData||{}).filter(f=>f.status==='active');
+  const _bizBrandId=_currentBiz?.data?.brandId||'';
+  _stores=Object.values(hqFrData||{}).filter(f=>f.status==='active'&&(!_bizBrandId||f.brandId===_bizBrandId));
 }
 
 // ── 정산관리 ──────────────────────────────────────────────

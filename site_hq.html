@@ -1054,7 +1054,8 @@ async function refreshMenuSelects(){
 
 // 다음 일련번호 자동 계산
 async function autoNextSeq(){
-  const list=await Auth.loadMenus();
+  const all=await Auth.loadMenus();
+  const list=_myBrandId?all.filter(m=>m.brandId===_myBrandId):all;
   const nums=list.map(m=>parseInt(m.code?.slice(-6)||'0')||0);
   const next=Math.max(0,...nums)+1;
   document.getElementById('mSeq').value=String(next).padStart(6,'0');
@@ -1154,7 +1155,8 @@ async function delM(id){ if(!confirm('삭제할까요?')) return; await Auth.del
 let _ingredients = []; // 현재 입력 중인 재료 목록
 
 async function refreshIngSelect(){
-  const menus = await Auth.loadMenus();
+  const all = await Auth.loadMenus();
+  const menus = _myBrandId ? all.filter(m=>m.brandId===_myBrandId) : all;
   document.getElementById('ingItem').innerHTML='<option value="">품목 선택</option>'+menus.map(m=>`<option value="${m.id}" data-unit="${m.unit||''}" data-name="${m.name}">[${m.code||'?'}] ${m.name}</option>`).join('');
 }
 
@@ -1189,7 +1191,7 @@ async function saveRecipe(){
   const threshold = Number(document.getElementById('recipeThreshold').value)||90;
   const id = 'recipe_'+Date.now();
   await Auth.DB.set('recipes/'+id, {
-    id, menuName, ingredients: _ingredients, threshold, createdAt: new Date().toISOString()
+    id, menuName, ingredients: _ingredients, threshold, brandId: _myBrandId || '', createdAt: new Date().toISOString()
   });
   document.getElementById('recipeMenu').value='';
   document.getElementById('recipeThreshold').value='90';
@@ -1199,7 +1201,7 @@ async function saveRecipe(){
 
 async function loadRecipes(){
   const data = await Auth.DB.get('recipes') || {};
-  const list = Object.values(data);
+  const list = Object.values(data).filter(n => !_myBrandId || !n.brandId || n.brandId === _myBrandId);
   const el = document.getElementById('recipeList');
   if(!list.length){ el.innerHTML='<div style="text-align:center;padding:30px;color:var(--dim);font-size:13px">등록된 소요량이 없습니다</div>'; return; }
   el.innerHTML = list.map(r=>`
@@ -1222,13 +1224,21 @@ async function loadRecipes(){
 async function delRecipe(id){ if(!confirm('삭제할까요?')) return; await Auth.DB.remove('recipes/'+id); await loadRecipes(); await loadOkposMenuNames(); showToast('삭제'); }
 
 async function loadOkposMenuNames(){
-  // 1. okpos_menu_sales 전체에서 prod_nm 수집 (날짜·매장 무관, 중복 제거)
+  // 0. 내 브랜드 가맹점의 okposShopCd 목록 (master면 전체)
+  let myShopCds = null;
+  if(_myBrandId){
+    const frData = await Auth.DB.get('hq_franchises') || {};
+    myShopCds = new Set(Object.values(frData).filter(f=>f.brandId===_myBrandId&&f.okposShopCd).map(f=>f.okposShopCd));
+  }
+
+  // 1. okpos_menu_sales에서 prod_nm 수집 — 내 브랜드 shopCd만 (master는 전체)
   const raw = await Auth.DB.get('okpos_menu_sales') || {};
   const names = new Set();
   for(const dateNode of Object.values(raw)){
     if(!dateNode || typeof dateNode !== 'object') continue;
-    for(const shopOrItem of Object.values(dateNode)){
+    for(const [shopCd, shopOrItem] of Object.entries(dateNode)){
       if(!shopOrItem || typeof shopOrItem !== 'object') continue;
+      if(myShopCds && !myShopCds.has(shopCd)) continue;
       if('prod_nm' in shopOrItem){
         // 평탄 구조 (테스트 시드)
         const nm = (shopOrItem.prod_nm||'').trim();
