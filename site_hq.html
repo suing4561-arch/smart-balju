@@ -1020,9 +1020,9 @@ async function loadReg(){ await rPartner(); }
 async function addPartner(){
   const code = pCode.value.trim().padStart(2,'0');
   if(!code||code==='00'||!pName.value.trim()){ showToast('코드(2자리)와 납품처명을 입력하세요'); return; }
-  // 중복 코드 체크
+  // 중복 코드 체크 — 같은 brandId 내에서만
   const list = await Auth.loadPartners();
-  if(list.find(p=>p.code===code)){ showToast('코드 '+code+' 는 이미 사용 중입니다'); return; }
+  if(list.find(p=>p.brandId===_myBrandId && p.code===code)){ showToast('코드 '+code+' 는 이미 사용 중입니다'); return; }
   await Auth.registerPartner({code,name:pName.value,businessNumber:pBiz.value,phone:pPhone.value,contactPerson:pContact.value,brandId:_myBrandId,brandName:_myBrandName,status:'active'});
   pCode.value=pName.value=pBiz.value=pPhone.value=pContact.value='';
   await rPartner(); await refreshMenuSelects(); showToast('납품처 등록 완료 (코드: '+code+')');
