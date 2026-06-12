@@ -518,7 +518,7 @@ async function getPreassignedDriver(rawId, storeName, bizNumber){
   // brandId가 있으면 내 브랜드 가맹점만 검색 — 동명 가맹점 오매칭 방지
   if(!entry){
     const hq = await Auth.DB.get('hq_franchises') || {};
-    const myBrandId = _currentBiz?.data?.brandId || '';
+    const myBrandId = _mySession?.brandId || '';
     const hqList = Object.values(hq).filter(f => !myBrandId || !f.brandId || f.brandId === myBrandId);
     let fr = null;
     if(rawId)            fr = hqList.find(f => f.id === rawId);
@@ -552,7 +552,7 @@ async function getPreassignedDriver(rawId, storeName, bizNumber){
 async function refreshAssignSelects(){
   const [allDrivers,hqFrData]=await Promise.all([Auth.loadSupplierDrivers(),Auth.DB.get('hq_franchises').catch(()=>({}))]);
   _drivers=_filterMyDrivers(allDrivers);
-  const _bizBrandId=_currentBiz?.data?.brandId||'';
+  const _bizBrandId=_mySession?.brandId||'';
   _stores=Object.values(hqFrData||{}).filter(f=>f.status==='active'&&(!_bizBrandId||f.brandId===_bizBrandId));
   document.getElementById('newStore').innerHTML='<option value="">배송지 선택</option>'+_stores.map(s=>`<option value="${s.id}">${s.businessName||s.name}</option>`).join('');
   document.getElementById('newDriver').innerHTML='<option value="">기사 선택 (나중에 배정 가능)</option>'+_drivers.map(d=>`<option value="${d.id}">${d.name} (${d.phone})</option>`).join('');
@@ -563,7 +563,7 @@ async function ensureStorePool(){
   if(!_drivers.length || !_stores.length){
     const [allDrivers, hqFrData] = await Promise.all([Auth.loadSupplierDrivers(), Auth.DB.get('hq_franchises').catch(()=>({}))]);
     _drivers = _filterMyDrivers(allDrivers);
-    const _bizBrandId=_currentBiz?.data?.brandId||'';
+    const _bizBrandId=_mySession?.brandId||'';
     _stores = Object.values(hqFrData||{}).filter(f=>f.status==='active'&&(!_bizBrandId||f.brandId===_bizBrandId));
   }
   _storePool = _stores;
@@ -626,7 +626,7 @@ async function autoConvertConfirmedOrders(){
   );
 
   await ensureStorePool();
-  const myBrandId = _currentBiz?.data?.brandId || '';
+  const myBrandId = _mySession?.brandId || '';
   let count = 0;
 
   for(const [orderId, ord] of Object.entries(orders)){
@@ -1222,7 +1222,7 @@ async function delDriver(id){if(!confirm('삭제할까요?'))return;await Auth.d
 // ── 배송지(가맹점) — 본사 등록 목록 읽기전용 표시 ──────────
 async function loadStores(){
   const hqFrData=await Auth.DB.get('hq_franchises').catch(()=>({}));
-  const _bizBrandId=_currentBiz?.data?.brandId||'';
+  const _bizBrandId=_mySession?.brandId||'';
   _stores=Object.values(hqFrData||{}).filter(f=>f.status==='active'&&(!_bizBrandId||f.brandId===_bizBrandId));
 }
 
@@ -1287,7 +1287,7 @@ async function loadPreAssign(){
     Auth.DB.get('hq_franchises').catch(()=>({})),
     Auth.DB.get('driver_store_map').catch(()=>({}))
   ]);
-  const myBrandId=_currentBiz?.brandId||'';
+  const myBrandId=_mySession?.brandId||'';
   const allFranchises=Object.entries(hqFrData||{}).map(([id,v])=>({id,...v}))
     .filter(f=>f.status==='active'&&(!myBrandId||f.brandId===myBrandId));
   const mySupId=_getMyPartnerId();
