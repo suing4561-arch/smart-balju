@@ -142,7 +142,47 @@ def login(session: requests.Session) -> bool:
     time.sleep(1)
     chk = session.get(f"{base}/login/top_frame.jsp", timeout=15)
     print(f"[top_frame] {chk.status_code}")
-    print(f"[top_frame 응답]\n{chk.text[:3000]}")
+    # HQ 관련 부분만 추출 (HQ, hq, 본사, 전환, chg, change 키워드 주변 50자)
+    tf = chk.text
+    hq_hits = []
+    for kw in ["HQ_CD", "hq_cd", "fnHQ", "fnChg", "hq_chg", "hq_change", "HQ_NM", "본사"]:
+        idx = 0
+        while True:
+            pos = tf.find(kw, idx)
+            if pos == -1:
+                break
+            hq_hits.append(f"  ...{tf[max(0,pos-40):pos+80]}...")
+            idx = pos + 1
+    if hq_hits:
+        print(f"[top_frame HQ 관련 구절 {len(hq_hits)}건]")
+        for h in hq_hits[:20]:
+            print(h)
+    else:
+        print("[top_frame] HQ 관련 구절 없음 — top_frame.js 확인 필요")
+        print(f"[top_frame 앞부분]\n{tf[:1000]}")
+
+    # top_frame.js fetch — 본사 전환 함수(fnHQChg 등) 위치 확인
+    js_r = session.get(f"{base}/login/top_frame.js", timeout=15)
+    print(f"[top_frame.js] {js_r.status_code}, {len(js_r.content)} bytes")
+    if js_r.status_code == 200:
+        js = js_r.text
+        js_hq = []
+        for kw in ["HQ_CD", "hq_cd", "fnHQ", "hq_chg", "hq_change", "HQ_NM", "location"]:
+            idx = 0
+            while True:
+                pos = js.find(kw, idx)
+                if pos == -1:
+                    break
+                js_hq.append(f"  ...{js[max(0,pos-40):pos+120]}...")
+                idx = pos + 1
+        if js_hq:
+            print(f"[top_frame.js HQ 관련 {len(js_hq)}건]")
+            for h in js_hq[:30]:
+                print(h)
+        else:
+            print("[top_frame.js] HQ 관련 구절 없음")
+            print(f"[top_frame.js 전체]\n{js[:3000]}")
+
     if "로그아웃" in chk.text or "divTopFrameHead" in chk.text:
         print("✅ 로그인 성공!")
         return True
