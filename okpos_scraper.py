@@ -122,7 +122,7 @@ def login(session: requests.Session) -> bool:
                       data={"user_id": uid, "user_pwd": upw, **h1, **h2},
                       headers=hdr(r2.url),
                       timeout=15, allow_redirects=True)
-    print(f"[S3] {r3.status_code} url={r3.url}")
+    print(f"[S3] {r3.status_code}")
 
     if "error.jsp" in r3.text:
         print("❌ 로그인 실패 — 아이디/비밀번호 확인")
@@ -133,36 +133,10 @@ def login(session: requests.Session) -> bool:
     if a4 and a4 != a3 and "error" not in a4:
         r4 = session.post(a4, data={"user_id": uid, "user_pwd": upw, **h3},
                           headers=hdr(r3.url), timeout=15, allow_redirects=True)
-        print(f"[S4] {r4.status_code} url={r4.url}")
-
-    # ── HQ_CD 강제 주입 시도 ─────────────────────────────────
-    # login_check_action 에 HQ_CD=HFTM 추가 전송 — 세션 본사가 바뀌는지 확인
-    hftm_code = os.environ.get("OKPOS_HFTM_CD", "HFTM")
-    print(f"[HQ 주입 시도] HQ_CD={hftm_code} → {a3}")
-    rHQ = session.post(a3,
-                       data={"user_id": uid, "user_pwd": upw,
-                             "HQ_CD": hftm_code, "ss_HQ_CD": hftm_code,
-                             **h1, **h2},
-                       headers=hdr(r2.url),
-                       timeout=15, allow_redirects=True)
-    print(f"[HQ 주입 응답] {rHQ.status_code} url={rHQ.url}")
-    chkHQ = session.get(f"{base}/login/top_frame.jsp", timeout=15)
-    title_hq = re.search(r'<title>([^<]+)</title>', chkHQ.text, re.IGNORECASE)
-    print(f"[HQ 주입 후 title] {title_hq.group(1) if title_hq else '없음'}")
-    # 세션 리셋 — 이바구밀면으로 돌아가기 위해 재로그인
-    session.post(f"{base}/login/login_check.jsp",
-                 data={"user_id": uid, "user_pwd": upw,
-                       "id_chk": "", "auto_login_chk": "", **h1},
-                 headers=hdr(f"{base}/login/login_form.jsp"), timeout=15,
-                 allow_redirects=True)
-    session.post(a3, data={"user_id": uid, "user_pwd": upw, **h1, **h2},
-                 headers=hdr(r2.url), timeout=15, allow_redirects=True)
-    # ─────────────────────────────────────────────────────────
+        print(f"[S4] {r4.status_code}")
 
     time.sleep(1)
     chk = session.get(f"{base}/login/top_frame.jsp", timeout=15)
-    title_m = re.search(r'<title>([^<]+)</title>', chk.text, re.IGNORECASE)
-    print(f"[top_frame title] {title_m.group(1) if title_m else '없음'}")
     if "로그아웃" in chk.text or "divTopFrameHead" in chk.text:
         print("✅ 로그인 성공!")
         return True
