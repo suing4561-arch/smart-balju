@@ -141,47 +141,63 @@ def login(session: requests.Session) -> bool:
 
     time.sleep(1)
     chk = session.get(f"{base}/login/top_frame.jsp", timeout=15)
-    print(f"[top_frame] {chk.status_code}")
-    # HQ 관련 부분만 추출 (HQ, hq, 본사, 전환, chg, change 키워드 주변 50자)
+    print(f"[top_frame] {chk.status_code}, {len(chk.content)} bytes")
     tf = chk.text
-    hq_hits = []
-    for kw in ["HQ_CD", "hq_cd", "fnHQ", "fnChg", "hq_chg", "hq_change", "HQ_NM", "본사"]:
-        idx = 0
-        while True:
-            pos = tf.find(kw, idx)
-            if pos == -1:
-                break
-            hq_hits.append(f"  ...{tf[max(0,pos-40):pos+80]}...")
-            idx = pos + 1
-    if hq_hits:
-        print(f"[top_frame HQ 관련 구절 {len(hq_hits)}건]")
-        for h in hq_hits[:20]:
-            print(h)
-    else:
-        print("[top_frame] HQ 관련 구절 없음 — top_frame.js 확인 필요")
-        print(f"[top_frame 앞부분]\n{tf[:1000]}")
 
-    # top_frame.js fetch — 본사 전환 함수(fnHQChg 등) 위치 확인
-    js_r = session.get(f"{base}/login/top_frame.js", timeout=15)
-    print(f"[top_frame.js] {js_r.status_code}, {len(js_r.content)} bytes")
-    if js_r.status_code == 200:
-        js = js_r.text
-        js_hq = []
-        for kw in ["HQ_CD", "hq_cd", "fnHQ", "hq_chg", "hq_change", "HQ_NM", "location"]:
-            idx = 0
-            while True:
-                pos = js.find(kw, idx)
-                if pos == -1:
-                    break
-                js_hq.append(f"  ...{js[max(0,pos-40):pos+120]}...")
-                idx = pos + 1
-        if js_hq:
-            print(f"[top_frame.js HQ 관련 {len(js_hq)}건]")
-            for h in js_hq[:30]:
-                print(h)
-        else:
-            print("[top_frame.js] HQ 관련 구절 없음")
-            print(f"[top_frame.js 전체]\n{js[:3000]}")
+    # 1. divTopFrameHead 전체 추출 (회사명/HQ 표시 영역)
+    head_m = re.search(r'<div[^>]*id=["\']?divTopFrameHead["\']?[^>]*>(.*?)(?=<div\s|$)',
+                       tf, re.DOTALL | re.IGNORECASE)
+    if head_m:
+        print(f"[divTopFrameHead]\n{head_m.group(0)[:1500]}")
+    else:
+        print("[divTopFrameHead] 없음")
+
+    # 2. 현재 세션에 박힌 HQ 코드 추출 (타이틀/변수/hidden 등에서)
+    title_m = re.search(r'<title>([^<]+)</title>', tf, re.IGNORECASE)
+    print(f"[title] {title_m.group(1) if title_m else '없음'}")
+
+    # 3. onclick·href 에서 HQ·chg·company·corp·sel 포함 구절 (전환 트리거)
+    switch_hits = re.findall(
+        r'(?:onclick|href)[^>"\'\n]{0,200}(?:HQ|chg|corp|company|hq_sel|hq_chg|brand)[^"\'\n]{0,100}',
+        tf, re.IGNORECASE
+    )
+    print(f"[전환 onclick/href {len(switch_hits)}건]")
+    for h in switch_hits[:15]:
+        print(f"  {h[:200]}")
+
+    # 4. JavaScript var/function 선언 중 HQ 관련 (인라인 스크립트)
+    js_vars = re.findall(
+        r'(?:var|let|const|function)\s+\w*(?:HQ|hq|Hq|corp|Corp)\w*[^;{]{0,150}',
+        tf, re.IGNORECASE
+    )
+    print(f"[inline JS HQ변수/함수 {len(js_vars)}건]")
+    for v in js_vars[:10]:
+        print(f"  {v[:150]}")
+
+    # 5. udfMainFrm.js fetch (fnDivPopupShow 등 공통 함수 파일)
+    umf_r = session.get(f"{base}/common/js/udfMainFrm.js", timeout=15)
+    print(f"[udfMainFrm.js] {umf_r.status_code}, {len(umf_r.content)} bytes")
+    if umf_r.status_code == 200:
+        umf = umf_r.text
+        hq_funcs = re.findall(
+            r'.{0,30}(?:HQ|hq_chg|corp_chg|fnHQ|changeHQ|selectHQ).{0,100}',
+            umf, re.IGNORECASE
+        )
+        print(f"[udfMainFrm.js HQ 관련 {len(hq_funcs)}건]")
+        for f_ in hq_funcs[:10]:
+            print(f"  {f_[:150]}")
+
+    # 6. 후보 전환 URL 직접 probe
+    for probe_url in [
+        f"{base}/login/company_sel.jsp",
+        f"{base}/login/hq_sel.jsp",
+        f"{base}/login/hq_chg.jsp",
+        f"{base}/login/hq_change.jsp",
+    ]:
+        pr = session.get(probe_url, timeout=10)
+        print(f"[probe] {probe_url.split('/')[-1]} → {pr.status_code}, {len(pr.content)} bytes")
+        if pr.status_code == 200 and len(pr.content) > 200:
+            print(f"  미리보기: {pr.text[:300]}")
 
     if "로그아웃" in chk.text or "divTopFrameHead" in chk.text:
         print("✅ 로그인 성공!")
