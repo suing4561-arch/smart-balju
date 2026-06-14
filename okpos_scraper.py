@@ -123,7 +123,6 @@ def login(session: requests.Session) -> bool:
                       headers=hdr(r2.url),
                       timeout=15, allow_redirects=True)
     print(f"[S3] {r3.status_code} url={r3.url}")
-    print(f"[S3 응답]\n{r3.text[:3000]}")
 
     if "error.jsp" in r3.text:
         print("❌ 로그인 실패 — 아이디/비밀번호 확인")
@@ -131,74 +130,39 @@ def login(session: requests.Session) -> bool:
 
     a4 = get_form_action(r3.text, base)
     h3 = get_hidden_fields(r3.text)
-    print(f"[S3 hidden] {h3}")
-    print(f"[S3 form action] {a4}")
     if a4 and a4 != a3 and "error" not in a4:
         r4 = session.post(a4, data={"user_id": uid, "user_pwd": upw, **h3},
                           headers=hdr(r3.url), timeout=15, allow_redirects=True)
         print(f"[S4] {r4.status_code} url={r4.url}")
-        print(f"[S4 응답]\n{r4.text[:2000]}")
+
+    # ── HQ_CD 강제 주입 시도 ─────────────────────────────────
+    # login_check_action 에 HQ_CD=HFTM 추가 전송 — 세션 본사가 바뀌는지 확인
+    hftm_code = os.environ.get("OKPOS_HFTM_CD", "HFTM")
+    print(f"[HQ 주입 시도] HQ_CD={hftm_code} → {a3}")
+    rHQ = session.post(a3,
+                       data={"user_id": uid, "user_pwd": upw,
+                             "HQ_CD": hftm_code, "ss_HQ_CD": hftm_code,
+                             **h1, **h2},
+                       headers=hdr(r2.url),
+                       timeout=15, allow_redirects=True)
+    print(f"[HQ 주입 응답] {rHQ.status_code} url={rHQ.url}")
+    chkHQ = session.get(f"{base}/login/top_frame.jsp", timeout=15)
+    title_hq = re.search(r'<title>([^<]+)</title>', chkHQ.text, re.IGNORECASE)
+    print(f"[HQ 주입 후 title] {title_hq.group(1) if title_hq else '없음'}")
+    # 세션 리셋 — 이바구밀면으로 돌아가기 위해 재로그인
+    session.post(f"{base}/login/login_check.jsp",
+                 data={"user_id": uid, "user_pwd": upw,
+                       "id_chk": "", "auto_login_chk": "", **h1},
+                 headers=hdr(f"{base}/login/login_form.jsp"), timeout=15,
+                 allow_redirects=True)
+    session.post(a3, data={"user_id": uid, "user_pwd": upw, **h1, **h2},
+                 headers=hdr(r2.url), timeout=15, allow_redirects=True)
+    # ─────────────────────────────────────────────────────────
 
     time.sleep(1)
     chk = session.get(f"{base}/login/top_frame.jsp", timeout=15)
-    print(f"[top_frame] {chk.status_code}, {len(chk.content)} bytes")
-    tf = chk.text
-
-    # 1. divTopFrameHead 전체 추출 (회사명/HQ 표시 영역)
-    head_m = re.search(r'<div[^>]*id=["\']?divTopFrameHead["\']?[^>]*>(.*?)(?=<div\s|$)',
-                       tf, re.DOTALL | re.IGNORECASE)
-    if head_m:
-        print(f"[divTopFrameHead]\n{head_m.group(0)[:1500]}")
-    else:
-        print("[divTopFrameHead] 없음")
-
-    # 2. 현재 세션에 박힌 HQ 코드 추출 (타이틀/변수/hidden 등에서)
-    title_m = re.search(r'<title>([^<]+)</title>', tf, re.IGNORECASE)
-    print(f"[title] {title_m.group(1) if title_m else '없음'}")
-
-    # 3. onclick·href 에서 HQ·chg·company·corp·sel 포함 구절 (전환 트리거)
-    switch_hits = re.findall(
-        r'(?:onclick|href)[^>"\'\n]{0,200}(?:HQ|chg|corp|company|hq_sel|hq_chg|brand)[^"\'\n]{0,100}',
-        tf, re.IGNORECASE
-    )
-    print(f"[전환 onclick/href {len(switch_hits)}건]")
-    for h in switch_hits[:15]:
-        print(f"  {h[:200]}")
-
-    # 4. JavaScript var/function 선언 중 HQ 관련 (인라인 스크립트)
-    js_vars = re.findall(
-        r'(?:var|let|const|function)\s+\w*(?:HQ|hq|Hq|corp|Corp)\w*[^;{]{0,150}',
-        tf, re.IGNORECASE
-    )
-    print(f"[inline JS HQ변수/함수 {len(js_vars)}건]")
-    for v in js_vars[:10]:
-        print(f"  {v[:150]}")
-
-    # 5. udfMainFrm.js fetch (fnDivPopupShow 등 공통 함수 파일)
-    umf_r = session.get(f"{base}/common/js/udfMainFrm.js", timeout=15)
-    print(f"[udfMainFrm.js] {umf_r.status_code}, {len(umf_r.content)} bytes")
-    if umf_r.status_code == 200:
-        umf = umf_r.text
-        hq_funcs = re.findall(
-            r'.{0,30}(?:HQ|hq_chg|corp_chg|fnHQ|changeHQ|selectHQ).{0,100}',
-            umf, re.IGNORECASE
-        )
-        print(f"[udfMainFrm.js HQ 관련 {len(hq_funcs)}건]")
-        for f_ in hq_funcs[:10]:
-            print(f"  {f_[:150]}")
-
-    # 6. 후보 전환 URL 직접 probe
-    for probe_url in [
-        f"{base}/login/company_sel.jsp",
-        f"{base}/login/hq_sel.jsp",
-        f"{base}/login/hq_chg.jsp",
-        f"{base}/login/hq_change.jsp",
-    ]:
-        pr = session.get(probe_url, timeout=10)
-        print(f"[probe] {probe_url.split('/')[-1]} → {pr.status_code}, {len(pr.content)} bytes")
-        if pr.status_code == 200 and len(pr.content) > 200:
-            print(f"  미리보기: {pr.text[:300]}")
-
+    title_m = re.search(r'<title>([^<]+)</title>', chk.text, re.IGNORECASE)
+    print(f"[top_frame title] {title_m.group(1) if title_m else '없음'}")
     if "로그아웃" in chk.text or "divTopFrameHead" in chk.text:
         print("✅ 로그인 성공!")
         return True
