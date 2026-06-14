@@ -30,17 +30,57 @@ FIREBASE_ENABLED         = bool(FIREBASE_DB_URL) and os.path.exists(FIREBASE_CRE
 
 
 
-def load_menu_shops_from_firebase() -> list:
+def _init_firebase():
+    """firebase_admin 초기화 (중복 호출 안전)."""
+    import firebase_admin
+    from firebase_admin import credentials, db
+    if not firebase_admin._apps:
+        cred = credentials.Certificate(FIREBASE_CREDENTIAL_PATH)
+        firebase_admin.initialize_app(cred, {"databaseURL": FIREBASE_DB_URL})
+    return db
+
+
+def load_hq_accounts_from_firebase() -> list:
+    """users 에서 role='hq' 이고 okposId·okposPw 가 모두 있는 본사 목록 반환.
+    Firebase 꺼짐·읽기 실패 시 빈 리스트."""
+    if not FIREBASE_ENABLED:
+        return []
+    try:
+        db = _init_firebase()
+        snapshot = db.reference("users").get()
+        if not snapshot:
+            return []
+        accounts = []
+        for uid, u in snapshot.items():
+            if not isinstance(u, dict):
+                continue
+            if u.get("role") != "hq":
+                continue
+            okpos_id = str(u.get("okposId", "")).strip()
+            okpos_pw = str(u.get("okposPw", "")).strip()
+            if not okpos_id or not okpos_pw:
+                continue
+            accounts.append({
+                "uid":      uid,
+                "label":    u.get("businessName") or u.get("name") or uid,
+                "brand_id": str(u.get("brandId", "")).strip(),
+                "okpos_id": okpos_id,
+                "okpos_pw": okpos_pw,
+            })
+        print(f"[HQ 계정 로드] {len(accounts)}개: "
+              + ", ".join(a["label"] for a in accounts))
+        return accounts
+    except Exception as e:
+        print(f"❌ HQ 계정 로드 실패: {e}")
+        return []
+
+
+def load_menu_shops_from_firebase(brand_id: str = "") -> list:
     """hq_franchises 에서 okposShopCd 가 있는 가맹점만 추려 반환.
+    brand_id 지정 시 해당 브랜드 소속 매장만, 빈 문자열이면 전체.
     Firebase 연동이 꺼져있거나 읽기 실패 시 빈 리스트."""
     try:
-        import firebase_admin
-        from firebase_admin import credentials, db
-
-        if not firebase_admin._apps:
-            cred = credentials.Certificate(FIREBASE_CREDENTIAL_PATH)
-            firebase_admin.initialize_app(cred, {"databaseURL": FIREBASE_DB_URL})
-
+        db = _init_firebase()
         snapshot = db.reference("hq_franchises").get()
         if not snapshot:
             print("[메뉴 매장 로드] hq_franchises 데이터 없음")
@@ -53,16 +93,19 @@ def load_menu_shops_from_firebase() -> list:
             shop_cd = str(fdata.get("okposShopCd", "")).strip()
             if not shop_cd:
                 continue
+            if brand_id and str(fdata.get("brandId", "")).strip() != brand_id:
+                continue
             shops.append({
                 "shop_cd": shop_cd,
                 "shop_nm": str(fdata.get("name", fid)).strip(),
             })
 
+        label = f"브랜드={brand_id}" if brand_id else "전체 브랜드"
         if not shops:
-            print("[메뉴 매장 로드] okposShopCd 가 있는 가맹점 없음 — 수집 건너뜀")
+            print(f"[메뉴 매장 로드] okposShopCd 있는 가맹점 없음 ({label})")
         else:
             names = ", ".join(f"{s['shop_nm']}({s['shop_cd']})" for s in shops)
-            print(f"[메뉴 매장 로드] {len(shops)}개: {names}")
+            print(f"[메뉴 매장 로드] {len(shops)}개 ({label}): {names}")
         return shops
     except Exception as e:
         print(f"❌ hq_franchises 로드 실패: {e}")
@@ -527,20 +570,9 @@ def save_menu_sales_to_firebase(menu_data: list, date: str) -> bool:
         return False
 
 
-def main(date_from=None, date_to=None, run_menu=False) -> int:
-    if not date_from:
-        yesterday = datetime.date.today() - datetime.timedelta(days=1)
-        date_from = date_to = yesterday.strftime("%Y-%m-%d")
-
-    print(f"\n{'='*50}")
-    print(f"  나이스오케이포스 매출 수집 v9")
-    print(f"  조회: {date_from} ~ {date_to}")
-    print(f"  계정: {CONFIG['id']}")
-    print(f"  Firebase 연동: {'ON' if FIREBASE_ENABLED else 'OFF (JSON 저장)'}")
-    print(f"{'='*50}\n")
-
-    session = requests.Session()
-    session.headers.update({
+def _make_session() -> requests.Session:
+    s = requests.Session()
+    s.headers.update({
         "User-Agent": (
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
             "AppleWebKit/537.36 (KHTML, like Gecko) "
@@ -548,21 +580,38 @@ def main(date_from=None, date_to=None, run_menu=False) -> int:
         ),
         "Accept-Language": "ko-KR,ko;q=0.9",
     })
+    return s
 
+
+def _collect_account(account: dict, date_from: str, date_to: str,
+                     run_menu: bool) -> int:
+    """단일 OKPos 계정으로 일별 매출 + 상품별 매출 수집.
+    account = {label, okpos_id, okpos_pw, brand_id}
+    반환: 0=성공, 양수=오류코드"""
+    label    = account["label"]
+    brand_id = account.get("brand_id", "")
+
+    CONFIG["id"] = account["okpos_id"]
+    CONFIG["pw"] = account["okpos_pw"]
+
+    print(f"\n{'='*55}")
+    print(f"  본사: {label}" + (f" (brandId={brand_id})" if brand_id else ""))
+    print(f"  조회: {date_from} ~ {date_to}")
+    print(f"{'='*55}\n")
+
+    session = _make_session()
     if not login(session):
+        print(f"❌ [{label}] 로그인 실패")
         return 1
 
     time.sleep(1)
     sales = fetch_sales(session, date_from, date_to)
 
     if not sales:
-        print("\n❌ 매출 데이터 없음")
-        return 2
+        print(f"⚠️  [{label}] 매출 데이터 없음")
+        return 0   # 영업 안 한 날일 수 있으므로 오류 아님
 
-    print(f"\n{'='*55}")
-    print(f"  📊 수집 결과 ({date_from})")
-    print(f"{'='*55}")
-    print(f"{'매장명':<20} {'총매출':>12} {'실매출':>12} {'주문':>6} {'고객':>6}")
+    print(f"\n{'매장명':<20} {'총매출':>12} {'실매출':>12} {'주문':>6} {'고객':>6}")
     print("-" * 60)
     for row in sales:
         print(
@@ -575,83 +624,124 @@ def main(date_from=None, date_to=None, run_menu=False) -> int:
     total = sum(r.get("TOT_SALE_AMT", 0) for r in sales)
     print("-" * 60)
     print(f"{'합계':<20} {total:>12,}")
-    print(f"{'='*55}")
 
     if FIREBASE_ENABLED:
-        ok = save_to_firebase(sales, date_from)
-        if not ok:
+        if not save_to_firebase(sales, date_from):
             return 3
     else:
         save_to_json(sales, date_from)
 
-    print(f"\n✅ 완료! {len(sales)}개 가맹점 수집")
+    print(f"✅ [{label}] 일별 매출 {len(sales)}개 가맹점 수집 완료")
 
-    # ── 상품별(메뉴별) 판매수량 수집 (--menu 옵션 시에만) ──────
-    if run_menu:
-        # 매장 목록: Firebase hq_franchises 자동 로드, 꺼져있으면 MENU_SHOPS 환경변수 fallback
-        if FIREBASE_ENABLED:
-            menu_shops = load_menu_shops_from_firebase()
-        else:
-            _env = os.environ.get("MENU_SHOPS", "")
-            menu_shops = json.loads(_env) if _env else []
-            if not menu_shops:
-                print("⚠️  Firebase 꺼짐: MENU_SHOPS 환경변수(JSON)를 지정하면 수동 수집 가능")
+    if not run_menu:
+        return 0
 
+    # ── 상품별(메뉴별) 판매수량 수집 ─────────────────────────
+    if FIREBASE_ENABLED:
+        menu_shops = load_menu_shops_from_firebase(brand_id)
+    else:
+        _env = os.environ.get("MENU_SHOPS", "")
+        menu_shops = json.loads(_env) if _env else []
         if not menu_shops:
-            print("⚠️  수집 대상 매장 없음 — --menu 수집 건너뜀")
-            return 4
+            print("⚠️  Firebase 꺼짐: MENU_SHOPS 환경변수(JSON)를 지정하면 수동 수집 가능")
 
-        print(f"\n{'='*50}")
-        print(f"  상품별 매출 수집 시작 (대상: {len(menu_shops)}개 매장)")
-        print(f"{'='*50}\n")
+    if not menu_shops:
+        print(f"⚠️  [{label}] 수집 대상 매장 없음 — 상품별 수집 건너뜀")
+        return 0
 
-        total_menu_rows = 0
-        for shop in menu_shops:
-            s_cd = shop["shop_cd"]
-            s_nm = shop["shop_nm"]
-            print(f"\n--- {s_nm}({s_cd}) 수집 중 ---")
-            time.sleep(1)
-            menu_sales = fetch_menu_sales(
-                session, date_from, date_to,
-                shop_cd=s_cd, shop_nm=s_nm,
-            )
-            if not menu_sales:
-                print(f"⚠️  {s_nm}: 상품별 매출 데이터 없음 (raw 파일 확인 필요)")
-                continue
-            print(f"  파싱 결과: {len(menu_sales)}개 행")
-            total_menu_rows += len(menu_sales)
+    print(f"\n  상품별 매출 수집 시작 (대상: {len(menu_shops)}개 매장)\n")
+    total_menu_rows = 0
+    for shop in menu_shops:
+        s_cd = shop["shop_cd"]
+        s_nm = shop["shop_nm"]
+        print(f"\n--- {s_nm}({s_cd}) 수집 중 ---")
+        time.sleep(1)
+        menu_sales = fetch_menu_sales(session, date_from, date_to,
+                                      shop_cd=s_cd, shop_nm=s_nm)
+        if not menu_sales:
+            print(f"⚠️  {s_nm}: 상품별 매출 데이터 없음")
+            continue
+        print(f"  파싱 결과: {len(menu_sales)}개 행")
+        total_menu_rows += len(menu_sales)
 
-            if FIREBASE_ENABLED:
-                ok2 = save_menu_sales_to_firebase(menu_sales, date_from)
-                if not ok2:
-                    return 5
-            else:
-                import collections
-                out_file = f"menu_sales_{s_cd}_{date_from.replace('-','')}.json"
-                shop_map_out: dict = collections.defaultdict(dict)
-                for row in menu_sales:
-                    shop_map_out[row["SHOP_CD"]][row["PROD_CD"]] = {
-                        "prod_nm":  row["PROD_NM"],
-                        "sale_qty": row["SALE_QTY"],
-                        "sale_amt": row["DCM_SALE_AMT"],
-                        "shop_nm":  row["SHOP_NM"],
-                        "date":     date_from,
-                    }
-                with open(out_file, "w", encoding="utf-8") as f:
-                    json.dump(dict(shop_map_out), f, ensure_ascii=False, indent=2)
-                print(f"  JSON 저장: {out_file}")
+        if FIREBASE_ENABLED:
+            if not save_menu_sales_to_firebase(menu_sales, date_from):
+                return 5
+        else:
+            import collections
+            out_file = f"menu_sales_{s_cd}_{date_from.replace('-','')}.json"
+            shop_map_out: dict = collections.defaultdict(dict)
+            for row in menu_sales:
+                shop_map_out[row["SHOP_CD"]][row["PROD_CD"]] = {
+                    "prod_nm":  row["PROD_NM"],
+                    "sale_qty": row["SALE_QTY"],
+                    "sale_amt": row["DCM_SALE_AMT"],
+                    "shop_nm":  row["SHOP_NM"],
+                    "date":     date_from,
+                }
+            with open(out_file, "w", encoding="utf-8") as f:
+                json.dump(dict(shop_map_out), f, ensure_ascii=False, indent=2)
+            print(f"  JSON 저장: {out_file}")
 
-        print(f"\n✅ 상품별 수집 완료! 총 {total_menu_rows}개 행 ({len(menu_shops)}개 매장)")
-
+    print(f"\n✅ [{label}] 상품별 수집 완료 — 총 {total_menu_rows}개 행 "
+          f"({len(menu_shops)}개 매장)")
     return 0
 
 
+def main(date_from=None, date_to=None, run_menu=False) -> int:
+    if not date_from:
+        yesterday = datetime.date.today() - datetime.timedelta(days=1)
+        date_from = date_to = yesterday.strftime("%Y-%m-%d")
+
+    print(f"\n{'='*50}")
+    print(f"  나이스오케이포스 매출 수집 v10 (멀티 본사)")
+    print(f"  조회: {date_from} ~ {date_to}")
+    print(f"  Firebase 연동: {'ON' if FIREBASE_ENABLED else 'OFF (JSON 저장)'}")
+    print(f"{'='*50}\n")
+
+    # ── OKPos 계정 목록 결정 ─────────────────────────────────
+    # Firebase 우선: users 에서 role=hq + okposId/okposPw 읽기
+    # Secrets fallback: Firebase 계정 없을 때 OKPOS_ID/PW 환경변수 사용
+    accounts = load_hq_accounts_from_firebase() if FIREBASE_ENABLED else []
+
+    if not accounts:
+        fallback_id = os.environ.get("OKPOS_ID", "")
+        fallback_pw = os.environ.get("OKPOS_PW", "")
+        if fallback_id and fallback_pw:
+            print("[계정] Firebase HQ 없음 — Secrets fallback 사용")
+            accounts = [{"label": "Secrets계정", "okpos_id": fallback_id,
+                         "okpos_pw": fallback_pw, "brand_id": ""}]
+        else:
+            print("❌ OKPos 계정 없음 (Firebase HQ 미등록 + Secrets 미설정)")
+            return 1
+
+    print(f"[수집 대상] {len(accounts)}개 본사\n")
+
+    # ── 본사별 순회 수집 ─────────────────────────────────────
+    any_error = 0
+    for account in accounts:
+        try:
+            rc = _collect_account(account, date_from, date_to, run_menu)
+            if rc != 0:
+                any_error = rc
+        except Exception as e:
+            print(f"❌ [{account['label']}] 예외 발생 — 다음 본사로 계속: {e}")
+            any_error = 1
+        time.sleep(2)   # 본사 간 간격
+
+    if any_error:
+        print(f"\n⚠️  일부 본사 수집 실패 (exit={any_error})")
+    else:
+        print(f"\n✅ 전체 {len(accounts)}개 본사 수집 완료!")
+    return any_error
+
+
 if __name__ == "__main__":
-    # python okpos_scraper.py                             → 어제 일별 집계
-    # python okpos_scraper.py 2026-05-19 2026-05-19       → 특정 날짜 일별 집계
-    # python okpos_scraper.py --menu                      → 어제 + 상품별 수집
-    # python okpos_scraper.py 2026-05-19 2026-05-19 --menu→ 특정 날짜 + 상품별 수집
-    # python okpos_scraper.py schedule                    → 로컬 스케줄러 (일별만)
+    # python okpos_scraper.py                              → 어제 일별 집계 (멀티 본사)
+    # python okpos_scraper.py 2026-05-19 2026-05-19        → 특정 날짜 일별 집계
+    # python okpos_scraper.py --menu                       → 어제 + 상품별 수집
+    # python okpos_scraper.py 2026-05-19 2026-05-19 --menu → 특정 날짜 + 상품별 수집
+    # python okpos_scraper.py schedule                     → 로컬 스케줄러 (일별만)
 
     args = sys.argv[1:]
     run_menu = "--menu" in args
