@@ -148,6 +148,7 @@ def login(session: requests.Session) -> bool:
         "Content-Type": "application/x-www-form-urlencoded",
     }
 
+    print(f"[로그인 시도] id={uid[:3]}*** ({len(uid)}자)")
     r1 = session.get(f"{base}/login/login_form.jsp", timeout=15)
     h1 = get_hidden_fields(r1.text)
     print(f"[S1] {r1.status_code}")
@@ -165,7 +166,9 @@ def login(session: requests.Session) -> bool:
                       data={"user_id": uid, "user_pwd": upw, **h1, **h2},
                       headers=hdr(r2.url),
                       timeout=15, allow_redirects=True)
-    print(f"[S3] {r3.status_code}")
+    print(f"[S3] {r3.status_code} url={r3.url}")
+    print(f"[S3 cookies] {dict(session.cookies)}")
+    print(f"[S3 응답 앞부분] {r3.text[:400]}")
 
     if "error.jsp" in r3.text:
         print("❌ 로그인 실패 — 아이디/비밀번호 확인")
@@ -173,18 +176,21 @@ def login(session: requests.Session) -> bool:
 
     a4 = get_form_action(r3.text, base)
     h3 = get_hidden_fields(r3.text)
+    print(f"[S3 a4] {a4}  h3={list(h3.keys())}")
     if a4 and a4 != a3 and "error" not in a4:
         r4 = session.post(a4, data={"user_id": uid, "user_pwd": upw, **h3},
                           headers=hdr(r3.url), timeout=15, allow_redirects=True)
-        print(f"[S4] {r4.status_code}")
+        print(f"[S4] {r4.status_code} url={r4.url}")
 
     time.sleep(1)
     chk = session.get(f"{base}/login/top_frame.jsp", timeout=15)
+    print(f"[top_frame] {chk.status_code} {len(chk.content)}bytes")
+    print(f"[top_frame 앞부분] {chk.text[:400]}")
     if "로그아웃" in chk.text or "divTopFrameHead" in chk.text:
         print("✅ 로그인 성공!")
         return True
-    print("⚠️  로그인 불명확 — 계속 진행")
-    return True
+    print("❌ 로그인 실패 — 세션 미인증 (아이디/비밀번호 확인)")
+    return False
 
 
 def fetch_sales(session: requests.Session, date_from: str,
